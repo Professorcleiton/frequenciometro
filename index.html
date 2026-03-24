@@ -39,66 +39,88 @@
     </div>
 
     <script>
-        const PLANILHA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlfXs3ZlGbJoyVAQxdJd32Kx2ahdPlO0_Kv0pqCsCs6BAJwLOkjqVdA4txmHISIpswwTXfhg6YFSrc/pub?output=csv';
+    const PLANILHA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlfXs3ZlGbJoyVAQxdJd32Kx2ahdPlO0_Kv0pqCsCs6BAJwLOkjqVdA4txmHISIpswwTXfhg6YFSrc/pub?output=csv';
 
-        async function carregarDadosAgora() {
-            try {
-                // O "v=" com o número aleatório garante que o Google Sheets mande os dados MAIS RECENTES
-                const response = await fetch(PLANILHA_URL + "&v=" + Math.random());
-                const csvData = await response.text();
-                
-                // Limpa os boxes
-                document.getElementById('box-manha1').innerHTML = '';
-                document.getElementById('box-manha2').innerHTML = '';
-                document.getElementById('box-tarde').innerHTML = '';
-
-                const linhas = csvData.split(/\r?\n/);
-
-                linhas.slice(1).forEach(linha => {
-                    if(!linha.trim()) return;
-                    
-                    // Detecta o divisor ponto e vírgula da sua planilha
-                    const col = linha.split(';');
-                    
-                    if(col.length >= 2) {
-                        const nome = col[0].replace(/"/g, '').trim();
-                        const freq = col[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim();
-                        const bloco = col[2] ? col[2].replace(/"/g, '').trim().toLowerCase() : 'tarde';
-                        
-                        const valor = parseFloat(freq);
-                        if(!isNaN(valor) && nome !== "") {
-                            renderizarNoBox(nome, valor, bloco);
-                        }
-                    }
-                });
-
-                // Animação
-                setTimeout(() => {
-                    document.querySelectorAll('.barra-frequencia').forEach(b => {
-                        b.style.setProperty('width', b.dataset.width + '%', 'important');
-                    });
-                }, 600);
-
-            } catch (e) { console.error(e); }
-        }
-
-        function renderizarNoBox(nome, valor, bloco) {
-            const box = document.getElementById('box-' + bloco) || document.getElementById('box-tarde');
-            let cor = valor >= 95 ? 'bg-green-500' : (valor >= 90 ? 'bg-yellow-500' : 'bg-red-500');
+    async function carregarDadosAgora() {
+        try {
+            // O "v=" força o Google a ignorar o cache
+            const response = await fetch(PLANILHA_URL + "&v=" + Date.now());
+            const csvData = await response.text();
             
-            box.innerHTML += `
-                <div class="bg-gray-50 p-2 rounded border border-gray-200 shadow-sm">
-                    <div class="flex justify-between text-[10px] font-bold mb-1">
-                        <span>${nome}</span>
-                        <span>${valor.toFixed(1).replace('.', ',')}%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                        <div class="barra-frequencia ${cor} h-full" data-width="${valor}"></div>
-                    </div>
-                </div>`;
-        }
+            console.log("Dados recebidos do Google:", csvData); // Isso ajuda a ver o erro no F12
 
-        window.onload = carregarDadosAgora;
-    </script>
+            // Limpa os boxes antes de preencher
+            ['box-manha1', 'box-manha2', 'box-tarde'].forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
+
+            const linhas = csvData.split(/\r?\n/);
+
+            linhas.slice(1).forEach(linha => {
+                if(!linha.trim()) return;
+                
+                // --- TESTE UNIVERSAL DE SEPARADOR ---
+                // Tenta separar por ponto e vírgula primeiro
+                let col = linha.split(';');
+                // Se só deu 1 coluna, tenta separar por vírgula
+                if (col.length < 2) {
+                    col = linha.split(',');
+                }
+                
+                if(col.length >= 2) {
+                    const nome = col[0].replace(/"/g, '').trim();
+                    // Limpa o número: tira %, troca vírgula por ponto para o JS entender
+                    let freqLimpa = col[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim();
+                    // Se não tiver a 3ª coluna (bloco), manda para a tarde
+                    let bloco = col[2] ? col[2].replace(/"/g, '').trim().toLowerCase() : 'tarde';
+                    
+                    const valor = parseFloat(freqLimpa);
+
+                    if(!isNaN(valor) && nome !== "") {
+                        renderizarNoBox(nome, valor, bloco);
+                    }
+                }
+            });
+
+            // Dispara a animação das barras
+            setTimeout(() => {
+                document.querySelectorAll('.barra-frequencia').forEach(b => {
+                    b.style.setProperty('width', b.dataset.width + '%', 'important');
+                });
+            }, 600);
+
+        } catch (e) { 
+            console.error("Erro ao carregar:", e);
+            alert("Erro de conexão. Verifique se a planilha está publicada.");
+        }
+    }
+
+    function renderizarNoBox(nome, valor, bloco) {
+        // Garante que o ID do box existe
+        const idAlvo = 'box-' + bloco.replace(/\s+/g, '');
+        const box = document.getElementById(idAlvo) || document.getElementById('box-tarde');
+        
+        let cor = valor >= 95 ? 'bg-green-500' : (valor >= 90 ? 'bg-yellow-500' : 'bg-red-500');
+        let txtCor = valor >= 95 ? 'text-green-700' : (valor >= 90 ? 'text-yellow-600' : 'text-red-700');
+        let emoji = valor >= 95 ? '😊' : (valor >= 90 ? '😐' : '😡');
+
+        box.innerHTML += `
+            <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm transition-transform hover:scale-105">
+                <div class="flex justify-between items-center mb-1 font-black text-gray-700">
+                    <span class="text-[11px] uppercase tracking-tighter">${nome}</span>
+                    <span class="${txtCor} text-sm">${valor.toFixed(1).replace('.', ',')}% ${emoji}</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner border border-gray-100">
+                    <div class="barra-frequencia ${cor} h-full rounded-full" data-width="${valor}"></div>
+                </div>
+            </div>`;
+    }
+
+    // Data atual formatada
+    const opcoes = { month: 'long', year: 'numeric' };
+    document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', opcoes).toUpperCase();
+
+    window.onload = carregarDadosAgora;
+</script>
 </body>
 </html>
