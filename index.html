@@ -3,124 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frequenciômetro V2 - CCM Anchieta</title>
+    <title>Frequenciômetro - CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s ease-in-out; width: 0% !important; }
+        .fundo-quadriculado {
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
     </style>
 </head>
-<body class="bg-gray-100 p-4 font-sans min-h-screen">
+<body class="bg-gray-100 p-4 font-sans min-h-screen fundo-quadriculado">
 
     <div class="max-w-7xl mx-auto bg-white shadow-2xl rounded-2xl border-4 border-blue-900 overflow-hidden">
+        
         <header class="p-6 border-b-2 border-gray-100 flex flex-col md:flex-row items-center justify-between bg-white">
             <div class="text-center md:text-left">
-                <h1 class="text-2xl md:text-3xl font-black text-gray-800 uppercase">Colégio Estadual <br>Cívico Militar Anchieta</h1>
-                <p class="text-blue-700 font-bold tracking-widest mt-2 italic uppercase underline">PAINEL DE FREQUÊNCIA ATUALIZADO</p>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-800 uppercase leading-tight">Colégio Estadual <br>Cívico Militar Anchieta</h1>
+                <p class="text-blue-700 font-bold tracking-widest mt-1 italic uppercase">Painel de Frequência</p>
             </div>
-            <button onclick="carregarDadosAgora()" class="mt-4 md:mt-0 bg-blue-900 text-white text-xs font-bold py-2 px-6 rounded-full shadow-lg">
-                🔄 FORÇAR ATUALIZAÇÃO
-            </button>
+            <div class="flex flex-col items-center md:items-end mt-4 md:mt-0 gap-2">
+                <button onclick="carregarDados()" class="bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold py-2 px-6 rounded-full shadow-lg active:scale-95 transition-all">
+                    🔄 ATUALIZAR AGORA
+                </button>
+                <p id="data-exibicao" class="text-blue-900 font-bold text-sm uppercase"></p>
+            </div>
         </header>
 
-        <main class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="space-y-4">
-                <h3 class="bg-orange-500 text-white text-center font-black py-2 rounded-lg">MANHÃ 1</h3>
-                <div id="box-manha1" class="space-y-3 min-h-[100px] border-2 border-dashed border-gray-100 rounded-lg"></div>
+        <main class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="flex flex-col gap-4">
+                <h3 class="bg-orange-500 text-white text-center font-black py-3 rounded-xl shadow-md uppercase">Manhã 1</h3>
+                <div id="box-manha1" class="space-y-3 min-h-[100px]"></div>
             </div>
-            <div class="space-y-4">
-                <h3 class="bg-cyan-500 text-white text-center font-black py-2 rounded-lg">MANHÃ 2</h3>
-                <div id="box-manha2" class="space-y-3 min-h-[100px] border-2 border-dashed border-gray-100 rounded-lg"></div>
+            <div class="flex flex-col gap-4">
+                <h3 class="bg-cyan-500 text-white text-center font-black py-3 rounded-xl shadow-md uppercase">Manhã 2</h3>
+                <div id="box-manha2" class="space-y-3 min-h-[100px]"></div>
             </div>
-            <div class="space-y-4">
-                <h3 class="bg-green-600 text-white text-center font-black py-2 rounded-lg">TARDE</h3>
-                <div id="box-tarde" class="space-y-3 min-h-[100px] border-2 border-dashed border-gray-100 rounded-lg"></div>
+            <div class="flex flex-col gap-4">
+                <h3 class="bg-green-600 text-white text-center font-black py-3 rounded-xl shadow-md uppercase">Tarde</h3>
+                <div id="box-tarde" class="space-y-3 min-h-[100px]"></div>
             </div>
         </main>
+
+        <footer class="bg-gray-50 p-6 border-t flex flex-wrap justify-around gap-4 text-xs font-bold uppercase tracking-tighter">
+            <div class="flex items-center gap-2 text-red-600"><span>😡</span> ABAIXO DE 89,9%</div>
+            <div class="flex items-center gap-2 text-yellow-600"><span>😐</span> 90% A 94,9%</div>
+            <div class="flex items-center gap-2 text-green-700"><span>😊</span> ACIMA DE 95%</div>
+        </footer>
     </div>
 
     <script>
-    const PLANILHA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlfXs3ZlGbJoyVAQxdJd32Kx2ahdPlO0_Kv0pqCsCs6BAJwLOkjqVdA4txmHISIpswwTXfhg6YFSrc/pub?output=csv';
+        const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
 
-    async function carregarDadosAgora() {
-        try {
-            // O "v=" força o Google a ignorar o cache
-            const response = await fetch(PLANILHA_URL + "&v=" + Date.now());
-            const csvData = await response.text();
-            
-            console.log("Dados recebidos do Google:", csvData); // Isso ajuda a ver o erro no F12
-
-            // Limpa os boxes antes de preencher
-            ['box-manha1', 'box-manha2', 'box-tarde'].forEach(id => {
-                document.getElementById(id).innerHTML = '';
-            });
-
-            const linhas = csvData.split(/\r?\n/);
-
-            linhas.slice(1).forEach(linha => {
-                if(!linha.trim()) return;
+        async function carregarDados() {
+            try {
+                // O link ganha um "v=" aleatório para garantir que o navegador não use cache antigo
+                const response = await fetch(URL_CSV + "&v=" + Date.now());
+                const csvStr = await response.text();
                 
-                // --- TESTE UNIVERSAL DE SEPARADOR ---
-                // Tenta separar por ponto e vírgula primeiro
-                let col = linha.split(';');
-                // Se só deu 1 coluna, tenta separar por vírgula
-                if (col.length < 2) {
-                    col = linha.split(',');
-                }
-                
-                if(col.length >= 2) {
-                    const nome = col[0].replace(/"/g, '').trim();
-                    // Limpa o número: tira %, troca vírgula por ponto para o JS entender
-                    let freqLimpa = col[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim();
-                    // Se não tiver a 3ª coluna (bloco), manda para a tarde
-                    let bloco = col[2] ? col[2].replace(/"/g, '').trim().toLowerCase() : 'tarde';
+                // Limpa os espaços onde as turmas aparecem
+                ['manha1', 'manha2', 'tarde'].forEach(id => {
+                    document.getElementById('box-' + id).innerHTML = '';
+                });
+
+                const linhas = csvStr.split(/\r?\n/);
+
+                // Começa na linha 1 (pula a linha 0 que são os títulos)
+                for (let i = 1; i < linhas.length; i++) {
+                    const linha = linhas[i];
+                    if (!linha.trim()) continue;
+
+                    // Tenta separar por ; (padrão brasileiro) ou por ,
+                    const colunas = linha.includes(';') ? linha.split(';') : linha.split(',');
                     
-                    const valor = parseFloat(freqLimpa);
+                    if (colunas.length >= 2) {
+                        const nomeTurma = colunas[0].replace(/"/g, '').trim();
+                        let freqTexto = colunas[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim();
+                        let blocoDestino = colunas[2] ? colunas[2].replace(/"/g, '').trim().toLowerCase() : 'tarde';
+                        
+                        const valorNum = parseFloat(freqTexto);
 
-                    if(!isNaN(valor) && nome !== "") {
-                        renderizarNoBox(nome, valor, bloco);
+                        if (!isNaN(valorNum) && nomeTurma !== "") {
+                            renderizarTurma(nomeTurma, valorNum, blocoDestino);
+                        }
                     }
                 }
-            });
 
-            // Dispara a animação das barras
-            setTimeout(() => {
-                document.querySelectorAll('.barra-frequencia').forEach(b => {
-                    b.style.setProperty('width', b.dataset.width + '%', 'important');
-                });
-            }, 600);
+                // Dispara a animação das barras coloridas
+                setTimeout(() => {
+                    document.querySelectorAll('.barra-frequencia').forEach(b => {
+                        b.style.setProperty('width', b.dataset.width + '%', 'important');
+                    });
+                }, 500);
 
-        } catch (e) { 
-            console.error("Erro ao carregar:", e);
-            alert("Erro de conexão. Verifique se a planilha está publicada.");
+            } catch (err) {
+                console.error("Erro ao carregar:", err);
+            }
         }
-    }
 
-    function renderizarNoBox(nome, valor, bloco) {
-        // Garante que o ID do box existe
-        const idAlvo = 'box-' + bloco.replace(/\s+/g, '');
-        const box = document.getElementById(idAlvo) || document.getElementById('box-tarde');
-        
-        let cor = valor >= 95 ? 'bg-green-500' : (valor >= 90 ? 'bg-yellow-500' : 'bg-red-500');
-        let txtCor = valor >= 95 ? 'text-green-700' : (valor >= 90 ? 'text-yellow-600' : 'text-red-700');
-        let emoji = valor >= 95 ? '😊' : (valor >= 90 ? '😐' : '😡');
+        function renderizarTurma(nome, valor, bloco) {
+            // Garante que o ID do box existe (ex: box-manha1)
+            const box = document.getElementById('box-' + bloco) || document.getElementById('box-tarde');
+            
+            let cor = valor >= 95 ? 'bg-green-500' : (valor >= 90 ? 'bg-yellow-500' : 'bg-red-500');
+            let txt = valor >= 95 ? 'text-green-700' : (valor >= 90 ? 'text-yellow-600' : 'text-red-700');
+            let emoji = valor >= 95 ? '😊' : (valor >= 90 ? '😐' : '😡');
 
-        box.innerHTML += `
-            <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm transition-transform hover:scale-105">
-                <div class="flex justify-between items-center mb-1 font-black text-gray-700">
-                    <span class="text-[11px] uppercase tracking-tighter">${nome}</span>
-                    <span class="${txtCor} text-sm">${valor.toFixed(1).replace('.', ',')}% ${emoji}</span>
-                </div>
-                <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner border border-gray-100">
-                    <div class="barra-frequencia ${cor} h-full rounded-full" data-width="${valor}"></div>
-                </div>
-            </div>`;
-    }
+            box.innerHTML += `
+                <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm transition-transform hover:scale-105">
+                    <div class="flex justify-between items-center mb-1 font-black text-gray-700 text-[11px] uppercase tracking-tight">
+                        <span>${nome}</span>
+                        <span class="${txt}">${valor.toFixed(1).replace('.', ',')}% ${emoji}</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden border border-gray-100 shadow-inner">
+                        <div class="barra-frequencia ${cor} h-full rounded-full" data-width="${valor}"></div>
+                    </div>
+                </div>`;
+        }
 
-    // Data atual formatada
-    const opcoes = { month: 'long', year: 'numeric' };
-    document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', opcoes).toUpperCase();
+        // Exibe o mês atual
+        document.getElementById('data-exibicao').innerText = new Date().toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'}).toUpperCase();
 
-    window.onload = carregarDadosAgora;
-</script>
+        // Inicia o processo
+        window.onload = carregarDados;
+    </script>
 </body>
 </html>
