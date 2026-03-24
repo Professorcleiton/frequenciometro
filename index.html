@@ -15,7 +15,7 @@
         }
         .barra-frequencia {
             transition: width 1.5s cubic-bezier(0.1, 0.5, 0.5, 1);
-            width: 0% !important;
+            width: 0% !important; /* Começa em 0 para a animação */
         }
     </style>
 </head>
@@ -34,57 +34,84 @@
                     🔄 ATUALIZAR DADOS
                 </button>
                 <p id="data-atual" class="text-blue-900 font-bold text-sm uppercase"></p>
+                <p class="text-gray-400 font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
             </div>
         </header>
 
-        <main class="p-6 fundo-quadriculado min-h-[500px]">
+        <main class="p-6 fundo-quadriculado min-h-[600px]">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 
                 <section class="space-y-4">
                     <h3 class="bg-orange-500 text-white text-center font-black py-3 rounded-xl shadow-lg uppercase text-lg">Manhã</h3>
-                    <div id="container-manha1" class="space-y-3 min-h-[50px]"></div>
+                    <div id="container-manha1" class="space-y-3 min-h-[100px]"></div>
                 </section>
 
                 <section class="space-y-4">
                     <h3 class="bg-cyan-500 text-white text-center font-black py-3 rounded-xl shadow-lg uppercase text-lg">Manhã</h3>
-                    <div id="container-manha2" class="space-y-3 min-h-[50px]"></div>
+                    <div id="container-manha2" class="space-y-3 min-h-[100px]"></div>
                 </section>
 
                 <section class="space-y-4">
                     <h3 class="bg-green-600 text-white text-center font-black py-3 rounded-xl shadow-lg uppercase text-lg">Tarde</h3>
-                    <div id="container-tarde" class="space-y-3 min-h-[50px]"></div>
+                    <div id="container-tarde" class="space-y-3 min-h-[100px]"></div>
                 </section>
 
             </div>
         </main>
 
         <footer class="bg-slate-50 p-6 border-t-2 border-gray-100 flex flex-wrap justify-around gap-6 text-xs md:text-sm">
-            <div class="flex items-center gap-2 font-black text-red-600"><span>😡</span> ABAIXO DE 89,9%</div>
-            <div class="flex items-center gap-2 font-black text-yellow-600"><span>😐</span> 90% A 94,9%</div>
-            <div class="flex items-center gap-2 font-black text-green-700"><span>😊</span> ACIMA DE 95%</div>
+            <div class="flex items-center gap-3 p-2 bg-white rounded-lg shadow-sm border border-red-100">
+                <span class="text-2xl">😡</span> <span class="font-black text-red-600 uppercase">Abaixo de 89,9%</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 bg-white rounded-lg shadow-sm border border-yellow-100">
+                <span class="text-2xl">😐</span> <span class="font-black text-yellow-600 uppercase">90% a 94,9%</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 bg-white rounded-lg shadow-sm border border-green-100">
+                <span class="text-2xl">😊</span> <span class="font-black text-green-700 uppercase">Acima de 95%</span>
+            </div>
         </footer>
     </div>
 
     <script>
+        // LINK DA PLANILHA (O SEU LINK JÁ CONFIGURADO)
         const URL_PLANILHA = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlfXs3ZlGbJoyVAQxdJd32Kx2ahdPlO0_Kv0pqCsCs6BAJwLOkjqVdA4txmHISIpswwTXfhg6YFSrc/pub?output=csv';
 
         async function carregarPainel() {
             try {
-                const response = await fetch(URL_PLANILHA);
+                console.log("Iniciando carregamento...");
+                
+                // Forçar o Google a ignorar o cache (Cache Busting)
+                const linkComTimestamp = URL_PLANILHA + "&t=" + Date.now();
+                
+                const response = await fetch(linkComTimestamp);
                 const csvText = await response.text();
+                
+                // Se o link retornar HTML em vez de CSV, avisa no console
+                if (csvText.includes("<html")) {
+                    console.error("Erro: O link retornou HTML. Verifique se a planilha está publicada como CSV.");
+                    return;
+                }
+
                 const linhas = csvText.split(/\r?\n/);
                 
+                // Limpar os containers antes de preencher
                 ['manha1', 'manha2', 'tarde'].forEach(id => {
-                    document.getElementById(container-${id}).innerHTML = '';
+                    const el = document.getElementById(container-${id});
+                    if(el) el.innerHTML = '';
                 });
 
+                // Processar as linhas (pular a primeira que é o cabeçalho)
                 linhas.slice(1).forEach(linha => {
-                    // MUDANÇA CHAVE: O seu CSV usa ponto e vírgula (;)
+                    if (!linha.trim()) return;
+
+                    // O SEU DIVISOR É O PONTO E VÍRGULA (;)
                     const colunas = linha.split(';');
                     
                     if (colunas.length >= 2) {
                         const nomeTurma = colunas[0].replace(/"/g, '').trim();
-                        let freqTexto = colunas[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim();
+                        // Limpa a frequência: tira aspas, %, troca vírgula por ponto
+                        let freqTexto = colunas[1] ? colunas[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim() : "0";
+                        // Pega o bloco (coluna 3) ou assume 'tarde' por padrão
                         let blocoTexto = colunas[2] ? colunas[2].replace(/"/g, '').trim().toLowerCase() : 'tarde';
                         
                         const freqValor = parseFloat(freqTexto);
@@ -95,22 +122,26 @@
                     }
                 });
 
-                // Inicia animação das barras
+                // Disparar a animação das barras coloridas
                 setTimeout(() => {
                     document.querySelectorAll('.barra-frequencia').forEach(b => {
-                        b.style.setProperty('width', b.dataset.width + '%', 'important');
+                        const larguraAlvo = b.dataset.width + '%';
+                        b.style.setProperty('width', larguraAlvo, 'important');
                     });
-                }, 400);
+                }, 500);
 
             } catch (error) {
-                console.error("Erro:", error);
+                console.error("Erro crítico ao carregar dados:", error);
             }
         }
 
         function renderizarTurma(nome, valor, bloco) {
-            const container = document.getElementById(container-${bloco});
+            // Garante que o ID do container existe (evita manha 1 vs manha1)
+            const idAlvo = container-${bloco.replace(/\s+/g, '')};
+            const container = document.getElementById(idAlvo);
             if (!container) return;
 
+            // Lógica das Cores (Legenda do Banner)
             let corBarra = "bg-red-500";
             let corTexto = "text-red-700";
             let emoji = "😡";
@@ -125,23 +156,29 @@
                 emoji = "😐";
             }
 
-            container.innerHTML += `
-                <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+            const card = `
+                <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm transition-all hover:scale-[1.02]">
                     <div class="flex justify-between items-center mb-1">
-                        <span class="font-black text-gray-700 text-[11px] uppercase">${nome}</span>
+                        <span class="font-black text-gray-700 text-[11px] uppercase tracking-tighter">${nome}</span>
                         <span class="${corTexto} font-black text-sm">${valor.toFixed(1).replace('.', ',')}% ${emoji}</span>
                     </div>
-                    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner border border-gray-100">
+                    <div class="w-full bg-gray-100 rounded-full h-3 border border-gray-100 overflow-hidden shadow-inner">
                         <div class="barra-frequencia ${corBarra} h-full rounded-full" data-width="${valor}"></div>
                     </div>
                 </div>
             `;
+            container.innerHTML += card;
         }
 
-        document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
+        // Definir mês e ano atual no cabeçalho
+        const opcoesData = { month: 'long', year: 'numeric' };
+        document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', opcoesData).toUpperCase();
+
+        // Carregar automaticamente ao abrir a página
         window.onload = carregarPainel;
+        
+        // Atualizar automaticamente a cada 10 minutos (opcional)
+        setInterval(carregarPainel, 600000);
     </script>
-    // Atualiza os dados automaticamente a cada 30 minutos (1800000ms)
-setInterval(carregarPainel, 1800000);
 </body>
 </html>
