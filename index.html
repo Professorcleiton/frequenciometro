@@ -1,20 +1,90 @@
+<!DOCTYPE html>
 <html lang="pt-br">
-    <head>
-        <meta charset="UTF - 8">
-        <meta name="viewport" content="width=device-width, initial - scale=1.0">
-        <title>Frequenciometro 2024</title>
-        <link rel="stylesheet" href="style.css">
-    </head>
-<body>
-<section class="conteudo-principal"></section>
-<h2 class="titulo-principal">Frequenciometro 2024</h2>
-<div class="botoes">
-    <button class="botao">1°Trimestre</button>
-    <button class="botao">2°Trimestre<button>
-    <button class="botao">3°Trimestre</button>
-    <button class="botao">Geral</button>   
-    </button>
-</div></h2></section>   
-</body></title>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequenciômetro Digital - CCM Anchieta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-bg { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-10 font-sans grid-bg">
+
+    <div class="max-w-6xl mx-auto bg-white/90 backdrop-blur-sm shadow-2xl rounded-xl border-4 border-blue-900 overflow-hidden">
+        
+        <header class="p-6 border-b-2 border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4 bg-white">
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl font-black text-blue-900 leading-tight uppercase">Colégio Estadual <br>Cívico Militar Anchieta</h1>
+                <p class="text-blue-600 font-bold tracking-[0.2em] mt-1 text-xl">FREQUENCIÔMETRO</p>
+            </div>
+            <div class="hidden md:block text-right">
+                <span class="text-xs font-bold text-gray-400 uppercase">Cruzeiro do Oeste - PR</span>
+            </div>
+        </header>
+
+        <div id="painel-frequencia" class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <div class="text-center py-10 col-span-3 text-gray-500 animate-pulse">Carregando dados da planilha...</div>
+        </div>
+
+        <footer class="bg-gray-50 p-6 border-t flex flex-wrap justify-center gap-8">
+            <div class="flex items-center gap-2 font-bold text-red-600">
+                <span class="text-3xl">😡</span> <span>ABAIXO DE 89,9%</span>
+            </div>
+            <div class="flex items-center gap-2 font-bold text-yellow-600">
+                <span class="text-3xl">😐</span> <span>DE 90% A 94,9%</span>
+            </div>
+            <div class="flex items-center gap-2 font-bold text-green-600">
+                <span class="text-3xl">😊</span> <span>ACIMA DE 95%</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // COLE O LINK DO SEU GOOGLE SHEETS (CSV) AQUI EMBAIXO
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlfXs3ZlGbJoyVAQxdJd32Kx2ahdPlO0_Kv0pqCsCs6BAJwLOkjqVdA4txmHISIpswwTXfhg6YFSrc/pubhtml';
+
+        async function carregarDados() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const data = await response.text();
+                const linhas = data.split('\n').slice(1); // Pula o cabeçalho
+                
+                const container = document.getElementById('painel-frequencia');
+                container.innerHTML = ''; // Limpa o "Carregando"
+
+                linhas.forEach(linha => {
+                    const [turma, freq] = linha.split(',');
+                    if(!turma) return;
+
+                    const valor = parseFloat(freq);
+                    let cor = "border-red-500 bg-red-50 text-red-700";
+                    let emoji = "😡";
+
+                    if(valor >= 95) {
+                        cor = "border-green-500 bg-green-50 text-green-700";
+                        emoji = "😊";
+                    } else if(valor >= 90) {
+                        cor = "border-yellow-500 bg-yellow-50 text-yellow-700";
+                        emoji = "😐";
+                    }
+
+                    container.innerHTML += `
+                        <div class="flex items-center justify-between border-l-8 ${cor} p-4 rounded-r-lg shadow-md transition-transform hover:scale-105">
+                            <span class="font-bold text-lg uppercase">${turma}</span>
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl font-black">${valor}%</span>
+                                <span class="text-xl">${emoji}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("Erro ao carregar:", error);
+            }
+        }
+
+        carregarDados();
+    </script>
+</body>
 </html>
