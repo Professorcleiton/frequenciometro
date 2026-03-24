@@ -30,8 +30,8 @@
                 <p class="text-gray-400 font-bold text-xs mt-1 uppercase">Cruzeiro do Oeste - PR</p>
             </div>
 
-            <div class="flex flex-col items-center md:items-end mt-6 md:mt-0 gap-2">
-                <button onclick="carregarDados()" class="bg-blue-900 hover:bg-blue-800 text-white text-xs font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all uppercase tracking-widest">
+            <div class="flex flex-col items-center md:items-end mt-6 md:mt-0 gap-2 text-right">
+                <button onclick="carregarDados()" class="bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-bold py-3 px-8 rounded-full shadow-lg active:scale-95 transition-all uppercase tracking-widest">
                     🔄 Atualizar Dados
                 </button>
                 <p id="data-exibicao" class="text-blue-900 font-black text-sm"></p>
@@ -53,37 +53,42 @@
             </div>
         </main>
 
-        <footer class="bg-gray-50 p-6 border-t flex flex-wrap justify-around gap-6 text-xs md:text-sm font-black uppercase">
+        <footer class="bg-gray-50 p-6 border-t flex flex-wrap justify-around gap-6 text-[10px] md:text-xs font-black uppercase">
             <div class="flex items-center gap-3 text-red-600 px-4 py-2 bg-white rounded-lg border border-red-100 shadow-sm">
-                <span class="text-2xl">😡</span> ABAIXO DE 89,9%
+                <span class="text-xl md:text-2xl">😡</span> ABAIXO DE 89,9%
             </div>
             <div class="flex items-center gap-3 text-yellow-600 px-4 py-2 bg-white rounded-lg border border-yellow-100 shadow-sm">
-                <span class="text-2xl">😐</span> 90% A 94,9%
+                <span class="text-xl md:text-2xl">😐</span> 90,0% A 94,9%
             </div>
             <div class="flex items-center gap-3 text-green-700 px-4 py-2 bg-white rounded-lg border border-green-100 shadow-sm">
-                <span class="text-2xl">😊</span> ACIMA DE 95%
+                <span class="text-xl md:text-2xl">😊</span> ACIMA DE 95,0%
             </div>
         </footer>
     </div>
 
     <script>
+        // SEU NOVO LINK DA PLANILHA PUBLICADA
         const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
 
         async function carregarDados() {
             try {
+                // Cache busting para garantir dados sempre novos
                 const response = await fetch(URL_CSV + "&v=" + Date.now());
                 const csvStr = await response.text();
                 
+                // Limpa os containers antes de preencher
                 ['manha1', 'manha2', 'tarde'].forEach(id => {
                     document.getElementById('box-' + id).innerHTML = '';
                 });
 
                 const linhas = csvStr.split(/\r?\n/);
 
+                // Pula a linha de títulos (Linha 1)
                 for (let i = 1; i < linhas.length; i++) {
                     const linha = linhas[i];
                     if (!linha.trim()) continue;
 
+                    // Suporta separador ; ou ,
                     const colunas = linha.includes(';') ? linha.split(';') : linha.split(',');
                     
                     if (colunas.length >= 2) {
@@ -99,26 +104,29 @@
                     }
                 }
 
+                // Dispara animação
                 setTimeout(() => {
                     document.querySelectorAll('.barra-frequencia').forEach(b => {
                         b.style.setProperty('width', b.dataset.width + '%', 'important');
                     });
                 }, 500);
 
-            } catch (err) { console.error("Erro:", err); }
+            } catch (err) { console.error("Erro na leitura da planilha:", err); }
         }
 
         function renderizarTurma(nome, valor, bloco) {
             const box = document.getElementById('box-' + bloco) || document.getElementById('box-tarde');
+            
+            // Regras de Cores
             let cor = valor >= 95 ? 'bg-green-500' : (valor >= 90 ? 'bg-yellow-500' : 'bg-red-500');
             let txt = valor >= 95 ? 'text-green-700' : (valor >= 90 ? 'text-yellow-600' : 'text-red-700');
             let emoji = valor >= 95 ? '😊' : (valor >= 90 ? '😐' : '😡');
 
             box.innerHTML += `
                 <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-md transition-transform hover:scale-105 border-l-8 ${valor >= 95 ? 'border-green-500' : (valor >= 90 ? 'border-yellow-500' : 'border-red-500')}">
-                    <div class="flex justify-between items-center mb-2 font-black text-gray-700 uppercase">
-                        <span class="text-xs tracking-tighter">${nome}</span>
-                        <span class="${txt} text-base">${valor.toFixed(1).replace('.', ',')}% ${emoji}</span>
+                    <div class="flex justify-between items-start mb-2 font-black text-gray-700 uppercase">
+                        <span class="text-[10px] md:text-xs leading-tight pr-2 flex-grow">${nome}</span>
+                        <span class="${txt} text-sm whitespace-nowrap">${valor.toFixed(1).replace('.', ',')}% ${emoji}</span>
                     </div>
                     <div class="w-full bg-gray-100 rounded-full h-4 overflow-hidden border border-gray-100 shadow-inner">
                         <div class="barra-frequencia ${cor} h-full rounded-full" data-width="${valor}"></div>
@@ -126,6 +134,7 @@
                 </div>`;
         }
 
+        // Data atualizada
         document.getElementById('data-exibicao').innerText = new Date().toLocaleDateString('pt-BR', {month: 'long', year: 'numeric'}).toUpperCase();
         window.onload = carregarDados;
     </script>
