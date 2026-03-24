@@ -141,5 +141,7 @@
         document.getElementById('data-atual').innerText = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
         window.onload = carregarPainel;
     </script>
+    // Atualiza os dados automaticamente a cada 30 minutos (1800000ms)
+setInterval(carregarPainel, 1800000);
 </body>
 </html>
