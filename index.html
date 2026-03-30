@@ -6,191 +6,181 @@
     <title>Painel de Frequência - CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .barra-frequencia { transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); width: 0% !important; }
-        body { background-color: #f1f5f9; overflow-x: hidden; }
+        .barra-frequencia { transition: width 1.5s ease-in-out; width: 0% !important; }
+        body { background-color: #f1f5f9; overflow: hidden; }
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card-turma { min-height: 120px; border-left-width: 6px; }
+        .card-turma { min-height: 120px; border-left-width: 8px; }
+        .card-ranking { border-left-width: 12px; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="font-sans min-h-screen flex flex-col">
+<body class="font-sans h-screen flex flex-col">
 
-    <header class="bg-white px-6 py-3 shadow-md border-b-4 border-[#1e3a8a] flex flex-col md:flex-row justify-between items-center shrink-0">
+    <header class="bg-white px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
         <div class="flex items-center gap-4">
-            <img src="nucleo.png" alt="NRE" class="h-8 md:h-12 object-contain opacity-80">
-            <img src="logoA.png" alt="Brasão" class="h-20 md:h-28 object-contain rounded-full shadow-lg border-4 border-[#1e3a8a] bg-white p-0.5">
+            <img src="nucleo.png" alt="NRE" class="h-10 md:h-12 object-contain opacity-80">
+            <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full shadow-lg border-2 border-[#1e3a8a] bg-white p-0.5">
             <div class="hidden lg:block ml-2 text-[#1e3a8a]">
-                <h1 class="text-xl lg:text-3xl font-black uppercase leading-none tracking-tight">Colégio Estadual</h1>
-                <h1 class="text-xl lg:text-3xl font-black uppercase leading-none tracking-tight">Cívico Militar Anchieta</h1>
-                <p class="text-slate-500 font-bold tracking-[0.3em] mt-1 text-base lg:text-lg italic uppercase font-serif">Frequenciômetro Digital</p>
+                <h1 class="text-xl font-black uppercase leading-none">CCM Anchieta</h1>
+                <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic">Frequenciômetro por Séries</p>
             </div>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="text-right">
-                <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-50 px-3 py-1 rounded-full mb-1">Sincronizando...</p>
-                <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
-            </div>
-            <img src="criancas.png" alt="Mascotes" class="h-14 md:h-20 object-contain hidden sm:block drop-shadow-md">
+        <div class="text-right">
+            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-50 px-4 py-1 rounded-full mb-1 tracking-widest">Iniciando...</p>
+            <p class="text-[#1e3a8a] font-bold text-[9px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
         </div>
     </header>
 
-    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center">
-        <div id="status-msg" class="text-center w-full">
-            <p class="text-blue-900 font-bold animate-pulse text-xl">BUSCANDO DADOS ATUALIZADOS...</p>
-        </div>
-    </main>
+    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center"></main>
 
-    <footer class="w-full bg-[#0f172a] text-white p-3 flex flex-wrap justify-center gap-8 text-xs md:text-sm font-bold uppercase tracking-wider shrink-0">
+    <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-8 text-xs font-bold uppercase tracking-wider shrink-0">
         <div class="flex items-center gap-2"><span>✋</span> < 90,00%</div>
         <div class="flex items-center gap-2"><span>👍</span> 90,00 - 94,99%</div>
         <div class="flex items-center gap-2"><span>👏</span> > 95,00%</div>
     </footer>
 
     <script>
-        // O LINK DA SUA NOVA PLANILHA PUBLICADA COMO CSV
         const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
-        
-        let turmasManha = [];
-        let turmasTarde = [];
+        let todasTurmas = [];
         let indexSlide = 0;
         let loopInterval = null;
-        const ITENS_POR_SLIDE = 6; 
 
         async function carregarDados() {
             try {
-                // Força o navegador a buscar dados novos sem usar o cache
-                const response = await fetch(URL_CSV + "&nocache=" + new Date().getTime());
+                const response = await fetch(URL_CSV + "&v=" + new Date().getTime());
                 const csvStr = await response.text();
-                
-                turmasManha = [];
-                turmasTarde = [];
-
+                todasTurmas = [];
                 const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 5);
                 
                 for (let i = 1; i < linhas.length; i++) {
-                    const linha = linhas[i];
-                    let colunas = linha.split(';');
-                    if (colunas.length < 2) colunas = linha.split(',');
+                    const colunas = linhas[i].split(';');
+                    const cols = colunas.length < 2 ? linhas[i].split(',') : colunas;
                     
-                    if (colunas.length >= 2) {
-                        const nome = colunas[0].replace(/"/g, '').trim();
-                        
-                        // LÓGICA DE LIMPEZA DE NÚMERO REFORÇADA:
-                        // Remove tudo que não é número, ponto ou vírgula
-                        let freqLimpa = colunas[1].replace(/[^\d,.]/g, '').trim();
-                        // Transforma vírgula em ponto para o JavaScript entender os decimais
-                        let freqPonto = freqLimpa.replace(',', '.');
-                        
-                        const valor = parseFloat(freqPonto);
-
-                        let bloco = colunas[2] ? colunas[2].replace(/"/g, '').toLowerCase() : 'tarde';
-                        let trofeus = colunas[3] ? parseInt(colunas[3].replace(/"/g, '')) || 0 : 0;
-
-                        if (!isNaN(valor) && nome !== "") {
-                            const obj = { nome, valor, trofeus };
-                            if (bloco.includes('manha')) turmasManha.push(obj);
-                            else turmasTarde.push(obj);
-                        }
+                    if (cols.length >= 2) {
+                        const freq = cols[1].replace(/[^\d,.]/g, '').replace(',', '.');
+                        todasTurmas.push({
+                            nome: cols[0].replace(/"/g, '').trim(),
+                            valor: parseFloat(freq),
+                            bloco: cols[2] ? cols[2].toLowerCase().trim() : 'tarde',
+                            trofeus: cols[3] ? parseInt(cols[3]) || 0 : 0
+                        });
                     }
                 }
-
-                if (turmasManha.length === 0 && turmasTarde.length === 0) {
-                    document.getElementById('status-msg').innerHTML = "<p class='text-red-600 font-black'>NENHUMA TURMA ENCONTRADA NA PLANILHA</p>";
-                } else {
-                    montarSlides();
-                }
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('status-msg').innerHTML = "<p class='text-red-600 font-black'>ERRO AO LER PLANILHA. VERIFIQUE A PUBLICAÇÃO.</p>";
-            }
+                montarSlidesSéries();
+            } catch (err) { console.error(err); }
         }
 
-        function montarSlides() {
+        function filtrarPorAno(ano) {
+            // Busca o número do ano no nome da turma (ex: "6", "1º EM")
+            return todasTurmas.filter(t => t.nome.startsWith(ano));
+        }
+
+        function montarSlidesSéries() {
             const container = document.getElementById('container-slides');
             container.innerHTML = '';
-            indexSlide = 0;
-            if(loopInterval) clearInterval(loopInterval);
-
-            const totalPaginas = Math.ceil(Math.max(turmasManha.length, turmasTarde.length) / ITENS_POR_SLIDE);
-
-            for (let p = 0; p < totalPaginas; p++) {
-                const divSlide = document.createElement('div');
-                divSlide.className = pagina-slide w-full h-full ${p === 0 ? 'active' : ''};
-                
-                divSlide.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-                        <section class="flex flex-col">
-                            <div class="bg-blue-600 text-white text-center py-3 rounded-full font-black text-xl shadow-lg mb-4 uppercase tracking-widest">Turno Manhã</div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                ${turmasManha.slice(p * ITENS_POR_SLIDE, (p + 1) * ITENS_POR_SLIDE).map(t => criarCard(t)).join('')}
-                            </div>
-                        </section>
-                        <section class="flex flex-col">
-                            <div class="bg-blue-900 text-white text-center py-3 rounded-full font-black text-xl shadow-lg mb-4 uppercase tracking-widest">Turno Tarde</div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                ${turmasTarde.slice(p * ITENS_POR_SLIDE, (p + 1) * ITENS_POR_SLIDE).map(t => criarCard(t)).join('')}
-                            </div>
-                        </section>
-                    </div>
-                `;
-                container.appendChild(divSlide);
-            }
             
-            iniciarLoop(totalPaginas);
+            // Definimos as séries que queremos mostrar em ordem
+            const series = ["6", "7", "8", "9", "1", "2", "3"];
+            const nomesSéries = ["6º ANOS", "7º ANOS", "8º ANOS", "9º ANOS", "1º ANOS - EM", "2º ANOS - EM", "3º ANOS - EM"];
+
+            series.forEach((ano, i) => {
+                const turmasDoAno = filtrarPorAno(ano);
+                if (turmasDoAno.length > 0) {
+                    const slide = document.createElement('div');
+                    slide.className = pagina-slide w-full h-full;
+                    slide.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+                            <section>
+                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${nomesSéries[i]} - MANHÃ</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${turmasDoAno.filter(t => t.bloco.includes('manha')).map(t => criarCard(t)).join('')}
+                                </div>
+                            </section>
+                            <section>
+                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${nomesSéries[i]} - TARDE</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${turmasDoAno.filter(t => t.bloco.includes('tarde')).map(t => criarCard(t)).join('')}
+                                </div>
+                            </section>
+                        </div>`;
+                    container.appendChild(slide);
+                }
+            });
+
+            // SLIDE DE RANKING FINAL (O Top 10 do Colégio)
+            const rankingSlide = document.createElement('div');
+            rankingSlide.className = pagina-slide w-full h-full;
+            const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
+            
+            rankingSlide.innerHTML = `
+                <div class="flex flex-col h-full">
+                    <div class="bg-yellow-500 text-blue-900 text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase tracking-[0.3em] border-4 border-yellow-300">
+                        🏆 RANKING GERAL - TOP 10 ANCHIETA 🏆
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${top10.map((t, index) => criarCardRanking(t, index + 1)).join('')}
+                    </div>
+                </div>`;
+            container.appendChild(rankingSlide);
+
+            iniciarLoop();
         }
 
         function criarCard(t) {
-            let corBarra = t.valor >= 95 ? '#10b981' : (t.valor >= 90 ? '#f59e0b' : '#e11d48');
-            let bordaCard = t.valor >= 95 ? 'border-emerald-500' : (t.valor >= 90 ? 'border-amber-400' : 'border-rose-600');
-            let corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
-            let emoji = t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋');
-            let trofeus = '🏆'.repeat(t.trofeus);
-            
-            // FORMATAÇÃO COM 2 CASAS DECIMAIS REAIS
-            let valorFormatado = t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            
-            let bgCard = t.valor >= 95 ? 'bg-emerald-50 shadow-emerald-100' : 'bg-white';
-
+            const corBarra = t.valor >= 95 ? '#10b981' : (t.valor >= 90 ? '#f59e0b' : '#e11d48');
+            const borda = t.valor >= 95 ? 'border-emerald-500' : (t.valor >= 90 ? 'border-amber-400' : 'border-rose-600');
+            const corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
+            const bg = t.valor >= 95 ? 'bg-emerald-50' : 'bg-white';
             return `
-                <div class="p-4 rounded-xl card-turma shadow-md flex flex-col justify-between ${bgCard} ${bordaCard} transition-all duration-500">
+                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between ${bg} ${borda} border-l-8 transition-all">
                     <div class="flex justify-between items-start">
-                        <div class="flex flex-col">
-                            <span class="font-black text-slate-800 text-sm md:text-base xl:text-lg uppercase truncate w-36 md:w-48">${t.nome}</span>
-                            <span class="text-xs mt-1">${trofeus}</span>
-                        </div>
-                        <span class="text-2xl">${emoji}</span>
+                        <span class="font-black text-slate-800 text-sm uppercase truncate w-40">${t.nome}</span>
+                        <span class="text-lg">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                     </div>
-                    <div class="${corTexto} font-black text-3xl md:text-4xl xl:text-5xl my-1">
-                        ${valorFormatado}%
-                    </div>
-                    <div class="w-full bg-slate-100 rounded-full h-3 border border-slate-200 overflow-hidden">
-                        <div class="barra-frequencia h-full rounded-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
+                    <div class="${corTexto} font-black text-3xl my-1">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div class="barra-frequencia h-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
                     </div>
                 </div>`;
         }
 
-        function iniciarLoop(total) {
-            if (total <= 1) {
-                document.getElementById('indicador-pagina').innerText = "PAINEL ÚNICO";
-                return;
-            }
+        function criarCardRanking(t, posicao) {
+            return `
+                <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white card-ranking">
+                    <div class="flex items-center gap-4">
+                        <span class="text-2xl font-black text-yellow-400">${posicao}º</span>
+                        <div class="flex flex-col">
+                            <span class="font-black text-lg uppercase">${t.nome}</span>
+                            <span class="text-xs text-blue-200 uppercase">${t.bloco}</span>
+                        </div>
+                    </div>
+                    <div class="text-3xl font-black text-yellow-400">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                </div>`;
+        }
+
+        function iniciarLoop() {
+            if (loopInterval) clearInterval(loopInterval);
+            const slides = document.querySelectorAll('.pagina-slide');
+            if (slides.length === 0) return;
+            
+            slides[0].classList.add('active');
+            indexSlide = 0;
+            const total = slides.length;
+            
+            document.getElementById('indicador-pagina').innerText = Página 1 de ${total};
+
             loopInterval = setInterval(() => {
-                const slides = document.querySelectorAll('.pagina-slide');
-                if(slides.length === 0) return;
                 slides[indexSlide].classList.remove('active');
                 indexSlide = (indexSlide + 1) % total;
                 slides[indexSlide].classList.add('active');
                 document.getElementById('indicador-pagina').innerText = Página ${indexSlide + 1} de ${total};
-            }, 10000); 
-            document.getElementById('indicador-pagina').innerText = Página 1 de ${total};
+            }, 12000); // 12 segundos por slide para dar tempo de ler o ranking
         }
 
         window.onload = carregarDados;
-        // Atualiza os dados da planilha a cada 2 minutos
-        setInterval(carregarDados, 120000);
+        setInterval(carregarDados, 900000); // Atualiza a cada 15 min
     </script>
 </body>
 </html>
