@@ -3,53 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CCM Anchieta - Frequência</title>
+    <title>Painel de Frequência - CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .barra-frequencia { transition: width 1.5s ease-in-out; width: 0% !important; }
-        body { background-color: #f1f5f9; }
+        .barra-frequencia { transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); width: 0% !important; }
+        body { background-color: #f1f5f9; overflow-x: hidden; }
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card-turma { min-height: 110px; border-left-width: 6px; }
+        .card-turma { min-height: 120px; border-left-width: 6px; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col">
 
-    <header class="bg-white px-4 py-2 shadow-md border-b-4 border-[#1e3a8a] flex flex-col md:flex-row justify-between items-center shrink-0">
-        <div class="flex items-center gap-3">
-            <img src="nucleo.png" alt="NRE" class="h-8 md:h-10 object-contain opacity-80">
-            <img src="logoA.png" alt="Brasão" class="h-14 md:h-20 object-contain rounded-full shadow-md border-2 border-[#1e3a8a] bg-white p-0.5">
-            <div class="hidden sm:block ml-1 text-[#1e3a8a]">
-                <h1 class="text-lg md:text-xl font-black uppercase leading-none">CCM Anchieta</h1>
-                <p class="text-slate-500 font-bold tracking-[0.2em] text-[8px] uppercase italic">Frequência Digital</p>
+    <header class="bg-white px-6 py-3 shadow-md border-b-4 border-[#1e3a8a] flex flex-col md:flex-row justify-between items-center shrink-0">
+        <div class="flex items-center gap-4">
+            <img src="nucleo.png" alt="NRE" class="h-8 md:h-12 object-contain opacity-80">
+            <img src="logoA.png" alt="Brasão" class="h-20 md:h-28 object-contain rounded-full shadow-lg border-4 border-[#1e3a8a] bg-white p-0.5">
+            <div class="hidden lg:block ml-2 text-[#1e3a8a]">
+                <h1 class="text-xl lg:text-3xl font-black uppercase leading-none tracking-tight">Colégio Estadual</h1>
+                <h1 class="text-xl lg:text-3xl font-black uppercase leading-none tracking-tight">Cívico Militar Anchieta</h1>
+                <p class="text-slate-500 font-bold tracking-[0.3em] mt-1 text-base lg:text-lg italic uppercase font-serif">Frequenciômetro Digital</p>
             </div>
         </div>
         <div class="flex items-center gap-4">
             <div class="text-right">
-                <p id="indicador-pagina" class="text-blue-900 font-black text-[9px] uppercase bg-blue-50 px-3 py-1 rounded-full mb-1">Sincronizando...</p>
-                <p class="text-[#1e3a8a] font-bold text-[8px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
+                <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-50 px-3 py-1 rounded-full mb-1">Sincronizando...</p>
+                <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
             </div>
-            <img src="criancas.png" alt="Mascotes" class="h-12 md:h-16 object-contain hidden xs:block">
+            <img src="criancas.png" alt="Mascotes" class="h-14 md:h-20 object-contain hidden sm:block drop-shadow-md">
         </div>
     </header>
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center">
         <div id="status-msg" class="text-center w-full">
-            <p class="text-blue-900 font-bold animate-pulse text-lg uppercase">Aguardando Planilha...</p>
-            <p class="text-gray-400 text-[10px] mt-2 uppercase">Verificando conexão com Google Sheets</p>
+            <p class="text-blue-900 font-bold animate-pulse text-xl">BUSCANDO DADOS ATUALIZADOS...</p>
         </div>
     </main>
 
-    <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-6 text-[9px] md:text-xs font-bold uppercase tracking-wider shrink-0">
-        <div class="flex items-center gap-2"><span>✋</span> < 90%</div>
-        <div class="flex items-center gap-2"><span>👍</span> 90-95%</div>
-        <div class="flex items-center gap-2"><span>👏</span> > 95%</div>
+    <footer class="w-full bg-[#0f172a] text-white p-3 flex flex-wrap justify-center gap-8 text-xs md:text-sm font-bold uppercase tracking-wider shrink-0">
+        <div class="flex items-center gap-2"><span>✋</span> < 90,00%</div>
+        <div class="flex items-center gap-2"><span>👍</span> 90,00 - 94,99%</div>
+        <div class="flex items-center gap-2"><span>👏</span> > 95,00%</div>
     </footer>
 
     <script>
-        // LINK DA PLANILHA (Verifique se é este mesmo)
+        // O LINK DA SUA NOVA PLANILHA PUBLICADA COMO CSV
         const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
         
         let turmasManha = [];
@@ -60,33 +60,33 @@
 
         async function carregarDados() {
             try {
-                // Tenta buscar o arquivo com um código que evita o "engasgo" do navegador
-                const response = await fetch(URL_CSV + "&cache=" + new Date().getTime());
-                if (!response.ok) throw new Error("Erro na conexão");
-                
+                // Força o navegador a buscar dados novos sem usar o cache
+                const response = await fetch(URL_CSV + "&nocache=" + new Date().getTime());
                 const csvStr = await response.text();
                 
-                // Limpa as listas
                 turmasManha = [];
                 turmasTarde = [];
 
-                // Divide por linhas e remove linhas vazias
                 const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 5);
                 
-                // Pula a primeira linha (cabeçalho)
                 for (let i = 1; i < linhas.length; i++) {
                     const linha = linhas[i];
-                    // Tenta os dois tipos de separador (; e ,)
                     let colunas = linha.split(';');
                     if (colunas.length < 2) colunas = linha.split(',');
                     
                     if (colunas.length >= 2) {
                         const nome = colunas[0].replace(/"/g, '').trim();
-                        let freqRaw = colunas[1].replace(/"/g, '').replace('%', '').replace(',', '.').trim();
+                        
+                        // LÓGICA DE LIMPEZA DE NÚMERO REFORÇADA:
+                        // Remove tudo que não é número, ponto ou vírgula
+                        let freqLimpa = colunas[1].replace(/[^\d,.]/g, '').trim();
+                        // Transforma vírgula em ponto para o JavaScript entender os decimais
+                        let freqPonto = freqLimpa.replace(',', '.');
+                        
+                        const valor = parseFloat(freqPonto);
+
                         let bloco = colunas[2] ? colunas[2].replace(/"/g, '').toLowerCase() : 'tarde';
                         let trofeus = colunas[3] ? parseInt(colunas[3].replace(/"/g, '')) || 0 : 0;
-
-                        const valor = parseFloat(freqRaw);
 
                         if (!isNaN(valor) && nome !== "") {
                             const obj = { nome, valor, trofeus };
@@ -97,21 +97,20 @@
                 }
 
                 if (turmasManha.length === 0 && turmasTarde.length === 0) {
-                    document.getElementById('status-msg').innerHTML = "<p class='text-red-600 font-black'>NENHUMA TURMA ENCONTRADA</p><p class='text-[10px] text-gray-500'>Verifique se os dados estão na planilha.</p>";
+                    document.getElementById('status-msg').innerHTML = "<p class='text-red-600 font-black'>NENHUMA TURMA ENCONTRADA NA PLANILHA</p>";
                 } else {
                     montarSlides();
                 }
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('status-msg').innerHTML = "<p class='text-red-600 font-black text-xs uppercase'>ERRO DE SINCRONIZAÇÃO</p><p class='text-[10px] text-gray-500 uppercase'>Verifique se a planilha está 'Publicada na Web'</p>";
+                document.getElementById('status-msg').innerHTML = "<p class='text-red-600 font-black'>ERRO AO LER PLANILHA. VERIFIQUE A PUBLICAÇÃO.</p>";
             }
         }
 
         function montarSlides() {
             const container = document.getElementById('container-slides');
             container.innerHTML = '';
-            container.className = "flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden"; 
             indexSlide = 0;
             if(loopInterval) clearInterval(loopInterval);
 
@@ -119,19 +118,19 @@
 
             for (let p = 0; p < totalPaginas; p++) {
                 const divSlide = document.createElement('div');
-                divSlide.className = `pagina-slide w-full h-full ${p === 0 ? 'active' : ''}`;
+                divSlide.className = pagina-slide w-full h-full ${p === 0 ? 'active' : ''};
                 
                 divSlide.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
                         <section class="flex flex-col">
-                            <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-sm shadow-md mb-4 uppercase tracking-widest">Turno Manhã</div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-blue-600 text-white text-center py-3 rounded-full font-black text-xl shadow-lg mb-4 uppercase tracking-widest">Turno Manhã</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 ${turmasManha.slice(p * ITENS_POR_SLIDE, (p + 1) * ITENS_POR_SLIDE).map(t => criarCard(t)).join('')}
                             </div>
                         </section>
                         <section class="flex flex-col">
-                            <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-sm shadow-md mb-4 uppercase tracking-widest">Turno Tarde</div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-blue-900 text-white text-center py-3 rounded-full font-black text-xl shadow-lg mb-4 uppercase tracking-widest">Turno Tarde</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 ${turmasTarde.slice(p * ITENS_POR_SLIDE, (p + 1) * ITENS_POR_SLIDE).map(t => criarCard(t)).join('')}
                             </div>
                         </section>
@@ -149,21 +148,25 @@
             let corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
             let emoji = t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋');
             let trofeus = '🏆'.repeat(t.trofeus);
+            
+            // FORMATAÇÃO COM 2 CASAS DECIMAIS REAIS
+            let valorFormatado = t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
             let bgCard = t.valor >= 95 ? 'bg-emerald-50 shadow-emerald-100' : 'bg-white';
 
             return `
-                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between ${bgCard} ${bordaCard}">
-                    <div class="flex justify-between items-start leading-none">
-                        <div class="flex flex-col overflow-hidden">
-                            <span class="font-black text-slate-800 text-[11px] md:text-[13px] uppercase truncate w-32 md:w-44">${t.nome}</span>
-                            <span class="text-[9px] mt-1">${trofeus}</span>
+                <div class="p-4 rounded-xl card-turma shadow-md flex flex-col justify-between ${bgCard} ${bordaCard} transition-all duration-500">
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <span class="font-black text-slate-800 text-sm md:text-base xl:text-lg uppercase truncate w-36 md:w-48">${t.nome}</span>
+                            <span class="text-xs mt-1">${trofeus}</span>
                         </div>
-                        <span class="text-lg">${emoji}</span>
+                        <span class="text-2xl">${emoji}</span>
                     </div>
-                    <div class="${corTexto} font-black text-2xl md:text-4xl my-1 tracking-tighter">
-                        ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}%
+                    <div class="${corTexto} font-black text-3xl md:text-4xl xl:text-5xl my-1">
+                        ${valorFormatado}%
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2.5 border border-slate-200 overflow-hidden">
+                    <div class="w-full bg-slate-100 rounded-full h-3 border border-slate-200 overflow-hidden">
                         <div class="barra-frequencia h-full rounded-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
                     </div>
                 </div>`;
@@ -180,12 +183,14 @@
                 slides[indexSlide].classList.remove('active');
                 indexSlide = (indexSlide + 1) % total;
                 slides[indexSlide].classList.add('active');
-                document.getElementById('indicador-pagina').innerText = `Página ${indexSlide + 1} de ${total}`;
+                document.getElementById('indicador-pagina').innerText = Página ${indexSlide + 1} de ${total};
             }, 10000); 
-            document.getElementById('indicador-pagina').innerText = `Página 1 de ${total}`;
+            document.getElementById('indicador-pagina').innerText = Página 1 de ${total};
         }
 
         window.onload = carregarDados;
+        // Atualiza os dados da planilha a cada 2 minutos
+        setInterval(carregarDados, 120000);
     </script>
 </body>
 </html>
