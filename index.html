@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Frequência - CCM Anchieta</title>
+    <title>Painel CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s ease-in-out; width: 0% !important; }
@@ -19,11 +19,11 @@
 
     <header class="bg-white px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
         <div class="flex items-center gap-4">
-            <img src="nucleo.png" alt="NRE" class="h-8 md:h-12 object-contain opacity-80">
-            <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full shadow-lg border-2 border-[#1e3a8a] bg-white p-0.5">
+            <img src="nucleo.png" alt="NRE" class="h-10 md:h-12 object-contain">
+            <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5">
             <div class="hidden lg:block ml-2 text-[#1e3a8a]">
                 <h1 class="text-xl font-black uppercase leading-none">CCM Anchieta</h1>
-                <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic">Frequência por Séries</p>
+                <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic">Frequenciômetro Digital</p>
             </div>
         </div>
         <div class="text-right">
@@ -33,7 +33,9 @@
     </header>
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center text-center">
-        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-xl uppercase">A carregar dados do Google Sheets...</p>
+        <div id="status-msg">
+            <p class="text-blue-900 font-bold animate-pulse text-xl uppercase">Buscando dados da planilha...</p>
+        </div>
     </main>
 
     <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-8 text-[10px] md:text-xs font-bold uppercase tracking-wider shrink-0">
@@ -43,29 +45,34 @@
     </footer>
 
     <script>
+        // ATENÇÃO: Use o link de PUBLICAÇÃO (CSV), não o link de EDIÇÃO
         const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
+        
         let todasTurmas = [];
-        let indexSlide = 0;
         let loopInterval = null;
+        let indexSlide = 0;
 
         async function carregarDados() {
             try {
                 const response = await fetch(URL_CSV + "&nocache=" + new Date().getTime());
-                if (!response.ok) throw new Error("Erro de conexão com a planilha");
                 const csvStr = await response.text();
                 
+                // Se o Google retornar HTML em vez de CSV, o link está errado
+                if(csvStr.includes("<html") || csvStr.includes("<body")) {
+                    throw new Error("Link incorreto. Use o link de 'Publicar na Web' como CSV.");
+                }
+
                 todasTurmas = [];
-                const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 5);
+                const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 2);
                 
                 for (let i = 1; i < linhas.length; i++) {
-                    const linha = linhas[i];
-                    let cols = linha.split(';');
-                    if (cols.length < 2) cols = linha.split(',');
+                    let cols = linhas[i].split(';');
+                    if (cols.length < 2) cols = linhas[i].split(',');
                     
                     if (cols.length >= 2) {
+                        const nome = cols[0].replace(/"/g, '').trim();
                         const freqLimpa = cols[1].replace(/[^\d,.]/g, '').replace(',', '.');
                         const valor = parseFloat(freqLimpa);
-                        const nome = cols[0].replace(/"/g, '').trim();
 
                         if (!isNaN(valor) && nome !== "") {
                             todasTurmas.push({
@@ -79,65 +86,59 @@
                 }
 
                 if (todasTurmas.length > 0) {
-                    montarSlidesSéries();
+                    montarSlides();
                 } else {
-                    document.getElementById('status-msg').innerText = "NENHUMA TURMA ENCONTRADA NA PLANILHA.";
+                    document.getElementById('status-msg').innerHTML = "<p class='text-red-500 font-bold'>DADOS NÃO ENCONTRADOS NAS COLUNAS A e B.</p>";
                 }
-
             } catch (err) {
-                console.error(err);
-                document.getElementById('status-msg').innerText = "ERRO AO ACEDER À PLANILHA. VERIFIQUE A PUBLICAÇÃO.";
+                document.getElementById('status-msg').innerHTML = `<p class='text-red-500 font-bold'>ERRO: ${err.message}</p>`;
             }
         }
 
-        function montarSlidesSéries() {
+        function montarSlides() {
             const container = document.getElementById('container-slides');
             container.innerHTML = '';
             container.className = "flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center";
             
+            // Agrupamento Inteligente
             const grupos = {
                 "6º ANOS": todasTurmas.filter(t => t.nome.includes('6')),
                 "7º ANOS": todasTurmas.filter(t => t.nome.includes('7')),
                 "8º ANOS": todasTurmas.filter(t => t.nome.includes('8')),
                 "9º ANOS": todasTurmas.filter(t => t.nome.includes('9')),
-                "ENSINO MÉDIO": todasTurmas.filter(t => t.nome.includes('1') || t.nome.includes('2') || t.nome.includes('3'))
+                "ENSINO MÉDIO": todasTurmas.filter(t => t.nome.match(/[123]/) && (t.nome.toLowerCase().includes('em') || t.nome.toLowerCase().includes('médio') || t.nome.toLowerCase().includes('ano'))),
+                "OUTRAS TURMAS": todasTurmas.filter(t => !t.nome.match(/[6789123]/))
             };
 
-            // Criar slides para cada grupo que tenha turmas
+            // Gera slides de grupos
             Object.keys(grupos).forEach(titulo => {
-                const turmasNoGrupo = grupos[titulo];
-                if (turmasNoGrupo.length > 0) {
+                const turmas = grupos[titulo];
+                if (turmas.length > 0) {
                     const slide = document.createElement('div');
-                    slide.className = pagina-slide w-full h-full;
+                    slide.className = "pagina-slide w-full h-full";
                     slide.innerHTML = `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
                             <section>
-                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-lg mb-4 shadow-md uppercase">${titulo} - MANHÃ</div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    ${turmasNoGrupo.filter(t => t.bloco.includes('manha')).map(t => criarCard(t)).join('')}
-                                </div>
+                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase">${titulo} - MANHÃ</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${turmas.filter(t => t.bloco.includes('manha')).map(t => criarCard(t)).join('')}</div>
                             </section>
                             <section>
-                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-lg mb-4 shadow-md uppercase">${titulo} - TARDE</div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    ${turmasNoGrupo.filter(t => t.bloco.includes('tarde')).map(t => criarCard(t)).join('')}
-                                </div>
+                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase">${titulo} - TARDE</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${turmas.filter(t => t.bloco.includes('tarde')).map(t => criarCard(t)).join('')}</div>
                             </section>
                         </div>`;
                     container.appendChild(slide);
                 }
             });
 
-            // Slide de Ranking Geral
+            // Slide de Ranking
             const rankingSlide = document.createElement('div');
-            rankingSlide.className = pagina-slide w-full h-full;
+            rankingSlide.className = "pagina-slide w-full h-full";
             const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
             rankingSlide.innerHTML = `
-                <div class="flex flex-col h-full">
-                    <div class="bg-yellow-500 text-blue-900 text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase border-4 border-yellow-300">
-                        🏆 TOP 10 FREQUÊNCIA - GERAL 🏆
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex flex-col h-full items-center">
+                    <div class="bg-yellow-500 text-blue-900 w-full text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase border-4 border-yellow-300">🏆 TOP 10 FREQUÊNCIA 🏆</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                         ${top10.map((t, i) => `
                             <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white">
                                 <div class="flex items-center gap-4">
@@ -158,17 +159,16 @@
             const corBarra = t.valor >= 95 ? '#10b981' : (t.valor >= 90 ? '#f59e0b' : '#e11d48');
             const borda = t.valor >= 95 ? 'border-emerald-500' : (t.valor >= 90 ? 'border-amber-400' : 'border-rose-600');
             const corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
-            const bg = t.valor >= 95 ? 'bg-emerald-50' : 'bg-white';
             return `
-                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between ${bg} ${borda} border-l-8">
-                    <div class="flex justify-between items-start leading-tight">
-                        <div class="flex flex-col">
-                            <span class="font-black text-slate-800 text-[13px] uppercase truncate w-32">${t.nome}</span>
+                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between bg-white ${borda} border-l-8">
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col text-left">
+                            <span class="font-black text-slate-800 text-sm uppercase truncate w-32">${t.nome}</span>
                             <span class="text-[10px]">${'🏆'.repeat(t.trofeus)}</span>
                         </div>
                         <span class="text-lg">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                     </div>
-                    <div class="${corTexto} font-black text-2xl my-1">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                    <div class="${corTexto} font-black text-3xl my-1 text-left">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
                     <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                         <div class="barra-frequencia h-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
                     </div>
@@ -181,17 +181,16 @@
             if (slides.length === 0) return;
             indexSlide = 0;
             slides[0].classList.add('active');
-            document.getElementById('indicador-pagina').innerText = Página 1 de ${slides.length};
+            document.getElementById('indicador-pagina').innerText = `Página 1 de ${slides.length}`;
             loopInterval = setInterval(() => {
                 slides[indexSlide].classList.remove('active');
                 indexSlide = (indexSlide + 1) % slides.length;
                 slides[indexSlide].classList.add('active');
-                document.getElementById('indicador-pagina').innerText = Página ${indexSlide + 1} de ${slides.length};
+                document.getElementById('indicador-pagina').innerText = `Página ${indexSlide + 1} de ${slides.length}`;
             }, 10000); 
         }
 
         window.onload = carregarDados;
-        setInterval(carregarDados, 300000); // Atualiza a cada 5 minutos
     </script>
 </body>
 </html>
