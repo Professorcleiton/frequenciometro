@@ -20,7 +20,7 @@
     <header class="bg-white px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
         <div class="flex items-center gap-4">
             <img src="nucleo.png" alt="NRE" class="h-10 md:h-12 object-contain">
-            <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5">
+            <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5 shadow-md">
             <div class="hidden lg:block ml-2 text-[#1e3a8a]">
                 <h1 class="text-xl font-black uppercase leading-none">CCM Anchieta</h1>
                 <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic">Frequenciômetro Digital</p>
@@ -34,7 +34,7 @@
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center text-center">
         <div id="status-msg">
-            <p class="text-blue-900 font-bold animate-pulse text-xl uppercase">Buscando dados da planilha...</p>
+            <p class="text-blue-900 font-bold animate-pulse text-xl uppercase">A buscar turmas...</p>
         </div>
     </main>
 
@@ -45,23 +45,18 @@
     </footer>
 
     <script>
-        // ATENÇÃO: Use o link de PUBLICAÇÃO (CSV), não o link de EDIÇÃO
         const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
         
         let todasTurmas = [];
         let loopInterval = null;
         let indexSlide = 0;
+        const ITENS_POR_LADO = 6; 
 
         async function carregarDados() {
             try {
                 const response = await fetch(URL_CSV + "&nocache=" + new Date().getTime());
                 const csvStr = await response.text();
                 
-                // Se o Google retornar HTML em vez de CSV, o link está errado
-                if(csvStr.includes("<html") || csvStr.includes("<body")) {
-                    throw new Error("Link incorreto. Use o link de 'Publicar na Web' como CSV.");
-                }
-
                 todasTurmas = [];
                 const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 2);
                 
@@ -85,13 +80,10 @@
                     }
                 }
 
-                if (todasTurmas.length > 0) {
-                    montarSlides();
-                } else {
-                    document.getElementById('status-msg').innerHTML = "<p class='text-red-500 font-bold'>DADOS NÃO ENCONTRADOS NAS COLUNAS A e B.</p>";
-                }
+                if (todasTurmas.length > 0) montarSlides();
+                else document.getElementById('status-msg').innerHTML = "Nenhuma turma encontrada.";
             } catch (err) {
-                document.getElementById('status-msg').innerHTML = `<p class='text-red-500 font-bold'>ERRO: ${err.message}</p>`;
+                document.getElementById('status-msg').innerHTML = `Erro: ${err.message}`;
             }
         }
 
@@ -100,52 +92,60 @@
             container.innerHTML = '';
             container.className = "flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center";
             
-            // Agrupamento Inteligente
-            const grupos = {
-                "6º ANOS": todasTurmas.filter(t => t.nome.includes('6')),
-                "7º ANOS": todasTurmas.filter(t => t.nome.includes('7')),
-                "8º ANOS": todasTurmas.filter(t => t.nome.includes('8')),
-                "9º ANOS": todasTurmas.filter(t => t.nome.includes('9')),
-                "ENSINO MÉDIO": todasTurmas.filter(t => t.nome.match(/[123]/) && (t.nome.toLowerCase().includes('em') || t.nome.toLowerCase().includes('médio') || t.nome.toLowerCase().includes('ano'))),
-                "OUTRAS TURMAS": todasTurmas.filter(t => !t.nome.match(/[6789123]/))
-            };
+            const series = [
+                { id: '6', titulo: '6º ANOS' },
+                { id: '7', titulo: '7º ANOS' },
+                { id: '8', titulo: '8º ANOS' },
+                { id: '9', titulo: '9º ANOS' },
+                { id: '1', titulo: '1º ANOS' },
+                { id: '2', titulo: '2º ANOS' },
+                { id: '3', titulo: '3º ANOS' }
+            ];
 
-            // Gera slides de grupos
-            Object.keys(grupos).forEach(titulo => {
-                const turmas = grupos[titulo];
-                if (turmas.length > 0) {
+            series.forEach(serie => {
+                const turmasDaSerie = todasTurmas.filter(t => t.nome.startsWith(serie.id));
+                const tManha = turmasDaSerie.filter(t => t.bloco.includes('manha'));
+                const tTarde = turmasDaSerie.filter(t => t.bloco.includes('tarde'));
+
+                const maxPaginas = Math.ceil(Math.max(tManha.length, tTarde.length) / ITENS_POR_LADO);
+
+                for (let p = 0; p < maxPaginas; p++) {
                     const slide = document.createElement('div');
                     slide.className = "pagina-slide w-full h-full";
                     slide.innerHTML = `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
                             <section>
-                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase">${titulo} - MANHÃ</div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${turmas.filter(t => t.bloco.includes('manha')).map(t => criarCard(t)).join('')}</div>
+                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${serie.titulo} - MANHÃ</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${tManha.slice(p * ITENS_POR_LADO, (p + 1) * ITENS_POR_LADO).map(t => criarCard(t)).join('')}
+                                </div>
                             </section>
                             <section>
-                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase">${titulo} - TARDE</div>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${turmas.filter(t => t.bloco.includes('tarde')).map(t => criarCard(t)).join('')}</div>
+                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${serie.titulo} - TARDE</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${tTarde.slice(p * ITENS_POR_LADO, (p + 1) * ITENS_POR_LADO).map(t => criarCard(t)).join('')}
+                                </div>
                             </section>
                         </div>`;
                     container.appendChild(slide);
                 }
             });
 
-            // Slide de Ranking
+            // Ranking Geral (Top 10)
             const rankingSlide = document.createElement('div');
             rankingSlide.className = "pagina-slide w-full h-full";
             const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
             rankingSlide.innerHTML = `
                 <div class="flex flex-col h-full items-center">
-                    <div class="bg-yellow-500 text-blue-900 w-full text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase border-4 border-yellow-300">🏆 TOP 10 FREQUÊNCIA 🏆</div>
+                    <div class="bg-yellow-500 text-blue-900 w-full text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase border-4 border-yellow-300">🏆 RANKING GERAL - TOP 10 🏆</div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                         ${top10.map((t, i) => `
-                            <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white">
+                            <div class="p-3 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white">
                                 <div class="flex items-center gap-4">
                                     <span class="text-2xl font-black text-yellow-400">${i+1}º</span>
-                                    <span class="font-black text-lg uppercase">${t.nome}</span>
+                                    <span class="font-black text-sm md:text-base uppercase">${t.nome}</span>
                                 </div>
-                                <div class="text-3xl font-black text-yellow-400">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                                <div class="text-2xl font-black text-yellow-400">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
                             </div>
                         `).join('')}
                     </div>
@@ -161,15 +161,15 @@
             const corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
             return `
                 <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between bg-white ${borda} border-l-8">
-                    <div class="flex justify-between items-start">
+                    <div class="flex justify-between items-start leading-none">
                         <div class="flex flex-col text-left">
-                            <span class="font-black text-slate-800 text-sm uppercase truncate w-32">${t.nome}</span>
-                            <span class="text-[10px]">${'🏆'.repeat(t.trofeus)}</span>
+                            <span class="font-black text-slate-800 text-[11px] md:text-[13px] uppercase truncate w-32 md:w-40">${t.nome}</span>
+                            <span class="text-[10px] mt-1">${'🏆'.repeat(t.trofeus)}</span>
                         </div>
-                        <span class="text-lg">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
+                        <span class="text-base">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                     </div>
-                    <div class="${corTexto} font-black text-3xl my-1 text-left">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
-                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div class="${corTexto} font-black text-2xl my-1 text-left">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-100">
                         <div class="barra-frequencia h-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
                     </div>
                 </div>`;
