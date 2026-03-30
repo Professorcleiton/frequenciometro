@@ -7,18 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); width: 0% !important; }
-        body { background-color: #f1f5f9; } /* Fundo levemente azulado para combinar */
+        body { background-color: #f1f5f9; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col">
 
     <header class="bg-white px-6 py-3 shadow-md border-b-4 border-blue-900 flex flex-col md:flex-row justify-between items-center gap-4">
-        
         <div class="flex items-center gap-4 md:gap-6">
-            <img src="nucleo.png" alt="NRE Umuarama" class="h-8 md:h-12 object-contain opacity-80">
-            <img src="logoA.png" alt="Brasão CCM Anchieta" class="h-20 md:h-28 object-contain rounded-full shadow-lg border-4 border-blue-900 bg-white p-0.5">
-            
+            <img src="nucleo.jpg" alt="NRE Umuarama" class="h-8 md:h-12 object-contain opacity-80">
+            <img src="logoA.jpg" alt="Brasão CCM Anchieta" class="h-20 md:h-28 object-contain rounded-full shadow-lg border-4 border-blue-900 bg-white p-0.5">
             <div class="hidden lg:block md:ml-2">
                 <h1 class="text-xl lg:text-3xl font-black text-blue-900 uppercase leading-none tracking-tight">Colégio Estadual</h1>
                 <h1 class="text-xl lg:text-3xl font-black text-blue-900 uppercase leading-none tracking-tight">Cívico Militar Anchieta</h1>
@@ -53,14 +51,13 @@
                 </div>
                 <div id="box-tarde" class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"></div>
             </section>
-
         </div>
     </main>
 
     <footer class="w-full bg-blue-950 text-white p-3 flex flex-wrap justify-center gap-6 md:gap-12 text-xs md:text-sm font-bold uppercase tracking-wider">
-        <div class="flex items-center gap-2"><span class="text-xl">✋</span> < 90%</div>
-        <div class="flex items-center gap-2"><span class="text-xl">👍</span> 90-94,9%</div>
-        <div class="flex items-center gap-2"><span class="text-xl">👏</span> > 95%</div>
+        <div class="flex items-center gap-2"><span class="text-xl">✋</span> < 90,00%</div>
+        <div class="flex items-center gap-2"><span class="text-xl">👍</span> 90,00-94,99%</div>
+        <div class="flex items-center gap-2"><span class="text-xl">👏</span> > 95,00%</div>
     </footer>
 
     <script>
@@ -80,7 +77,9 @@
                     const linha = linhas[i];
                     if (!linha.trim()) continue;
 
-                    const colunas = linha.includes(';') ? linha.split(';') : linha.split(',');
+                    // Suporte a separador ; ou ,
+                    let colunas = linha.split(';');
+                    if (colunas.length < 2) colunas = linha.split(',');
                     
                     if (colunas.length >= 2) {
                         const nomeTurma = colunas[0].replace(/"/g, '').trim();
@@ -104,25 +103,24 @@
 
                 setTimeout(() => {
                     document.querySelectorAll('.barra-frequencia').forEach(b => {
-                        b.style.setProperty('width', b.dataset.width + '%', 'important');
+                        b.style.setProperty('width', (b.dataset.width > 100 ? 100 : b.dataset.width) + '%', 'important');
                     });
                 }, 300);
 
-            } catch (err) { console.error("Erro:", err); }
+            } catch (err) { console.error("Erro no carregamento:", err); }
         }
 
         function renderizarTurma(nome, valor, bloco, trofeus) {
             const box = document.getElementById('box-' + bloco);
             if (!box) return;
             
-            // Cores das Barras de Progresso
             let corBarra = valor >= 95 ? 'bg-emerald-500' : (valor >= 90 ? 'bg-amber-400' : 'bg-rose-600');
             let corTexto = valor >= 95 ? 'text-emerald-700' : (valor >= 90 ? 'text-amber-600' : 'text-rose-700');
             let emoji = valor >= 95 ? '👏' : (valor >= 90 ? '👍' : '✋');
             
-            let valorFormatado = Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            // AJUSTE: Duas casas decimais garantidas
+            let valorFormatado = Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             
-            // Cartão Destaque (Borda dourada para meta batida)
             let classeCard = valor >= 95 
                 ? 'border-4 border-yellow-400 bg-amber-50 shadow-lg scale-[1.03]' 
                 : 'border border-slate-200 bg-white shadow-md';
@@ -132,17 +130,17 @@
             box.innerHTML += `
                 <div class="p-4 rounded-xl flex flex-col justify-between transition-all duration-300 ${classeCard}">
                     <div class="flex justify-between items-start mb-1">
-                        <div class="flex flex-col">
-                            <span class="font-black text-slate-800 text-sm md:text-base xl:text-lg uppercase tracking-tighter truncate pr-2">${nome}</span>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="font-black text-slate-800 text-sm md:text-base xl:text-lg uppercase tracking-tighter truncate pr-1">${nome}</span>
                             <span class="text-xs mt-1 drop-shadow-sm">${stringTrofeus}</span>
                         </div>
-                        <span class="text-xl">${emoji}</span>
+                        <span class="text-xl flex-shrink-0 ml-1">${emoji}</span>
                     </div>
-                    <div class="${corTexto} font-black text-2xl md:text-3xl xl:text-4xl my-1">
+                    <div class="${corTexto} font-black text-2xl md:text-3xl xl:text-4xl my-1 whitespace-nowrap">
                         ${valorFormatado}%
                     </div>
-                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200 shadow-inner">
-                        <div class="barra-frequencia ${corBarra} h-full rounded-full" data-width="${valor > 100 ? 100 : valor}"></div>
+                    <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+                        <div class="barra-frequencia ${corBarra} h-full rounded-full" data-width="${valor}"></div>
                     </div>
                 </div>`;
         }
