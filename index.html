@@ -11,8 +11,7 @@
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card-turma { min-height: 120px; border-left-width: 8px; }
-        .card-ranking { border-left-width: 12px; }
+        .card-turma { min-height: 110px; border-left-width: 8px; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -20,22 +19,24 @@
 
     <header class="bg-white px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
         <div class="flex items-center gap-4">
-            <img src="nucleo.png" alt="NRE" class="h-10 md:h-12 object-contain opacity-80">
+            <img src="nucleo.png" alt="NRE" class="h-8 md:h-12 object-contain opacity-80">
             <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full shadow-lg border-2 border-[#1e3a8a] bg-white p-0.5">
             <div class="hidden lg:block ml-2 text-[#1e3a8a]">
                 <h1 class="text-xl font-black uppercase leading-none">CCM Anchieta</h1>
-                <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic">Frequenciômetro por Séries</p>
+                <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic">Frequência por Séries</p>
             </div>
         </div>
         <div class="text-right">
-            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-50 px-4 py-1 rounded-full mb-1 tracking-widest">Iniciando...</p>
+            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-50 px-4 py-1 rounded-full mb-1 tracking-widest">Sincronizando...</p>
             <p class="text-[#1e3a8a] font-bold text-[9px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
         </div>
     </header>
 
-    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center"></main>
+    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center text-center">
+        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-xl uppercase">A carregar dados do Google Sheets...</p>
+    </main>
 
-    <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-8 text-xs font-bold uppercase tracking-wider shrink-0">
+    <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-8 text-[10px] md:text-xs font-bold uppercase tracking-wider shrink-0">
         <div class="flex items-center gap-2"><span>✋</span> < 90,00%</div>
         <div class="flex items-center gap-2"><span>👍</span> 90,00 - 94,99%</div>
         <div class="flex items-center gap-2"><span>👏</span> > 95,00%</div>
@@ -49,59 +50,77 @@
 
         async function carregarDados() {
             try {
-                const response = await fetch(URL_CSV + "&v=" + new Date().getTime());
+                const response = await fetch(URL_CSV + "&nocache=" + new Date().getTime());
+                if (!response.ok) throw new Error("Erro de conexão com a planilha");
                 const csvStr = await response.text();
+                
                 todasTurmas = [];
                 const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 5);
                 
                 for (let i = 1; i < linhas.length; i++) {
-                    const colunas = linhas[i].split(';');
-                    const cols = colunas.length < 2 ? linhas[i].split(',') : colunas;
+                    const linha = linhas[i];
+                    let cols = linha.split(';');
+                    if (cols.length < 2) cols = linha.split(',');
                     
                     if (cols.length >= 2) {
-                        const freq = cols[1].replace(/[^\d,.]/g, '').replace(',', '.');
-                        todasTurmas.push({
-                            nome: cols[0].replace(/"/g, '').trim(),
-                            valor: parseFloat(freq),
-                            bloco: cols[2] ? cols[2].toLowerCase().trim() : 'tarde',
-                            trofeus: cols[3] ? parseInt(cols[3]) || 0 : 0
-                        });
+                        const freqLimpa = cols[1].replace(/[^\d,.]/g, '').replace(',', '.');
+                        const valor = parseFloat(freqLimpa);
+                        const nome = cols[0].replace(/"/g, '').trim();
+
+                        if (!isNaN(valor) && nome !== "") {
+                            todasTurmas.push({
+                                nome: nome,
+                                valor: valor,
+                                bloco: cols[2] ? cols[2].toLowerCase().trim() : 'tarde',
+                                trofeus: cols[3] ? parseInt(cols[3]) || 0 : 0
+                            });
+                        }
                     }
                 }
-                montarSlidesSéries();
-            } catch (err) { console.error(err); }
-        }
 
-        function filtrarPorAno(ano) {
-            // Busca o número do ano no nome da turma (ex: "6", "1º EM")
-            return todasTurmas.filter(t => t.nome.startsWith(ano));
+                if (todasTurmas.length > 0) {
+                    montarSlidesSéries();
+                } else {
+                    document.getElementById('status-msg').innerText = "NENHUMA TURMA ENCONTRADA NA PLANILHA.";
+                }
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('status-msg').innerText = "ERRO AO ACEDER À PLANILHA. VERIFIQUE A PUBLICAÇÃO.";
+            }
         }
 
         function montarSlidesSéries() {
             const container = document.getElementById('container-slides');
             container.innerHTML = '';
+            container.className = "flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center";
             
-            // Definimos as séries que queremos mostrar em ordem
-            const series = ["6", "7", "8", "9", "1", "2", "3"];
-            const nomesSéries = ["6º ANOS", "7º ANOS", "8º ANOS", "9º ANOS", "1º ANOS - EM", "2º ANOS - EM", "3º ANOS - EM"];
+            const grupos = {
+                "6º ANOS": todasTurmas.filter(t => t.nome.includes('6')),
+                "7º ANOS": todasTurmas.filter(t => t.nome.includes('7')),
+                "8º ANOS": todasTurmas.filter(t => t.nome.includes('8')),
+                "9º ANOS": todasTurmas.filter(t => t.nome.includes('9')),
+                "ENSINO MÉDIO": todasTurmas.filter(t => t.nome.includes('1') || t.nome.includes('2') || t.nome.includes('3'))
+            };
 
-            series.forEach((ano, i) => {
-                const turmasDoAno = filtrarPorAno(ano);
-                if (turmasDoAno.length > 0) {
+            // Criar slides para cada grupo que tenha turmas
+            Object.keys(grupos).forEach(titulo => {
+                const turmasNoGrupo = grupos[titulo];
+                if (turmasNoGrupo.length > 0) {
                     const slide = document.createElement('div');
                     slide.className = pagina-slide w-full h-full;
                     slide.innerHTML = `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
                             <section>
-                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${nomesSéries[i]} - MANHÃ</div>
+                                <div class="bg-blue-600 text-white text-center py-2 rounded-full font-black text-lg mb-4 shadow-md uppercase">${titulo} - MANHÃ</div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    ${turmasDoAno.filter(t => t.bloco.includes('manha')).map(t => criarCard(t)).join('')}
+                                    ${turmasNoGrupo.filter(t => t.bloco.includes('manha')).map(t => criarCard(t)).join('')}
                                 </div>
                             </section>
                             <section>
-                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${nomesSéries[i]} - TARDE</div>
+                                <div class="bg-blue-900 text-white text-center py-2 rounded-full font-black text-lg mb-4 shadow-md uppercase">${titulo} - TARDE</div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    ${turmasDoAno.filter(t => t.bloco.includes('tarde')).map(t => criarCard(t)).join('')}
+                                    ${turmasNoGrupo.filter(t => t.bloco.includes('tarde')).map(t => criarCard(t)).join('')}
                                 </div>
                             </section>
                         </div>`;
@@ -109,18 +128,25 @@
                 }
             });
 
-            // SLIDE DE RANKING FINAL (O Top 10 do Colégio)
+            // Slide de Ranking Geral
             const rankingSlide = document.createElement('div');
             rankingSlide.className = pagina-slide w-full h-full;
             const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
-            
             rankingSlide.innerHTML = `
                 <div class="flex flex-col h-full">
-                    <div class="bg-yellow-500 text-blue-900 text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase tracking-[0.3em] border-4 border-yellow-300">
-                        🏆 RANKING GERAL - TOP 10 ANCHIETA 🏆
+                    <div class="bg-yellow-500 text-blue-900 text-center py-3 rounded-full font-black text-2xl mb-6 shadow-xl uppercase border-4 border-yellow-300">
+                        🏆 TOP 10 FREQUÊNCIA - GERAL 🏆
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${top10.map((t, index) => criarCardRanking(t, index + 1)).join('')}
+                        ${top10.map((t, i) => `
+                            <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white">
+                                <div class="flex items-center gap-4">
+                                    <span class="text-2xl font-black text-yellow-400">${i+1}º</span>
+                                    <span class="font-black text-lg uppercase">${t.nome}</span>
+                                </div>
+                                <div class="text-3xl font-black text-yellow-400">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>`;
             container.appendChild(rankingSlide);
@@ -134,29 +160,18 @@
             const corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
             const bg = t.valor >= 95 ? 'bg-emerald-50' : 'bg-white';
             return `
-                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between ${bg} ${borda} border-l-8 transition-all">
-                    <div class="flex justify-between items-start">
-                        <span class="font-black text-slate-800 text-sm uppercase truncate w-40">${t.nome}</span>
+                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between ${bg} ${borda} border-l-8">
+                    <div class="flex justify-between items-start leading-tight">
+                        <div class="flex flex-col">
+                            <span class="font-black text-slate-800 text-[13px] uppercase truncate w-32">${t.nome}</span>
+                            <span class="text-[10px]">${'🏆'.repeat(t.trofeus)}</span>
+                        </div>
                         <span class="text-lg">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                     </div>
-                    <div class="${corTexto} font-black text-3xl my-1">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                    <div class="${corTexto} font-black text-2xl my-1">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
                     <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                         <div class="barra-frequencia h-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
                     </div>
-                </div>`;
-        }
-
-        function criarCardRanking(t, posicao) {
-            return `
-                <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white card-ranking">
-                    <div class="flex items-center gap-4">
-                        <span class="text-2xl font-black text-yellow-400">${posicao}º</span>
-                        <div class="flex flex-col">
-                            <span class="font-black text-lg uppercase">${t.nome}</span>
-                            <span class="text-xs text-blue-200 uppercase">${t.bloco}</span>
-                        </div>
-                    </div>
-                    <div class="text-3xl font-black text-yellow-400">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
                 </div>`;
         }
 
@@ -164,23 +179,19 @@
             if (loopInterval) clearInterval(loopInterval);
             const slides = document.querySelectorAll('.pagina-slide');
             if (slides.length === 0) return;
-            
-            slides[0].classList.add('active');
             indexSlide = 0;
-            const total = slides.length;
-            
-            document.getElementById('indicador-pagina').innerText = Página 1 de ${total};
-
+            slides[0].classList.add('active');
+            document.getElementById('indicador-pagina').innerText = Página 1 de ${slides.length};
             loopInterval = setInterval(() => {
                 slides[indexSlide].classList.remove('active');
-                indexSlide = (indexSlide + 1) % total;
+                indexSlide = (indexSlide + 1) % slides.length;
                 slides[indexSlide].classList.add('active');
-                document.getElementById('indicador-pagina').innerText = Página ${indexSlide + 1} de ${total};
-            }, 12000); // 12 segundos por slide para dar tempo de ler o ranking
+                document.getElementById('indicador-pagina').innerText = Página ${indexSlide + 1} de ${slides.length};
+            }, 10000); 
         }
 
         window.onload = carregarDados;
-        setInterval(carregarDados, 900000); // Atualiza a cada 15 min
+        setInterval(carregarDados, 300000); // Atualiza a cada 5 minutos
     </script>
 </body>
 </html>
