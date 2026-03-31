@@ -3,52 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frequência CCM Anchieta</title>
+    <title>Painel CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s ease-in-out; width: 0% !important; }
-        body { background-color: #f1f5f9; }
-        .card-turma { min-height: 110px; border-left-width: 8px; }
-        /* Permite rolar a página se houver muitas turmas */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-thumb { background: #1e3a8a; border-radius: 10px; }
+        body { background-color: #f1f5f9; overflow: hidden; }
+        .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
+        .pagina-slide.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card-turma { min-height: 120px; border-left-width: 8px; }
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="font-sans min-h-screen flex flex-col">
+<body class="font-sans h-screen flex flex-col">
 
-    <header class="bg-white px-6 py-4 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
+    <header class="bg-white px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
         <div class="flex items-center gap-4">
-            <img src="nucleo.png" alt="NRE" class="h-10 md:h-12 object-contain opacity-80">
-            <img src="logoA.png" alt="Brasão" class="h-16 md:h-24 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5">
+            <img src="nucleo.png" alt="NRE" class="h-10 md:h-12 object-contain">
+            <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5">
             <div class="text-[#1e3a8a]">
-                <h1 class="text-xl md:text-3xl font-black uppercase leading-none">CCM Anchieta</h1>
-                <p class="text-slate-500 font-bold tracking-widest text-[10px] uppercase italic mt-1">Frequenciômetro Digital</p>
+                <h1 class="text-xl md:text-3xl font-black uppercase leading-none tracking-tighter">CCM Anchieta</h1>
+                <p class="text-slate-500 font-bold tracking-widest text-[10px] md:text-[12px] uppercase italic mt-1">Frequenciômetro Digital</p>
             </div>
         </div>
-        <div class="text-right hidden sm:block">
-            <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
-            <img src="criancas.png" alt="Mascotes" class="h-12 md:h-20 object-contain mt-1">
+        <div class="text-right flex items-center gap-4">
+            <div>
+                <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-50 px-4 py-1 rounded-full mb-1">Sincronizando...</p>
+                <p class="text-[#1e3a8a] font-bold text-[9px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
+            </div>
+            <img src="criancas.png" alt="Mascotes" class="h-14 md:h-20 object-contain">
         </div>
     </header>
 
-    <main class="flex-grow p-4 md:p-6 w-full max-w-[1600px] mx-auto">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            <section>
-                <div class="bg-blue-600 text-white text-center py-3 rounded-full font-black text-xl shadow-lg mb-6 uppercase">Turno Manhã</div>
-                <div id="box-manha" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    </div>
-            </section>
+    <main id="container-slides" class="flex-grow p-6 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center"></main>
 
-            <section>
-                <div class="bg-blue-900 text-white text-center py-3 rounded-full font-black text-xl shadow-lg mb-6 uppercase">Turno Tarde</div>
-                <div id="box-tarde" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    </div>
-            </section>
-        </div>
-    </main>
-
-    <footer class="bg-[#0f172a] text-white p-3 flex justify-center gap-8 text-xs font-bold uppercase sticky bottom-0">
+    <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-center gap-8 text-xs font-bold uppercase tracking-wider shrink-0">
         <div class="flex items-center gap-2"><span>✋</span> < 90,00%</div>
         <div class="flex items-center gap-2"><span>👍</span> 90,00 - 94,99%</div>
         <div class="flex items-center gap-2"><span>👏</span> > 95,00%</div>
@@ -56,73 +45,131 @@
 
     <script>
         const URL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=0&single=true&output=csv';
+        
+        let todasTurmas = [];
+        let indexSlide = 0;
+        let loopInterval = null;
+        const TURMAS_POR_PAGINA = 12; // Mostra 12 turmas por slide para ficar grande no projetor
 
         async function carregarDados() {
             try {
                 const response = await fetch(URL_CSV + "&nocache=" + new Date().getTime());
                 const csvStr = await response.text();
-                
-                const boxManha = document.getElementById('box-manha');
-                const boxTarde = document.getElementById('box-tarde');
-                boxManha.innerHTML = '';
-                boxTarde.innerHTML = '';
-
+                todasTurmas = [];
                 const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 5);
-
+                
                 for (let i = 1; i < linhas.length; i++) {
                     let cols = linhas[i].split(';');
                     if (cols.length < 2) cols = linhas[i].split(',');
-                    
                     if (cols.length >= 2) {
                         const nome = cols[0].replace(/"/g, '').trim();
-                        const freqLimpa = cols[1].replace(/[^\d,.]/g, '').replace(',', '.');
-                        const valor = parseFloat(freqLimpa);
-                        const bloco = cols[2] ? cols[2].toLowerCase() : 'tarde';
-                        const trofeus = cols[3] ? parseInt(cols[3]) || 0 : 0;
-
-                        if (!isNaN(valor) && nome !== "") {
-                            const card = criarCard(nome, valor, trofeus);
-                            if (bloco.includes('manha')) boxManha.innerHTML += card;
-                            else boxTarde.innerHTML += card;
+                        const freq = parseFloat(cols[1].replace(/[^\d,.]/g, '').replace(',', '.'));
+                        if (!isNaN(freq)) {
+                            todasTurmas.push({
+                                nome, valor: freq,
+                                bloco: cols[2] ? cols[2].toLowerCase().trim() : 'tarde',
+                                trofeus: cols[3] ? parseInt(cols[3]) || 0 : 0
+                            });
                         }
                     }
                 }
-
-                // Anima as barras após carregar
-                setTimeout(() => {
-                    document.querySelectorAll('.barra-frequencia').forEach(b => {
-                        b.style.setProperty('width', b.dataset.width + '%', 'important');
-                    });
-                }, 500);
-
-            } catch (err) { console.error("Erro ao carregar:", err); }
+                montarCicloDeSlides();
+            } catch (err) { console.error(err); }
         }
 
-        function criarCard(nome, valor, trofeus) {
-            const corBarra = valor >= 95 ? '#10b981' : (valor >= 90 ? '#f59e0b' : '#e11d48');
-            const borda = valor >= 95 ? 'border-emerald-500' : (valor >= 90 ? 'border-amber-400' : 'border-rose-600');
-            const corTexto = valor >= 95 ? 'text-emerald-700' : (valor >= 90 ? 'text-amber-600' : 'text-rose-700');
-            const emoji = valor >= 95 ? '👏' : (valor >= 90 ? '👍' : '✋');
-            
-            return `
-                <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between bg-white ${borda} border-l-8">
-                    <div class="flex justify-between items-start leading-none">
-                        <div class="text-left">
-                            <p class="font-black text-slate-800 text-[13px] uppercase truncate w-32 md:w-40">${nome}</p>
-                            <p class="text-[10px] mt-1">${'🏆'.repeat(trofeus)}</p>
-                        </div>
-                        <span class="text-lg">${emoji}</span>
+        function montarCicloDeSlides() {
+            const container = document.getElementById('container-slides');
+            container.innerHTML = '';
+
+            const turmasManha = todasTurmas.filter(t => t.bloco.includes('manha'));
+            const turmasTarde = todasTurmas.filter(t => t.bloco.includes('tarde'));
+
+            // 1. GERAR SLIDES DA MANHÃ
+            gerarSlidesPorTurno(turmasManha, "TURNO MANHÃ", "bg-blue-600", container);
+
+            // 2. GERAR SLIDES DA TARDE
+            gerarSlidesPorTurno(turmasTarde, "TURNO TARDE", "bg-blue-900", container);
+
+            // 3. GERAR SLIDE DE RANKING (TOP 10)
+            const rankingSlide = document.createElement('div');
+            rankingSlide.className = "pagina-slide w-full h-full";
+            const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
+            rankingSlide.innerHTML = `
+                <div class="flex flex-col h-full items-center">
+                    <div class="bg-yellow-500 text-blue-900 w-full text-center py-4 rounded-full font-black text-3xl mb-8 shadow-xl uppercase border-4 border-yellow-300">🏆 RANKING GERAL - TOP 10 ANCHIETA 🏆</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                        ${top10.map((t, i) => `
+                            <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white">
+                                <div class="flex items-center gap-4">
+                                    <span class="text-3xl font-black text-yellow-400">${i+1}º</span>
+                                    <span class="font-black text-xl uppercase">${t.nome}</span>
+                                </div>
+                                <div class="text-3xl font-black text-yellow-400">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</div>
+                            </div>
+                        `).join('')}
                     </div>
-                    <p class="${corTexto} font-black text-2xl my-1 text-left">${valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</p>
-                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-100">
-                        <div class="barra-frequencia h-full" style="background-color: ${corBarra};" data-width="${valor > 100 ? 100 : valor}"></div>
+                </div>`;
+            container.appendChild(rankingSlide);
+
+            iniciarLoop();
+        }
+
+        function gerarSlidesPorTurno(lista, titulo, corBg, container) {
+            const totalPaginas = Math.ceil(lista.length / TURMAS_POR_PAGINA);
+            for (let p = 0; p < totalPaginas; p++) {
+                const slide = document.createElement('div');
+                slide.className = "pagina-slide w-full h-full";
+                const turmasNaPagina = lista.slice(p * TURMAS_POR_PAGINA, (p + 1) * TURMAS_POR_PAGINA);
+                
+                slide.innerHTML = `
+                    <div class="flex flex-col h-full">
+                        <div class="${corBg} text-white text-center py-3 rounded-full font-black text-2xl mb-8 shadow-lg uppercase tracking-widest">${titulo} ${totalPaginas > 1 ? - Pág ${p+1} : ''}</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            ${turmasNaPagina.map(t => criarCard(t)).join('')}
+                        </div>
+                    </div>`;
+                container.appendChild(slide);
+            }
+        }
+
+        function criarCard(t) {
+            const corBarra = t.valor >= 95 ? '#10b981' : (t.valor >= 90 ? '#f59e0b' : '#e11d48');
+            const borda = t.valor >= 95 ? 'border-emerald-500' : (t.valor >= 90 ? 'border-amber-400' : 'border-rose-600');
+            const corTexto = t.valor >= 95 ? 'text-emerald-700' : (t.valor >= 90 ? 'text-amber-600' : 'text-rose-700');
+            return `
+                <div class="p-4 rounded-xl card-turma shadow-md flex flex-col justify-between bg-white ${borda} border-l-8 text-left">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-black text-slate-800 text-sm uppercase truncate w-32">${t.nome}</p>
+                            <p class="text-[10px] mt-1">${'🏆'.repeat(t.trofeus)}</p>
+                        </div>
+                        <span class="text-xl">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
+                    </div>
+                    <p class="${corTexto} font-black text-3xl my-2">${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}%</p>
+                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div class="barra-frequencia h-full" style="background-color: ${corBarra}; width: ${t.valor > 100 ? 100 : t.valor}% !important;"></div>
                     </div>
                 </div>`;
         }
 
+        function iniciarLoop() {
+            if (loopInterval) clearInterval(loopInterval);
+            const slides = document.querySelectorAll('.pagina-slide');
+            if (slides.length === 0) return;
+            indexSlide = 0;
+            slides[0].classList.add('active');
+            document.getElementById('indicador-pagina').innerText = Slide 1 de ${slides.length};
+            
+            loopInterval = setInterval(() => {
+                slides[indexSlide].classList.remove('active');
+                indexSlide = (indexSlide + 1) % slides.length;
+                slides[indexSlide].classList.add('active');
+                document.getElementById('indicador-pagina').innerText = Slide ${indexSlide + 1} de ${slides.length};
+            }, 12000); // 12 segundos por flashcard
+        }
+
         window.onload = carregarDados;
-        // Atualiza a cada 5 minutos
-        setInterval(carregarDados, 300000);
+        setInterval(carregarDados, 600000); // Atualiza dados a cada 10 min
     </script>
 </body>
 </html>
