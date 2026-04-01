@@ -7,17 +7,46 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s ease-in-out; }
-        body { background-color: #f1f5f9; overflow: hidden; }
+        
+        /* Marca d'água do Brasão no Fundo */
+        body { 
+            background-color: #f1f5f9; 
+            overflow: hidden; 
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 650px; 
+            height: 650px;
+            background-image: url('logoA.jpg');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            opacity: 0.08; /* Bem suave para não atrapalhar a leitura */
+            z-index: -1;
+        }
+
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card-turma { min-height: 110px; border-left-width: 8px; }
+        
+        /* Cards com leve transparência para ver o fundo */
+        .card-turma { 
+            min-height: 115px; 
+            border-left-width: 8px; 
+            background-color: rgba(255, 255, 255, 0.92); 
+            backdrop-filter: blur(2px);
+        }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="font-sans h-screen flex flex-col">
 
-    <header class="bg-white px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0">
+    <header class="bg-white/95 px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0 z-10">
         <div class="flex items-center gap-4">
             <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5">
             <div class="ml-2 text-[#1e3a8a]">
@@ -31,61 +60,62 @@
         </div>
     </header>
 
-    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center text-center">
+    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1600px] mx-auto overflow-hidden flex flex-col justify-center text-center z-10">
         <p id="msg-espera" class="text-blue-900 font-bold animate-pulse text-xl">AGUARDANDO DADOS...</p>
     </main>
 
-    <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-8 text-[10px] md:text-xs font-bold uppercase tracking-wider shrink-0">
+    <footer class="w-full bg-[#0f172a] text-white p-2 flex justify-center gap-8 text-[10px] md:text-xs font-bold uppercase tracking-wider shrink-0 z-10">
         <div class="flex items-center gap-2"><span>✋</span> < 90%</div>
         <div class="flex items-center gap-2"><span>👍</span> 90-95%</div>
         <div class="flex items-center gap-2"><span>👏</span> > 95%</div>
     </footer>
 
     <script>
-        // Usei o seu link direto e limpo
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
         
         let todasTurmas = [];
         let indexSlide = 0;
         let loopInterval = null;
 
+        // Função para definir o ícone da série
+        function obterIconeSerie(nome) {
+            if (nome.startsWith('6')) return '✏️'; // 6º Ano: Lápis
+            if (nome.startsWith('7')) return '📖'; // 7º Ano: Livro
+            if (nome.startsWith('8')) return '🔬'; // 8º Ano: Ciência
+            if (nome.startsWith('9')) return '🎓'; // 9º Ano: Formatura
+            if (nome.startsWith('1')) return '💻'; // 1º Médio: Tech
+            if (nome.startsWith('2')) return '🧪'; // 2º Médio: Química
+            if (nome.startsWith('3')) return '🚀'; // 3º Médio: Rumo ao futuro
+            return '🏫'; // Padrão
+        }
+
         async function carregarDados() {
             try {
                 const response = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
                 const texto = await response.text();
-                
-                // Quebra por linha e remove as vazias
                 const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 3);
                 todasTurmas = [];
                 
-                // Começa do 1 para pular o cabeçalho
                 for (let i = 1; i < linhas.length; i++) {
                     let colunas = linhas[i].split(",");
                     if (colunas.length < 3) colunas = linhas[i].split(";");
 
                     if (colunas.length >= 2) {
                         const nome = colunas[0].replace(/"/g, "").trim();
-                        const valorTexto = colunas[1].replace(/"/g, "").replace(",", ".");
-                        const freq = parseFloat(valorTexto);
-                        
-                        // Normaliza o bloco (tira acentos)
+                        let valorBruto = colunas[1].replace(/"/g, "").trim();
+                        let valorLimpo = valorBruto.replace(",", ".");
+                        const freq = parseFloat(valorLimpo);
                         const turno = colunas[2] ? colunas[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
-                        const trof = colunas[3] ? parseInt(colunas[3]) || 0 : 0;
+                        const trof = colunas[3] ? parseInt(colunas[3].replace(/[^\d]/g, "")) || 0 : 0;
 
-                        if (!isNaN(freq)) {
-                            todasTurmas.push({ nome: nome, valor: freq, bloco: turno, trofeus: trof });
+                        if (nome.length > 0 && !isNaN(freq)) {
+                            todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, icone: obterIconeSerie(nome) });
                         }
                     }
                 }
-
-                if (todasTurmas.length > 0) {
-                    gerarSlides();
-                } else {
-                    document.getElementById("msg-espera").innerText = "SEM DADOS NA PLANILHA";
-                }
-
+                if (todasTurmas.length > 0) gerarSlides();
             } catch (err) {
-                console.error("Erro:", err);
+                console.error(err);
                 document.getElementById("msg-espera").innerText = "ERRO DE CONEXÃO";
             }
         }
@@ -100,7 +130,6 @@
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
-            // Slide de Ranking
             const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
             const rSlide = document.createElement("div");
             rSlide.className = "pagina-slide w-full h-full";
@@ -109,10 +138,10 @@
                     <div class="bg-yellow-500 text-blue-900 py-3 rounded-full font-black text-2xl mb-6 shadow-xl border-4 border-yellow-300 uppercase">🏆 TOP 10 GERAL 🏆</div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         ${top10.map((t, i) => `
-                            <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900 border-l-8 border-yellow-400 text-white">
+                            <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900/90 border-l-8 border-yellow-400 text-white">
                                 <div class="flex items-center gap-4">
                                     <span class="text-2xl font-black text-yellow-400">${i+1}º</span>
-                                    <span class="font-black text-lg uppercase">${t.nome}</span>
+                                    <span class="font-black text-lg uppercase">${t.icone} ${t.nome}</span>
                                 </div>
                                 <div class="text-3xl font-black text-yellow-400">${t.valor.toFixed(1)}%</div>
                             </div>
@@ -132,20 +161,20 @@
                 slide.className = "pagina-slide w-full h-full";
                 slide.innerHTML = `
                     <div class="flex flex-col h-full">
-                        <div class="${cor} text-white py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase">${titulo}</div>
+                        <div class="${cor} text-white py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${titulo}</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                             ${pedaço.map(t => {
                                 const corBarra = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48");
                                 const borda = t.valor >= 95 ? "border-emerald-500" : (t.valor >= 90 ? "border-amber-400" : "border-rose-600");
                                 const textoCor = t.valor >= 95 ? "text-emerald-700" : (t.valor >= 90 ? "text-amber-600" : "text-rose-700");
                                 return `
-                                    <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between bg-white ${borda} border-l-8 text-left">
+                                    <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between border-l-8 text-left">
                                         <div class="flex justify-between items-start leading-none">
                                             <div>
-                                                <p class="font-black text-slate-800 text-[12px] uppercase truncate w-32">${t.nome}</p>
+                                                <p class="font-black text-slate-800 text-[11px] uppercase truncate w-36">${t.icone} ${t.nome}</p>
                                                 <p class="text-[10px] mt-1">${"🏆".repeat(t.trofeus)}</p>
                                             </div>
-                                            <span class="text-lg">${t.valor >= 95 ? "👏" : (t.valor >= 90 ? "👍" : "✋")}</span>
+                                            <span class="text-lg">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                                         </div>
                                         <p class="${textoCor} font-black text-2xl my-1">${t.valor.toFixed(1)}%</p>
                                         <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
@@ -163,13 +192,10 @@
             if (loopInterval) clearInterval(loopInterval);
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length === 0) return;
-            
             indexSlide = 0;
             slides.forEach(s => s.classList.remove("active"));
-            slides[0].classList.add("active");
-            
+            slides[0].classList.add('active');
             document.getElementById("indicador-pagina").innerText = "Slide 1 de " + slides.length;
-            
             loopInterval = setInterval(() => {
                 slides[indexSlide].classList.remove("active");
                 indexSlide = (indexSlide + 1) % slides.length;
