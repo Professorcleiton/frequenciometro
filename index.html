@@ -3,45 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel CCM Anchieta - Frequenciômetro</title>
+    <title>Frequenciômetro CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s ease-in-out; }
         
-        /* Fundo com Textura Repetida do Brasão (Backdrop de Entrevista) */
+        /* Fundo Estilo Painel de Entrevista (Backdrop) */
         body { 
             background-color: #f1f5f9; 
             overflow: hidden; 
             position: relative;
+            margin: 0;
+            padding: 0;
         }
-        body::before {
-            content: "";
-            position: absolute;
+
+        /* Camada da Textura de Brasões */
+        .fundo-textura {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            /* A imagem se repete automaticamente (repeat) */
             background-image: url('logoA.png');
             background-repeat: repeat;
-            /* Controla o tamanho de cada brasão individual */
-            background-size: 150px; 
-            background-position: center;
-            /* Deixa a textura MUITO suave (marca d'água) */
-            opacity: 0.05; 
+            background-size: 180px; /* Tamanho de cada brasão */
+            opacity: 0.06; /* Suavidade da marca d'água */
             z-index: -1;
+            pointer-events: none;
         }
 
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* Cartões com leve transparência para ver o fundo (efeito vidro) */
         .card-turma { 
-            min-height: 115px; 
+            min-height: 110px; 
             border-left-width: 8px; 
-            background-color: rgba(255, 255, 255, 0.9); 
-            backdrop-filter: blur(2px);
+            background-color: rgba(255, 255, 255, 0.95);
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
         ::-webkit-scrollbar { display: none; }
@@ -49,7 +47,9 @@
 </head>
 <body class="font-sans h-screen flex flex-col">
 
-    <header class="bg-white/95 px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0 z-10">
+    <div class="fundo-textura"></div>
+
+    <header class="bg-white/90 px-6 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0 z-10">
         <div class="flex items-center gap-4">
             <img src="logoA.png" alt="Brasão" class="h-16 md:h-20 object-contain rounded-full border-2 border-[#1e3a8a] bg-white p-0.5">
             <div class="ml-2 text-[#1e3a8a]">
@@ -80,15 +80,15 @@
         let indexSlide = 0;
         let loopInterval = null;
 
-        // Ícones temáticos para cada série
         function obterIconeSerie(nome) {
-            if (nome.startsWith('6')) return '✏️'; 
-            if (nome.startsWith('7')) return '📖'; 
-            if (nome.startsWith('8')) return '🔬'; 
-            if (nome.startsWith('9')) return '🎓'; 
-            if (nome.startsWith('1')) return '💻'; 
-            if (nome.startsWith('2')) return '🧪'; 
-            if (nome.startsWith('3')) return '🚀'; 
+            const n = nome.trim();
+            if (n.startsWith('6')) return '✏️'; 
+            if (n.startsWith('7')) return '📖'; 
+            if (n.startsWith('8')) return '🔬'; 
+            if (n.startsWith('9')) return '🎓'; 
+            if (n.startsWith('1')) return '💻'; 
+            if (n.startsWith('2')) return '🧪'; 
+            if (n.startsWith('3')) return '🚀'; 
             return '🏫'; 
         }
 
@@ -100,23 +100,27 @@
                 todasTurmas = [];
                 
                 for (let i = 1; i < linhas.length; i++) {
-                    let colunas = linhas[i].split(",");
-                    if (colunas.length < 3) colunas = linhas[i].split(";");
+                    let cols = linhas[i].split(",");
+                    if (cols.length < 3) cols = linhas[i].split(";");
 
-                    if (colunas.length >= 2) {
-                        const nome = colunas[0].replace(/"/g, "").trim();
-                        let valorBruto = colunas[1].replace(/"/g, "").trim();
-                        let valorLimpo = valorBruto.replace(",", ".");
-                        const freq = parseFloat(valorLimpo);
-                        const turno = colunas[2] ? colunas[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
-                        const trof = colunas[3] ? parseInt(colunas[3].replace(/[^\d]/g, "")) || 0 : 0;
+                    if (cols.length >= 2) {
+                        const nome = cols[0].replace(/"/g, "").trim();
+                        let vBruto = cols[1].replace(/"/g, "").trim();
+                        let vLimpo = vBruto.replace(",", ".");
+                        const freq = parseFloat(vLimpo);
+                        const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
+                        const trof = cols[3] ? parseInt(cols[3].replace(/[^\d]/g, "")) || 0 : 0;
 
                         if (nome.length > 0 && !isNaN(freq)) {
                             todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, icone: obterIconeSerie(nome) });
                         }
                     }
                 }
-                if (todasTurmas.length > 0) gerarSlides();
+                if (todasTurmas.length > 0) {
+                    gerarSlides();
+                } else {
+                    document.getElementById("msg-espera").innerText = "SEM DADOS NA PLANILHA";
+                }
             } catch (err) {
                 console.error(err);
                 document.getElementById("msg-espera").innerText = "ERRO DE CONEXÃO";
@@ -134,25 +138,26 @@
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
             const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
-            const rSlide = document.createElement("div");
-            rSlide.className = "pagina-slide w-full h-full";
-            rSlide.innerHTML = `
-                <div class="flex flex-col h-full">
-                    <div class="bg-yellow-500 text-blue-900 py-3 rounded-full font-black text-2xl mb-6 shadow-xl border-4 border-yellow-300 uppercase">🏆 TOP 10 GERAL 🏆</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${top10.map((t, i) => `
-                            <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900/95 border-l-8 border-yellow-400 text-white">
-                                <div class="flex items-center gap-4">
-                                    <span class="text-2xl font-black text-yellow-400">${i+1}º</span>
-                                    <span class="font-black text-lg uppercase">${t.icone} ${t.nome}</span>
+            if (top10.length > 0) {
+                const rSlide = document.createElement("div");
+                rSlide.className = "pagina-slide w-full h-full";
+                rSlide.innerHTML = `
+                    <div class="flex flex-col h-full">
+                        <div class="bg-yellow-500 text-blue-900 py-3 rounded-full font-black text-2xl mb-6 shadow-xl border-4 border-yellow-300 uppercase">🏆 TOP 10 GERAL 🏆</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${top10.map((t, i) => `
+                                <div class="p-4 rounded-xl shadow-lg flex items-center justify-between bg-blue-900/95 border-l-8 border-yellow-400 text-white">
+                                    <div class="flex items-center gap-4">
+                                        <span class="text-2xl font-black text-yellow-400">${i+1}º</span>
+                                        <span class="font-black text-lg uppercase">${t.icone} ${t.nome}</span>
+                                    </div>
+                                    <div class="text-3xl font-black text-yellow-400">${t.valor.toFixed(1)}%</div>
                                 </div>
-                                <div class="text-3xl font-black text-yellow-400">${t.valor.toFixed(1)}%</div>
-                            </div>
-                        `).join("")}
-                    </div>
-                </div>`;
-            container.appendChild(rSlide);
-
+                            `).join("")}
+                        </div>
+                    </div>`;
+                container.appendChild(rSlide);
+            }
             iniciarAnimacao();
         }
 
@@ -167,9 +172,9 @@
                         <div class="${cor} text-white py-2 rounded-full font-black text-xl mb-4 shadow-md uppercase tracking-widest">${titulo}</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                             ${pedaço.map(t => {
-                                const corBarra = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48");
+                                const corB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48");
                                 const borda = t.valor >= 95 ? "border-emerald-500" : (t.valor >= 90 ? "border-amber-400" : "border-rose-600");
-                                const textoCor = t.valor >= 95 ? "text-emerald-700" : (t.valor >= 90 ? "text-amber-600" : "text-rose-700");
+                                const textC = t.valor >= 95 ? "text-emerald-700" : (t.valor >= 90 ? "text-amber-600" : "text-rose-700");
                                 return `
                                     <div class="p-3 rounded-xl card-turma shadow-md flex flex-col justify-between border-l-8 text-left">
                                         <div class="flex justify-between items-start leading-none">
@@ -179,6 +184,35 @@
                                             </div>
                                             <span class="text-lg">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                                         </div>
-                                        <p class="${textoCor} font-black text-2xl my-1">${t.valor.toFixed(1)}%</p>
-                                        <div class="w-full bg-slate-
-        
+                                        <p class="${textC} font-black text-2xl my-1">${t.valor.toFixed(1)}%</p>
+                                        <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                            <div class="barra-frequencia h-full" style="background-color: ${corB}; width: ${t.valor > 100 ? 100 : t.valor}%"></div>
+                                        </div>
+                                    </div>`;
+                            }).join("")}
+                        </div>
+                    </div>`;
+                container.appendChild(slide);
+            }
+        }
+
+        function iniciarAnimacao() {
+            if (loopInterval) clearInterval(loopInterval);
+            const slides = document.querySelectorAll(".pagina-slide");
+            if (slides.length === 0) return;
+            indexSlide = 0;
+            slides.forEach(s => s.classList.remove("active"));
+            slides[0].classList.add('active');
+            document.getElementById("indicador-pagina").innerText = "Slide 1 de " + slides.length;
+            loopInterval = setInterval(() => {
+                slides[indexSlide].classList.remove("active");
+                indexSlide = (indexSlide + 1) % slides.length;
+                slides[indexSlide].classList.add("active");
+                document.getElementById("indicador-pagina").innerText = "Slide " + (indexSlide + 1) + " de " + slides.length;
+            }, 10000);
+        }
+
+        window.onload = carregarDados;
+    </script>
+</body>
+</html>
