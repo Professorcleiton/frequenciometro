@@ -55,20 +55,25 @@
                 todasTurmas = [];
                 const linhas = csvStr.split(/\r?\n/).filter(l => l.trim().length > 5);
                 
-                for (let i = 1; i < linhas.length; i++) {
-                    const cols = linhas[i].split(';');
-                    const c = cols.length < 2 ? linhas[i].split(',') : cols;
-                    if (c.length >= 2) {
-                        const freq = parseFloat(c[1].replace(/[^\d,.]/g, '').replace(',', '.'));
-                        if (!isNaN(freq)) {
-                            todasTurmas.push({
-                                nome: c[0].replace(/"/g, '').trim(),
-                                valor: freq,
-                                bloco: c[2] ? c[2].toLowerCase().trim() : 'tarde',
-                                trofeus: c[3] ? parseInt(c[3]) || 0 : 0
-                            });
-                        }
-                    }
+for (let i = 1; i < linhas.length; i++) {
+    // Tenta primeiro dividir por ponto e vírgula (padrão BR)
+    let cols = linhas[i].split(';');
+    
+    // Se não funcionou (só veio 1 coluna), tenta dividir por vírgula
+    if (cols.length < 3) {
+        cols = linhas[i].split(',');
+    }
+
+    // Só processa se encontrou as colunas necessárias
+    if (cols.length >= 3) {
+        const turma = cols[0].trim();
+        const frequencia = parseFloat(cols[1].replace(',', '.')); // Transforma 93,0 em 93.0
+        const bloco = cols[2].trim().toLowerCase();
+        const trofeus = cols[3] ? parseInt(cols[3]) : 0;
+
+        todasTurmas.push({ turma, frequencia, bloco, trofeus });
+    }
+}
                 }
                 if (todasTurmas.length > 0) gerarCarrossel();
             } catch (err) { console.error(err); }
