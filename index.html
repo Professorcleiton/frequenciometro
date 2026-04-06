@@ -16,7 +16,7 @@
             padding: 0;
         }
 
-        /* Fundo Estilo Painel de Entrevista com Logo Retangular */
+        /* Fundo Estilo Painel de Entrevista (Backdrop) - DOBRADO */
         .fundo-textura {
             position: fixed;
             top: 0;
@@ -25,7 +25,7 @@
             height: 100%;
             background-image: url('LogoA.png');
             background-repeat: repeat;
-            background-size: 250px; /* Aumentado para o formato retangular */
+            background-size: 500px; /* Dobrei de 250px para 500px */
             opacity: 0.04;
             z-index: -1;
             pointer-events: none;
@@ -49,12 +49,12 @@
 
     <div class="fundo-textura"></div>
 
-    <header class="bg-white/95 px-8 py-4 shadow-md border-b-8 border-[#1e3a8a] flex justify-between items-center shrink-0 z-10">
-        <div class="flex items-center gap-8">
-            <img src="nucleo.png" alt="NRE" class="h-16 object-contain">
-            <img src="LogoA.png" alt="CCM Anchieta" class="h-24 object-contain">
+    <header class="bg-white/95 px-8 py-5 shadow-md border-b-8 border-[#1e3a8a] flex justify-between items-center shrink-0 z-10">
+        <div class="flex items-center gap-10">
+            <img src="nucleo.png" alt="NRE" class="h-20 object-contain">
+            <img src="LogoA.png" alt="CCM Anchieta" class="h-48 object-contain">
             <div class="ml-4 text-[#1e3a8a]">
-                <h1 class="text-3xl md:text-4xl font-black uppercase leading-none tracking-tighter">CCM Anchieta</h1>
+                <h1 class="text-4xl md:text-5xl font-black uppercase leading-none tracking-tighter">CCM Anchieta</h1>
                 <p class="text-slate-500 font-bold tracking-[0.2em] text-sm uppercase italic mt-1">Frequenciômetro Digital</p>
             </div>
         </div>
@@ -157,19 +157,30 @@
                 container.appendChild(rSlide);
             }
 
-            // Slide 4: MÉDIA GERAL (IMPACTANTE)
+            // Slide 4: MÉDIA GERAL (IMPACTANTE E DOBRADO)
             const mediaGeral = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+            
+            let corDestaque = "#e11d48"; // Vermelho
+            let bordaDestaque = "border-rose-900";
+            if (mediaGeral >= 95) {
+                corDestaque = "#10b981"; // Verde
+                bordaDestaque = "border-emerald-900";
+            } else if (mediaGeral >= 90) {
+                corDestaque = "#f59e0b"; // Amarelo
+                bordaDestaque = "border-amber-700";
+            }
+
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
             mSlide.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full">
-                    <div class="bg-white/90 p-16 rounded-[4rem] shadow-2xl border-b-[20px] border-blue-900 flex flex-col items-center max-w-5xl w-full">
-                        <img src="LogoA.png" class="h-32 mb-8 object-contain">
-                        <h2 class="text-5xl font-black uppercase text-blue-900 tracking-tighter mb-6">MÉDIA GERAL DO COLÉGIO</h2>
-                        <div class="text-[14rem] leading-none font-black text-blue-900 my-4 drop-shadow-xl">
+                    <div class="bg-white/90 p-16 rounded-[4rem] shadow-2xl border-b-[20px] ${bordaDestaque} flex flex-col items-center max-w-5xl w-full">
+                        <img src="LogoA.png" class="h-64 mb-8 object-contain">
+                        <h2 class="text-5xl font-black uppercase tracking-tighter mb-6" style="color: ${corDestaque}">MÉDIA GERAL DO COLÉGIO</h2>
+                        <div class="text-[14rem] leading-none font-black my-4 drop-shadow-xl" style="color: ${corDestaque}">
                             ${mediaGeral.toFixed(1)}%
                         </div>
-                        <p class="text-3xl font-black italic text-blue-800 uppercase mt-8 opacity-90">"Ninguém é tão forte quanto todos nós juntos!"</p>
+                        <p class="text-3xl font-black italic uppercase mt-8 opacity-90" style="color: ${corDestaque}">"Ninguém é tão forte quanto todos nós juntos!"</p>
                     </div>
                 </div>`;
             container.appendChild(mSlide);
@@ -179,7 +190,6 @@
 
         function montarPaginas(lista, titulo, cor) {
             const container = document.getElementById("container-slides");
-            // Agora 9 turmas por slide para o nome ficar maior
             for (let i = 0; i < lista.length; i += 9) {
                 const pedaço = lista.slice(i, i + 9);
                 const slide = document.createElement("div");
@@ -190,7 +200,6 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                             ${pedaço.map(t => {
                                 const corB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48");
-                                const borda = t.valor >= 95 ? "border-emerald-500" : (t.valor >= 90 ? "border-amber-400" : "border-rose-600");
                                 const textC = t.valor >= 95 ? "text-emerald-700" : (t.valor >= 90 ? "text-amber-600" : "text-rose-700");
                                 return `
                                     <div class="p-6 rounded-3xl card-turma shadow-md flex flex-col justify-between border-l-[18px] text-left">
