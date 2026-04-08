@@ -6,13 +6,21 @@
     <title>Frequenciômetro CCM Anchieta</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .barra-frequencia { transition: width 1.5s ease-in-out; }
+        .barra-frequencia { transition: width 1.5s ease-in-out; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; }
         body { background-color: #f1f5f9; overflow: hidden; position: relative; margin: 0; padding: 0; }
         .fundo-textura { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('LogoA.png'); background-repeat: repeat; background-size: 400px; opacity: 0.04; z-index: -1; pointer-events: none; }
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card-turma { min-height: 160px; border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 15px 20px -5px rgb(0 0 0 / 0.1); }
+        .card-turma { border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        
+        /* Estilo do Podium */
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 20px; height: 400px; margin-top: 40px; }
+        .podium-item { display: flex; flex-direction: column; align-items: center; width: 250px; border-radius: 20px 20px 0 0; position: relative; padding-bottom: 20px; }
+        .podium-1 { height: 100%; background: linear-gradient(to top, #ca8a04, #facc15); order: 2; z-index: 3; }
+        .podium-2 { height: 80%; background: linear-gradient(to top, #4b5563, #9ca3af); order: 1; }
+        .podium-3 { height: 65%; background: linear-gradient(to top, #7c2d12, #b45309); order: 3; }
+        .medalha { font-size: 5rem; margin-bottom: -20px; z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -94,27 +102,39 @@
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
-            // RANKING TOP 8 (Ajustado para 2 colunas de 4 para não cortar o topo)
-            const top8 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 8);
-            if (top8.length > 0) {
-                const rSlide = document.createElement("div");
-                rSlide.className = "pagina-slide w-full h-full pt-4"; // pt-4 adiciona respiro no topo
-                rSlide.innerHTML = `
-                    <div class="flex flex-col h-full">
-                        <div class="bg-yellow-500 text-blue-950 py-3 rounded-full font-black text-3xl mb-8 shadow-xl border-4 border-yellow-300 uppercase shrink-0">🏆 TOP 8 GERAL 🏆</div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow pb-4">
-                            ${top8.map((t, i) => `
-                                <div class="p-6 rounded-3xl shadow-lg flex items-center justify-between bg-blue-900 border-l-[16px] border-yellow-400 text-white">
-                                    <div class="flex items-center gap-6">
-                                        <span class="text-4xl font-black text-yellow-400">${i+1}º</span>
-                                        <span class="font-black text-3xl uppercase">${t.icone} ${t.nome}</span>
-                                    </div>
-                                    <div class="text-5xl font-black text-yellow-400">${t.valor.toFixed(1)}%</div>
+            // SLIDE PODIUM (TOP 3)
+            const top3 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 3);
+            if (top3.length >= 3) {
+                const pSlide = document.createElement("div");
+                pSlide.className = "pagina-slide w-full h-full pt-10";
+                pSlide.innerHTML = `
+                    <div class="flex flex-col h-full items-center">
+                        <div class="bg-yellow-500 text-blue-950 py-3 px-20 rounded-full font-black text-4xl mb-4 shadow-xl border-4 border-yellow-200 uppercase">🏆 PODIUM DE EXCELÊNCIA 🏆</div>
+                        <div class="podium-container">
+                            <div class="podium-item podium-2 shadow-2xl">
+                                <span class="medalha">🥈</span>
+                                <div class="mt-auto text-center px-4">
+                                    <p class="text-white font-black text-2xl uppercase">${top3[1].nome}</p>
+                                    <p class="text-white font-black text-4xl">${top3[1].valor.toFixed(1)}%</p>
                                 </div>
-                            `).join("")}
+                            </div>
+                            <div class="podium-item podium-1 shadow-2xl scale-110">
+                                <span class="medalha">🥇</span>
+                                <div class="mt-auto text-center px-4">
+                                    <p class="text-blue-900 font-black text-3xl uppercase">${top3[0].nome}</p>
+                                    <p class="text-blue-900 font-black text-5xl">${top3[0].valor.toFixed(1)}%</p>
+                                </div>
+                            </div>
+                            <div class="podium-item podium-3 shadow-2xl">
+                                <span class="medalha">🥉</span>
+                                <div class="mt-auto text-center px-4">
+                                    <p class="text-white font-black text-2xl uppercase">${top3[2].nome}</p>
+                                    <p class="text-white font-black text-4xl">${top3[2].valor.toFixed(1)}%</p>
+                                </div>
+                            </div>
                         </div>
                     </div>`;
-                container.appendChild(rSlide);
+                container.appendChild(pSlide);
             }
 
             const mediaGeral = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
@@ -143,20 +163,23 @@
                 const slide = document.createElement("div");
                 slide.className = "pagina-slide w-full h-full pt-4";
                 slide.innerHTML = `
-                    <div class="flex flex-col h-full">
-                        <div class="${cor} text-white py-3 rounded-full font-black text-2xl mb-8 shadow-md uppercase tracking-[0.2em] shrink-0">${titulo}</div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow pb-4">
+                    <div class="flex flex-col h-full items-center">
+                        <div class="${cor} text-white py-3 px-20 rounded-full font-black text-3xl mb-10 shadow-md uppercase tracking-[0.2em] w-fit text-center shrink-0">${titulo}</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
                             ${pedaço.map(t => {
                                 const corB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48");
-                                const textC = t.valor >= 95 ? "text-emerald-700" : (t.valor >= 90 ? "text-amber-600" : "text-rose-700");
                                 return `
-                                    <div class="p-6 rounded-3xl card-turma shadow-md flex flex-col justify-between border-l-[20px] text-left">
-                                        <div class="flex justify-between items-start leading-none">
-                                            <div><p class="font-black text-slate-900 text-2xl uppercase truncate w-64">${t.icone} ${t.nome}</p><p class="text-xl mt-2">${"🏆".repeat(t.trofeus)}</p></div>
-                                            <span class="text-4xl">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
+                                    <div class="p-6 rounded-3xl card-turma border-l-[20px] text-left">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <p class="font-black text-slate-900 text-4xl uppercase truncate">${t.icone} ${t.nome}</p>
+                                            <span class="text-3xl">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                                         </div>
-                                        <p class="${textC} font-black text-7xl my-4">${t.valor.toFixed(1)}%</p>
-                                        <div class="w-full bg-slate-200 rounded-full h-5 overflow-hidden"><div class="barra-frequencia h-full" style="background-color: ${corB}; width: ${t.valor > 100 ? 100 : t.valor}%"></div></div>
+                                        <div class="w-full bg-slate-200 rounded-2xl h-16 overflow-hidden relative shadow-inner">
+                                            <div class="barra-frequencia h-full text-3xl" style="background-color: ${corB}; width: ${t.valor > 100 ? 100 : t.valor}%">
+                                                ${t.valor.toFixed(1)}%
+                                            </div>
+                                        </div>
+                                        <p class="text-xl mt-3 text-center">${"🏆".repeat(t.trofeus)}</p>
                                     </div>`;
                             }).join("")}
                         </div>
