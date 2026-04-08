@@ -7,39 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .barra-frequencia { transition: width 1.5s ease-in-out; }
-        
-        body { 
-            background-color: #f1f5f9; 
-            overflow: hidden; 
-            position: relative;
-            margin: 0;
-            padding: 0;
-        }
-
-        .fundo-textura {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('LogoA.png');
-            background-repeat: repeat;
-            background-size: 400px; 
-            opacity: 0.04;
-            z-index: -1;
-            pointer-events: none;
-        }
-
+        body { background-color: #f1f5f9; overflow: hidden; position: relative; margin: 0; padding: 0; }
+        .fundo-textura { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('LogoA.png'); background-repeat: repeat; background-size: 400px; opacity: 0.04; z-index: -1; pointer-events: none; }
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        .card-turma { 
-            min-height: 160px; 
-            border-left-width: 16px; 
-            background-color: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 15px 20px -5px rgb(0 0 0 / 0.1);
-        }
+        .card-turma { min-height: 160px; border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 15px 20px -5px rgb(0 0 0 / 0.1); }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -77,21 +50,15 @@
 
     <script>
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
-        
         let todasTurmas = [];
         let indexSlide = 0;
         let loopInterval = null;
 
         function obterIconeSerie(nome) {
             const n = nome.trim();
-            if (n.startsWith('6')) return '✏️'; 
-            if (n.startsWith('7')) return '📖'; 
-            if (n.startsWith('8')) return '🔬'; 
-            if (n.startsWith('9')) return '🎓'; 
-            if (n.startsWith('1')) return '💻'; 
-            if (n.startsWith('2')) return '🧪'; 
-            if (n.startsWith('3')) return '🚀'; 
-            return '🏫'; 
+            if (n.startsWith('6')) return '✏️'; if (n.startsWith('7')) return '📖'; if (n.startsWith('8')) return '🔬'; 
+            if (n.startsWith('9')) return '🎓'; if (n.startsWith('1')) return '💻'; if (n.startsWith('2')) return '🧪'; 
+            if (n.startsWith('3')) return '🚀'; return '🏫'; 
         }
 
         async function carregarDados() {
@@ -105,8 +72,7 @@
                     if (cols.length < 3) cols = linhas[i].split(";");
                     if (cols.length >= 2) {
                         const nome = cols[0].replace(/"/g, "").trim();
-                        let vBruto = cols[1].replace(/"/g, "").trim();
-                        let vLimpo = vBruto.replace(",", ".");
+                        let vLimpo = cols[1].replace(/"/g, "").trim().replace(",", ".");
                         const freq = parseFloat(vLimpo);
                         const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
                         const trof = cols[3] ? parseInt(cols[3].replace(/[^\d]/g, "")) || 0 : 0;
@@ -125,19 +91,19 @@
             const manha = todasTurmas.filter(t => t.bloco.includes("manha"));
             const tarde = todasTurmas.filter(t => t.bloco.includes("tarde"));
             
-            // Alterado para 6 turmas por slide para garantir visibilidade do título
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
-            const top10 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 10);
-            if (top10.length > 0) {
+            // RANKING TOP 8 (Ajustado para 2 colunas de 4 para não cortar o topo)
+            const top8 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 8);
+            if (top8.length > 0) {
                 const rSlide = document.createElement("div");
-                rSlide.className = "pagina-slide w-full h-full";
+                rSlide.className = "pagina-slide w-full h-full pt-4"; // pt-4 adiciona respiro no topo
                 rSlide.innerHTML = `
-                    <div class="flex flex-col h-full justify-center">
-                        <div class="bg-yellow-500 text-blue-950 py-4 rounded-full font-black text-4xl mb-6 shadow-xl border-4 border-yellow-300 uppercase">🏆 TOP 10 GERAL 🏆</div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            ${top10.map((t, i) => `
+                    <div class="flex flex-col h-full">
+                        <div class="bg-yellow-500 text-blue-950 py-3 rounded-full font-black text-3xl mb-8 shadow-xl border-4 border-yellow-300 uppercase shrink-0">🏆 TOP 8 GERAL 🏆</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow pb-4">
+                            ${top8.map((t, i) => `
                                 <div class="p-6 rounded-3xl shadow-lg flex items-center justify-between bg-blue-900 border-l-[16px] border-yellow-400 text-white">
                                     <div class="flex items-center gap-6">
                                         <span class="text-4xl font-black text-yellow-400">${i+1}º</span>
@@ -152,22 +118,18 @@
             }
 
             const mediaGeral = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-            let corDestaque = "#e11d48";
-            let bordaDestaque = "border-rose-900";
-            if (mediaGeral >= 95) { corDestaque = "#10b981"; bordaDestaque = "border-emerald-900"; }
-            else if (mediaGeral >= 90) { corDestaque = "#f59e0b"; bordaDestaque = "border-amber-700"; }
+            let corD = mediaGeral >= 95 ? "#10b981" : (mediaGeral >= 90 ? "#f59e0b" : "#e11d48");
+            let bordaD = mediaGeral >= 95 ? "border-emerald-900" : (mediaGeral >= 90 ? "border-amber-700" : "border-rose-900");
 
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
             mSlide.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full">
-                    <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] ${bordaDestaque} flex flex-col items-center max-w-4xl w-full">
+                    <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] ${bordaD} flex flex-col items-center max-w-4xl w-full">
                         <img src="LogoA.png" class="h-48 mb-4 object-contain">
-                        <h2 class="text-4xl font-black uppercase tracking-tighter mb-4" style="color: ${corDestaque}">MÉDIA GERAL DO COLÉGIO</h2>
-                        <div class="text-[12rem] leading-none font-black my-2 drop-shadow-xl" style="color: ${corDestaque}">
-                            ${mediaGeral.toFixed(1)}%
-                        </div>
-                        <p class="text-2xl font-black italic uppercase mt-4 opacity-90" style="color: ${corDestaque}">"Ninguém é tão forte quanto todos nós juntos!"</p>
+                        <h2 class="text-4xl font-black uppercase tracking-tighter mb-4" style="color: ${corD}">MÉDIA GERAL DO COLÉGIO</h2>
+                        <div class="text-[12rem] leading-none font-black my-2 drop-shadow-xl" style="color: ${corD}">${mediaGeral.toFixed(1)}%</div>
+                        <p class="text-2xl font-black italic uppercase mt-4 opacity-90" style="color: ${corD}">"Ninguém é tão forte quanto todos nós juntos!"</p>
                     </div>
                 </div>`;
             container.appendChild(mSlide);
@@ -176,31 +138,25 @@
 
         function montarPaginas(lista, titulo, cor) {
             const container = document.getElementById("container-slides");
-            // LIMITE DE 6 TURMAS POR SLIDE PARA NÃO CORTAR O TÍTULO
             for (let i = 0; i < lista.length; i += 6) {
                 const pedaço = lista.slice(i, i + 6);
                 const slide = document.createElement("div");
-                slide.className = "pagina-slide w-full h-full";
+                slide.className = "pagina-slide w-full h-full pt-4";
                 slide.innerHTML = `
                     <div class="flex flex-col h-full">
-                        <div class="${cor} text-white py-4 rounded-full font-black text-3xl mb-8 shadow-md uppercase tracking-[0.2em] w-full text-center shrink-0">${titulo}</div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow">
+                        <div class="${cor} text-white py-3 rounded-full font-black text-2xl mb-8 shadow-md uppercase tracking-[0.2em] shrink-0">${titulo}</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 flex-grow pb-4">
                             ${pedaço.map(t => {
                                 const corB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48");
                                 const textC = t.valor >= 95 ? "text-emerald-700" : (t.valor >= 90 ? "text-amber-600" : "text-rose-700");
                                 return `
                                     <div class="p-6 rounded-3xl card-turma shadow-md flex flex-col justify-between border-l-[20px] text-left">
                                         <div class="flex justify-between items-start leading-none">
-                                            <div>
-                                                <p class="font-black text-slate-900 text-2xl uppercase truncate w-64">${t.icone} ${t.nome}</p>
-                                                <p class="text-xl mt-2">${"🏆".repeat(t.trofeus)}</p>
-                                            </div>
+                                            <div><p class="font-black text-slate-900 text-2xl uppercase truncate w-64">${t.icone} ${t.nome}</p><p class="text-xl mt-2">${"🏆".repeat(t.trofeus)}</p></div>
                                             <span class="text-4xl">${t.valor >= 95 ? '👏' : (t.valor >= 90 ? '👍' : '✋')}</span>
                                         </div>
                                         <p class="${textC} font-black text-7xl my-4">${t.valor.toFixed(1)}%</p>
-                                        <div class="w-full bg-slate-200 rounded-full h-5 overflow-hidden">
-                                            <div class="barra-frequencia h-full" style="background-color: ${corB}; width: ${t.valor > 100 ? 100 : t.valor}%"></div>
-                                        </div>
+                                        <div class="w-full bg-slate-200 rounded-full h-5 overflow-hidden"><div class="barra-frequencia h-full" style="background-color: ${corB}; width: ${t.valor > 100 ? 100 : t.valor}%"></div></div>
                                     </div>`;
                             }).join("")}
                         </div>
