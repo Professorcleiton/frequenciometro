@@ -31,7 +31,8 @@
         </div>
         <div class="text-center flex-grow">
             <h1 class="text-3xl font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">CCM ANCHIETA</h1>
-            <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg mt-1 bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Carregando...</p>
+            <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic block mb-1">FREQUENCIÔMETRO DIGITAL</p>
+            <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Carregando...</p>
         </div>
         <div class="text-right">
             <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Sincronizando...</p>
@@ -40,7 +41,7 @@
     </header>
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center">
-        <p class="text-blue-900 font-bold animate-pulse text-2xl">ATUALIZANDO PAINEL...</p>
+        <p class="text-blue-900 font-bold animate-pulse text-2xl">ATUALIZANDO DADOS...</p>
     </main>
 
     <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-between items-center px-16 text-xs font-black uppercase tracking-widest shrink-0 z-10">
@@ -101,21 +102,28 @@
                 const texto = await response.text();
                 const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 3);
                 todasTurmas = [];
+                
                 for (let i = 1; i < linhas.length; i++) {
                     let cols = linhas[i].split(",");
-                    if (cols.length < 3) cols = linhas[i].split(";");
-                    if (cols.length >= 2) {
+                    if (cols.length < 4) cols = linhas[i].split(";");
+                    
+                    // Lógica ajustada para a nova coluna:
+                    // Col 0: Nome Turma | Col 1: Cód Turma (Nova) | Col 2: Frequência | Col 3: Turno | Col 4: Troféus | Col 5: Histórico
+                    if (cols.length >= 3) {
                         const nome = cols[0].replace(/"/g, "").trim();
-                        const freq = parseFloat(cols[1].replace(",", "."));
-                        const turno = cols[2]?.toLowerCase() || "tarde";
-                        const trof = parseInt(cols[3]) || 0;
-                        const hist = cols[4] ? parseFloat(cols[4].replace(",", ".")) : freq;
-                        if (!isNaN(freq)) todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, historico: hist });
+                        const freq = parseFloat(cols[2].replace(",", ".")); // Frequência agora está no índice 2
+                        const turno = cols[3]?.toLowerCase() || "tarde";
+                        const trof = parseInt(cols[4]) || 0;
+                        const hist = cols[5] ? parseFloat(cols[5].replace(",", ".")) : freq;
+                        
+                        if (!isNaN(freq)) {
+                            todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, historico: hist });
+                        }
                     }
                 }
                 atualizarTextoSemana();
                 gerarSlides();
-            } catch (err) { console.error("Erro ao carregar dados", err); }
+            } catch (err) { console.error(err); }
         }
 
         function gerarSlides() {
@@ -123,6 +131,7 @@
             container.innerHTML = "";
             const manha = todasTurmas.filter(t => t.bloco.includes("manha"));
             const tarde = todasTurmas.filter(t => t.bloco.includes("tarde"));
+            
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
@@ -136,6 +145,7 @@
 
             const mediaS = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const mediaT = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
+            
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
             mSlide.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-10"><div class="grid grid-cols-2 gap-12 w-full max-w-6xl"><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-blue-600 text-center"><h3 class="text-3xl font-black text-blue-900 uppercase mb-4">Média Semanal</h3><div class="text-[10rem] leading-none font-black text-blue-600">${mediaS.toFixed(1)}%</div></div><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-emerald-600 text-center"><h3 class="text-3xl font-black text-emerald-900 uppercase mb-4">Média Acumulada</h3><div class="text-[10rem] leading-none font-black text-emerald-600">${mediaT.toFixed(1)}%</div></div></div></div>`;
