@@ -32,7 +32,7 @@
         <div class="text-center flex-grow">
             <h1 class="text-3xl font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">CCM ANCHIETA</h1>
             <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic block mb-1">FREQUENCIÔMETRO DIGITAL</p>
-            <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Carregando...</p>
+            <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic italic">Carregando...</p>
         </div>
         <div class="text-right">
             <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Sincronizando...</p>
@@ -40,8 +40,8 @@
         </div>
     </header>
 
-    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center">
-        <p class="text-blue-900 font-bold animate-pulse text-2xl">ATUALIZANDO DADOS...</p>
+    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
+        <p id="mensagem-status" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando dados da planilha...</p>
     </main>
 
     <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-between items-center px-16 text-xs font-black uppercase tracking-widest shrink-0 z-10">
@@ -99,31 +99,43 @@
         async function carregarDados() {
             try {
                 const response = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
+                if (!response.ok) throw new Error("Erro ao acessar a planilha");
+                
                 const texto = await response.text();
                 const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 3);
                 todasTurmas = [];
                 
                 for (let i = 1; i < linhas.length; i++) {
-                    let cols = linhas[i].split(",");
-                    if (cols.length < 4) cols = linhas[i].split(";");
+                    // Tenta detectar o separador (vírgula ou ponto e vírgula)
+                    let cols = linhas[i].includes(";") ? linhas[i].split(";") : linhas[i].split(",");
                     
-                    // Lógica ajustada para a nova coluna:
-                    // Col 0: Nome Turma | Col 1: Cód Turma (Nova) | Col 2: Frequência | Col 3: Turno | Col 4: Troféus | Col 5: Histórico
                     if (cols.length >= 3) {
                         const nome = cols[0].replace(/"/g, "").trim();
-                        const freq = parseFloat(cols[2].replace(",", ".")); // Frequência agora está no índice 2
-                        const turno = cols[3]?.toLowerCase() || "tarde";
+                        // Ajustado para: Nome (0), Código (1), Freq (2), Turno (3), Troféus (4), Histórico (5)
+                        const freqTxt = cols[2] ? cols[2].replace(/"/g, "").replace(",", ".") : "0";
+                        const freq = parseFloat(freqTxt);
+                        const turno = cols[3] ? cols[3].toLowerCase().trim() : "tarde";
                         const trof = parseInt(cols[4]) || 0;
-                        const hist = cols[5] ? parseFloat(cols[5].replace(",", ".")) : freq;
+                        const histTxt = cols[5] ? cols[5].replace(/"/g, "").replace(",", ".") : freqTxt;
+                        const hist = parseFloat(histTxt);
                         
                         if (!isNaN(freq)) {
                             todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, historico: hist });
                         }
                     }
                 }
+
+                if (todasTurmas.length === 0) {
+                    document.getElementById("mensagem-status").innerText = "Nenhuma turma encontrada. Verifique as colunas da planilha.";
+                    return;
+                }
+
                 atualizarTextoSemana();
                 gerarSlides();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error(err);
+                document.getElementById("mensagem-status").innerText = "Erro ao carregar dados. Verifique a conexão.";
+            }
         }
 
         function gerarSlides() {
@@ -148,35 +160,5 @@
             
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
-            mSlide.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-10"><div class="grid grid-cols-2 gap-12 w-full max-w-6xl"><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-blue-600 text-center"><h3 class="text-3xl font-black text-blue-900 uppercase mb-4">Média Semanal</h3><div class="text-[10rem] leading-none font-black text-blue-600">${mediaS.toFixed(1)}%</div></div><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-emerald-600 text-center"><h3 class="text-3xl font-black text-emerald-900 uppercase mb-4">Média Acumulada</h3><div class="text-[10rem] leading-none font-black text-emerald-600">${mediaT.toFixed(1)}%</div></div></div></div>`;
-            container.appendChild(mSlide);
-            iniciarAnimacao();
-        }
-
-        function montarPaginas(lista, titulo, cor) {
-            const container = document.getElementById("container-slides");
-            for (let i = 0; i < lista.length; i += 6) {
-                const pedaço = lista.slice(i, i + 6);
-                const slide = document.createElement("div");
-                slide.className = "pagina-slide w-full h-full pt-4";
-                slide.innerHTML = `<div class="flex flex-col h-full items-center"><div class="${cor} text-white py-3 px-20 rounded-full font-black text-3xl mb-12 shadow-md uppercase w-fit">${titulo}</div><div class="grid grid-cols-3 gap-10 w-full">${pedaço.map(t => { const corB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48"); return `<div class="p-8 rounded-[2rem] card-turma border-l-[20px] text-left"><p class="font-black text-slate-900 text-4xl uppercase truncate mb-4">${t.nome}</p><div class="w-full bg-slate-200 rounded-2xl h-16 overflow-hidden relative shadow-inner"><div class="barra-frequencia h-full text-3xl" style="background-color: ${corB}; width: ${t.valor}%">${t.valor.toFixed(1)}%</div></div><p class="mt-3 text-center text-2xl">${"🏆".repeat(t.trofeus)}</p></div>`; }).join("")}</div></div>`;
-                container.appendChild(slide);
-            }
-        }
-
-        function iniciarAnimacao() {
-            if (loopInterval) clearInterval(loopInterval);
-            const slides = document.querySelectorAll(".pagina-slide");
-            if (slides.length <= 1 || isPaused) return;
-            slides.forEach(s => s.classList.remove("active"));
-            if (!slides[indexSlide]) indexSlide = 0;
-            slides[indexSlide].classList.add('active');
-            document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
-            loopInterval = setInterval(() => mudarSlide(1), 10000);
-        }
-
-        window.onload = carregarDados;
-        setInterval(() => { if(!isPaused) carregarDados(); }, 300000);
-    </script>
-</body>
-</html>
+            mSlide.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-10"><div class="grid grid-cols-2 gap-12 w-full max-w-6xl"><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-blue-600 text-center"><h3 class="text-3xl font-black text-blue-900 uppercase mb-4">Média Semanal</h3><div class="text-[10rem] leading-none font-black text-blue-600">${mediaS.toFixed(1)}%</div></div><div class="
+            
