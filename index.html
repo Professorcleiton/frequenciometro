@@ -13,9 +13,7 @@
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .card-turma { border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 20px; height: 350px; margin-top: 20px; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; width: 220px; border-radius: 20px 20px 0 0; padding-bottom: 20px; }
-        .btn-ctrl { background: rgba(255, 255, 255, 0.1); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); font-size: 0.9rem; transition: all 0.2s; }
+        .btn-ctrl { background: rgba(255, 255, 255, 0.15); color: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s; }
         .btn-ctrl:hover { background: #2563eb; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
     </style>
@@ -35,20 +33,20 @@
             <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Sincronizando...</p>
         </div>
         <div class="text-right">
-            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Página --</p>
+            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Aguarde</p>
             <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
         </div>
     </header>
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
-        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando dados da planilha...</p>
+        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando dados...</p>
     </main>
 
-    <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-between items-center px-16 text-xs font-black uppercase tracking-widest shrink-0 z-10">
-        <div class="flex gap-12 items-center">
-            <div class="flex items-center gap-3"><span>✋</span> < 90%</div>
-            <div class="flex items-center gap-3"><span>👍</span> 90-95%</div>
-            <div class="flex items-center gap-3"><span>👏</span> > 95%</div>
+    <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-between items-center px-16 text-xs font-black uppercase tracking-widest shrink-0 z-50">
+        <div class="flex gap-10 items-center">
+            <div class="flex items-center gap-2"><span>✋</span> < 90%</div>
+            <div class="flex items-center gap-2"><span>👍</span> 90-95%</div>
+            <div class="flex items-center gap-2"><span>👏</span> > 95%</div>
         </div>
 
         <div class="flex gap-4 items-center bg-white/5 px-4 py-1 rounded-full">
@@ -57,7 +55,10 @@
             <div class="btn-ctrl" onclick="mudarSlide(1)">➡️</div>
         </div>
 
-        <img src="criancas.png" alt="Estudantes" class="h-10 object-contain">
+        <div class="flex items-center gap-4">
+            <span class="opacity-50 text-[10px]">CCM Anchieta © 2026</span>
+            <img src="criancas.png" alt="Estudantes" class="h-10 object-contain">
+        </div>
     </footer>
 
     <script>
@@ -71,13 +72,13 @@
             const agora = new Date();
             const inicioAno = new Date(agora.getFullYear(), 0, 1);
             const dias = Math.floor((agora - inicioAno) / (24 * 60 * 60 * 1000));
-            const numeroSemana = Math.ceil((dias + inicioAno.getDay() + 1) / 7);
-            const diaSemana = agora.getDay();
-            const diffSegunda = agora.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1);
-            const segunda = new Date(new Date().setDate(diffSegunda));
-            const domingo = new Date(new Date().setDate(segunda.getDate() + 6));
-            const formatar = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-            document.getElementById("info-semana-detalhada").innerText = `SEMANA ${numeroSemana} • ${formatar(segunda)} a ${formatar(domingo)}`;
+            const numSem = Math.ceil((dias + inicioAno.getDay() + 1) / 7);
+            const dSem = agora.getDay();
+            const diffSeg = agora.getDate() - (dSem === 0 ? 6 : dSem - 1);
+            const seg = new Date(new Date().setDate(diffSeg));
+            const dom = new Date(new Date().setDate(seg.getDate() + 6));
+            const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+            document.getElementById("info-semana-detalhada").innerText = `SEMANA ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
         }
 
         function togglePause() {
@@ -98,37 +99,37 @@
 
         async function carregarDados() {
             try {
-                const response = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
-                const texto = await response.text();
-                const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 5);
+                const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
+                const txt = await res.text();
+                const linhas = txt.split(/\r?\n/).filter(l => l.trim().length > 5);
                 todasTurmas = [];
                 
                 for (let i = 1; i < linhas.length; i++) {
                     const cols = linhas[i].split(/[,;]/);
-                    
-                    // Ordem corrigida: 0:Nome | 1:Freq | 2:Turno | 3:Troféus | 4:Histórico | 5:Código (ignorar)
+                    // Ordem: 0:Nome | 1:Freq | 2:Turno | 3:Trof | 4:Histórico | 5:Código (Ignorado)
                     if (cols.length >= 2) {
                         const nome = cols[0].replace(/"/g, "").trim();
                         const freq = parseFloat(cols[1].replace(/"/g, "").replace(",", ".").trim());
                         const turno = cols[2]?.toLowerCase().replace(/"/g, "").trim() || "tarde";
                         const trof = parseInt(cols[3]) || 0;
-                        const hist = cols[4] ? parseFloat(cols[4].replace(/"/g, "").replace(",", ".").trim()) : freq;
                         
+                        // Limpeza profunda na média acumulada (coluna 4)
+                        let valHist = cols[4] ? cols[4].replace(/"/g, "").replace(",", ".").trim() : null;
+                        let hist = (valHist && !isNaN(parseFloat(valHist))) ? parseFloat(valHist) : freq;
+                        
+                        // Trava de segurança para não somar IDs gigantes
+                        if (hist > 100) hist = freq; 
+
                         if (!isNaN(freq)) {
                             todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, historico: hist });
                         }
                     }
                 }
-
                 if (todasTurmas.length > 0) {
                     atualizarTextoSemana();
                     gerarSlides();
-                } else {
-                    document.getElementById("status-msg").innerText = "Planilha vazia ou erro na leitura.";
                 }
-            } catch (err) { 
-                document.getElementById("status-msg").innerText = "Erro ao conectar com a planilha.";
-            }
+            } catch (err) { console.error(err); }
         }
 
         function gerarSlides() {
@@ -140,20 +141,13 @@
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
-            const top3 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 3);
-            if (top3.length >= 3) {
-                const pSlide = document.createElement("div");
-                pSlide.className = "pagina-slide w-full h-full pt-6";
-                pSlide.innerHTML = `<div class="flex flex-col h-full items-center justify-center"><div class="bg-yellow-500 text-blue-950 py-3 px-20 rounded-full font-black text-4xl mb-8 shadow-xl border-4 border-yellow-200 uppercase">🏆 PODIUM DA SEMANA 🏆</div><div class="podium-container"><div class="podium-item podium-2 shadow-2xl bg-slate-400 order-1"><span class="text-7xl mb-2">🥈</span><p class="text-white font-black text-2xl uppercase">${top3[1].nome}</p><p class="text-white font-black text-5xl">${top3[1].valor.toFixed(1)}%</p></div><div class="podium-item podium-1 shadow-2xl bg-yellow-500 order-2 scale-110"><span class="text-8xl mb-2">🥇</span><p class="text-blue-900 font-black text-3xl uppercase">${top3[0].nome}</p><p class="text-blue-900 font-black text-6xl">${top3[0].valor.toFixed(1)}%</p></div><div class="podium-item podium-3 shadow-2xl bg-amber-700 order-3"><span class="text-7xl mb-2">🥉</span><p class="text-white font-black text-2xl uppercase">${top3[2].nome}</p><p class="text-white font-black text-5xl">${top3[2].valor.toFixed(1)}%</p></div></div></div>`;
-                container.appendChild(pSlide);
-            }
-
-            const mediaS = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-            const mediaT = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
+            // Slide Médias Finais (Correção do número gigante aqui)
+            const mSem = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+            const mTot = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
             
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
-            mSlide.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-10"><div class="grid grid-cols-2 gap-12 w-full max-w-6xl"><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-blue-600 text-center"><h3 class="text-3xl font-black text-blue-900 uppercase mb-4">Média Semanal</h3><div class="text-[10rem] leading-none font-black text-blue-600">${mediaS.toFixed(1)}%</div></div><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-emerald-600 text-center"><h3 class="text-3xl font-black text-emerald-900 uppercase mb-4">Média Acumulada</h3><div class="text-[10rem] leading-none font-black text-emerald-600">${mediaT.toFixed(1)}%</div></div></div></div>`;
+            mSlide.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-10"><div class="grid grid-cols-2 gap-12 w-full max-w-6xl"><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-blue-600 text-center"><h3 class="text-3xl font-black text-blue-900 uppercase mb-4">Média Semanal</h3><div class="text-[10rem] leading-none font-black text-blue-600">${mSem.toFixed(1)}%</div></div><div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-emerald-600 text-center"><h3 class="text-3xl font-black text-emerald-900 uppercase mb-4">Média Acumulada</h3><div class="text-[10rem] leading-none font-black text-emerald-600">${mTot.toFixed(1)}%</div></div></div></div>`;
             container.appendChild(mSlide);
             iniciarAnimacao();
         }
@@ -164,7 +158,7 @@
                 const pedaço = lista.slice(i, i + 6);
                 const slide = document.createElement("div");
                 slide.className = "pagina-slide w-full h-full pt-4";
-                slide.innerHTML = `<div class="flex flex-col h-full items-center"><div class="${cor} text-white py-3 px-20 rounded-full font-black text-3xl mb-12 shadow-md uppercase w-fit tracking-widest">${titulo}</div><div class="grid grid-cols-3 gap-10 w-full">${pedaço.map(t => { const corB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48"); return `<div class="p-8 rounded-[2rem] card-turma border-l-[20px] text-left"><p class="font-black text-slate-900 text-4xl uppercase truncate mb-4">${t.nome}</p><div class="w-full bg-slate-200 rounded-xl h-16 overflow-hidden relative shadow-inner"><div class="barra-frequencia h-full text-3xl" style="background-color: ${corB}; width: ${t.valor}%">${t.valor.toFixed(1)}%</div></div><p class="mt-3 text-center text-2xl">${"🏆".repeat(t.trofeus)}</p></div>`; }).join("")}</div></div>`;
+                slide.innerHTML = `<div class="flex flex-col h-full items-center"><div class="${cor} text-white py-3 px-20 rounded-full font-black text-3xl mb-12 shadow-md uppercase w-fit tracking-widest">${titulo}</div><div class="grid grid-cols-3 gap-10 w-full">${pedaço.map(t => { const cB = t.valor >= 95 ? "#10b981" : (t.valor >= 90 ? "#f59e0b" : "#e11d48"); return `<div class="p-8 rounded-[2rem] card-turma border-l-[20px] text-left"><p class="font-black text-slate-900 text-4xl uppercase truncate mb-4">${t.nome}</p><div class="w-full bg-slate-200 rounded-2xl h-16 overflow-hidden relative shadow-inner"><div class="barra-frequencia h-full text-3xl" style="background-color: ${cB}; width: ${t.valor}%">${t.valor.toFixed(1)}%</div></div><p class="mt-3 text-center text-2xl">${"🏆".repeat(t.trofeus)}</p></div>`; }).join("")}</div></div>`;
                 container.appendChild(slide);
             }
         }
