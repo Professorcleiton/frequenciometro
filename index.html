@@ -30,20 +30,20 @@
         <div class="text-center flex-grow">
             <h1 class="text-3xl font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">CCM ANCHIETA</h1>
             <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic block mb-1">FREQUENCIÔMETRO DIGITAL</p>
-            <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Sincronizando...</p>
+            <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Calculando dados anteriores...</p>
         </div>
         <div class="text-right">
-            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Aguarde</p>
+            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Página --</p>
             <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
         </div>
     </header>
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
-        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando dados...</p>
+        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando dados da planilha...</p>
     </main>
 
     <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-between items-center px-16 text-xs font-black uppercase tracking-widest shrink-0 z-50">
-        <div class="flex gap-10 items-center">
+        <div class="flex gap-10 items-center text-[10px]">
             <div class="flex items-center gap-2"><span>✋</span> < 90%</div>
             <div class="flex items-center gap-2"><span>👍</span> 90-95%</div>
             <div class="flex items-center gap-2"><span>👏</span> > 95%</div>
@@ -56,7 +56,7 @@
         </div>
 
         <div class="flex items-center gap-4">
-            <span class="opacity-50 text-[10px]">CCM Anchieta © 2026</span>
+            <span class="opacity-50 text-[10px]">CCM ANCHIETA</span>
             <img src="criancas.png" alt="Estudantes" class="h-10 object-contain">
         </div>
     </footer>
@@ -69,16 +69,21 @@
         let isPaused = false;
 
         function atualizarTextoSemana() {
-            const agora = new Date();
-            const inicioAno = new Date(agora.getFullYear(), 0, 1);
-            const dias = Math.floor((agora - inicioAno) / (24 * 60 * 60 * 1000));
+            const hoje = new Date();
+            // Subtrai 7 dias para mostrar a SEMANA ANTERIOR
+            const dataReferencia = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
+            
+            const inicioAno = new Date(dataReferencia.getFullYear(), 0, 1);
+            const dias = Math.floor((dataReferencia - inicioAno) / (24 * 60 * 60 * 1000));
             const numSem = Math.ceil((dias + inicioAno.getDay() + 1) / 7);
-            const dSem = agora.getDay();
-            const diffSeg = agora.getDate() - (dSem === 0 ? 6 : dSem - 1);
-            const seg = new Date(new Date().setDate(diffSeg));
-            const dom = new Date(new Date().setDate(seg.getDate() + 6));
+
+            const dSem = dataReferencia.getDay();
+            const diffSeg = dataReferencia.getDate() - (dSem === 0 ? 6 : dSem - 1);
+            const seg = new Date(new Date(dataReferencia).setDate(diffSeg));
+            const dom = new Date(new Date(seg).setDate(seg.getDate() + 6));
+            
             const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-            document.getElementById("info-semana-detalhada").innerText = `SEMANA ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
+            document.getElementById("info-semana-detalhada").innerText = `DADOS DA SEMANA ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
         }
 
         function togglePause() {
@@ -106,18 +111,15 @@
                 
                 for (let i = 1; i < linhas.length; i++) {
                     const cols = linhas[i].split(/[,;]/);
-                    // Ordem: 0:Nome | 1:Freq | 2:Turno | 3:Trof | 4:Histórico | 5:Código (Ignorado)
                     if (cols.length >= 2) {
                         const nome = cols[0].replace(/"/g, "").trim();
                         const freq = parseFloat(cols[1].replace(/"/g, "").replace(",", ".").trim());
                         const turno = cols[2]?.toLowerCase().replace(/"/g, "").trim() || "tarde";
                         const trof = parseInt(cols[3]) || 0;
                         
-                        // Limpeza profunda na média acumulada (coluna 4)
+                        // Busca o histórico na coluna 4, se maior que 100 ou erro, usa a freq atual
                         let valHist = cols[4] ? cols[4].replace(/"/g, "").replace(",", ".").trim() : null;
                         let hist = (valHist && !isNaN(parseFloat(valHist))) ? parseFloat(valHist) : freq;
-                        
-                        // Trava de segurança para não somar IDs gigantes
                         if (hist > 100) hist = freq; 
 
                         if (!isNaN(freq)) {
@@ -141,7 +143,6 @@
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
-            // Slide Médias Finais (Correção do número gigante aqui)
             const mSem = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const mTot = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
             
@@ -175,7 +176,6 @@
         }
 
         window.onload = carregarDados;
-        setInterval(() => { if(!isPaused) carregarDados(); }, 300000);
     </script>
 </body>
 </html>
