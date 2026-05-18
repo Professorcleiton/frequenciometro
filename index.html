@@ -44,7 +44,7 @@
     </header>
 
     <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
-        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando dados da planilha...</p>
+        <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Sincronizando banco de dados...</p>
     </main>
 
     <footer class="w-full bg-[#0f172a] text-white p-3 flex justify-between items-center px-16 text-xs font-black uppercase tracking-widest shrink-0 z-50">
@@ -73,7 +73,6 @@
         let loopInterval = null;
         let isPaused = false;
 
-        // FUNÇÕES DE CORES PEGOAS PARA O TOPO PARA EVITAR CONFLITO DE LEITURA
         function obterCorTexto(valor) {
             if (valor >= 95) return "text-emerald-600";
             if (valor >= 90) return "text-amber-500";
@@ -120,35 +119,44 @@
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
                 const txt = await res.text();
-                const linhas = txt.split(/\r?\n/).filter(l => l.trim().length > 5);
+                
+                // Quebra as linhas tratando variações de servidores linux/windows (\r\n)
+                const linhas = txt.split(/\r?\n/);
                 todasTurmas = [];
                 
                 for (let i = 1; i < linhas.length; i++) {
-                    const cols = linhas[i].split(/[,;]/);
+                    if (linhas[i].trim().length < 4) continue;
+                    
+                    // Tratamento robusto para ignorar aspas geradas pelo CSV do Sheets
+                    const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    
                     if (cols.length >= 2) {
-                        const nome = cols[0].replace(/"/g, "").trim();
-                        const freq = parseFloat(cols[1].replace(/"/g, "").replace(",", ".").trim());
-                        const turno = cols[2]?.toLowerCase().replace(/"/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "tarde";
+                        const nome = cols[0];
+                        
+                        // Garante que o interpretador leia ponto ou vírgula decimal corretamente
+                        const freq = parseFloat(cols[1].replace(",", "."));
+                        const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
                         const trof = parseInt(cols[3]) || 0;
                         
-                        let valHist = cols[4] ? cols[4].replace(/"/g, "").replace(",", ".").trim() : null;
+                        let valHist = cols[4] ? cols[4].replace(",", ".") : null;
                         let hist = (valHist && !isNaN(parseFloat(valHist))) ? parseFloat(valHist) : freq;
                         if (hist > 100) hist = freq; 
 
-                        if (!isNaN(freq)) {
+                        if (!isNaN(freq) && nome.length > 0) {
                             todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof, historico: hist });
                         }
                     }
                 }
+                
                 if (todasTurmas.length > 0) {
                     atualizarTextoSemana();
                     gerarSlides();
                 } else {
-                    document.getElementById("status-msg").innerText = "Nenhum dado válido encontrado na planilha.";
+                    document.getElementById("status-msg").innerText = "Aviso: Nenhuma turma com dados numéricos válidos.";
                 }
             } catch (err) { 
                 console.error(err); 
-                document.getElementById("status-msg").innerText = "Erro ao carregar dados da planilha.";
+                document.getElementById("status-msg").innerText = "Erro Crítico: Verifique o link de publicação da planilha.";
             }
         }
 
@@ -171,7 +179,7 @@
                 montarSlideRankingTurno(tarde, "RANKING MENSAL - TARDE", "bg-blue-900");
             }
 
-            // 3. DISPUTA DE TURNOS (COMPARAÇÃO)
+            // 3. DISPUTA DE TURNOS
             if (manha.length > 0 && tarde.length > 0) {
                 const medManha = manha.reduce((acc, t) => acc + t.valor, 0) / manha.length;
                 const medTarde = tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length;
@@ -292,7 +300,7 @@
                                     <div class="flex justify-between items-center bg-slate-50/50 px-4 py-1.5 rounded-lg border border-slate-100">
                                         <span class="font-bold text-slate-700 text-lg uppercase"><span class="text-slate-400 mr-2 font-black">${index + 4}º</span> ${t.nome}</span>
                                         <span class="font-black text-xl ${cText}">${t.valor.toFixed(1)}%</span>
-                                    </div>`;
+                                                                           </div>`;
                             }).join("")}
                         </div>
                     </div>
@@ -302,4 +310,16 @@
 
         function iniciarAnimacao() {
             if (loopInterval) clearInterval(loopInterval);
- 
+            const slides = document.querySelectorAll(".pagina-slide");
+            if (slides.length === 0) return;
+            if (!slides[indexSlide]) indexSlide = 0;
+            slides.forEach(s => s.classList.remove("active"));
+            slides[indexSlide].classList.add('active');
+            document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
+            if (!isPaused) loopInterval = setInterval(() => mudarSlide(1), 10000);
+        }
+
+        window.onload = carregarDados;
+    </script>
+</body>
+</html>
