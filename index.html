@@ -13,6 +13,11 @@
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .card-turma { border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        
+        /* Ajuste do tamanho do contêiner do pódio para caber sem sumir */
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 20px; height: 320px; margin-top: 20px; }
+        .podium-item { display: flex; flex-direction: column; align-items: center; width: 220px; border-radius: 20px 20px 0 0; padding-bottom: 20px; }
+        
         .btn-ctrl { background: rgba(255, 255, 255, 0.15); color: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s; }
         .btn-ctrl:hover { background: #2563eb; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
@@ -25,7 +30,7 @@
     <header class="bg-white/95 px-8 py-2 shadow-md border-b-4 border-[#1e3a8a] flex justify-between items-center shrink-0 z-10">
         <div class="flex items-center gap-6">
             <img src="nucleo.png" alt="NRE" class="h-14 object-contain">
-            <img src="Design sem nome (1) (1).jpg" alt="CCM Anchieta" class="h-20 object-contain">
+            <img src="LogoA.png" alt="CCM Anchieta" class="h-20 object-contain">
         </div>
         <div class="text-center flex-grow">
             <h1 class="text-3xl font-black text-[#1e3a8a] uppercase leading-none tracking-tighter">CCM ANCHIETA</h1>
@@ -132,14 +137,12 @@
             } catch (err) { console.error(err); }
         }
 
-        // Função auxiliar para definir a cor do texto com base no valor
         function obterCorTexto(valor) {
-            if (valor >= 95) return "text-emerald-600"; // Verde
-            if (valor >= 90) return "text-amber-500";   // Laranja
-            return "text-rose-600";                      // Vermelho
+            if (valor >= 95) return "text-emerald-600";
+            if (valor >= 90) return "text-amber-500";
+            return "text-rose-600";
         }
 
-        // Função auxiliar para definir a cor da borda inferior com base no valor
         function obterCorBorda(valor) {
             if (valor >= 95) return "border-emerald-600";
             if (valor >= 90) return "border-amber-500";
@@ -155,13 +158,29 @@
             if (manha.length > 0) montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
             if (tarde.length > 0) montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
 
+            // SLIDE PODIUM GARANTIDO
+            const top3 = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 3);
+            if (top3.length >= 3) {
+                const pSlide = document.createElement("div");
+                pSlide.className = "pagina-slide w-full h-full pt-6";
+                pSlide.innerHTML = `
+                    <div class="flex flex-col h-full items-center justify-center">
+                        <div class="bg-yellow-500 text-blue-950 py-3 px-20 rounded-full font-black text-4xl mb-8 shadow-xl border-4 border-yellow-200 uppercase">🏆 PODIUM DA SEMANA 🏆</div>
+                        <div class="podium-container">
+                            <div class="podium-item podium-2 shadow-2xl bg-slate-400 order-1"><span class="text-7xl mb-2">🥈</span><p class="text-white font-black text-2xl uppercase">${top3[1].nome}</p><p class="text-white font-black text-5xl">${top3[1].valor.toFixed(1)}%</p></div>
+                            <div class="podium-item podium-1 shadow-2xl bg-yellow-500 order-2 scale-110"><span class="text-8xl mb-2">🥇</span><p class="text-blue-900 font-black text-3xl uppercase">${top3[0].nome}</p><p class="text-blue-900 font-black text-6xl">${top3[0].valor.toFixed(1)}%</p></div>
+                            <div class="podium-item podium-3 shadow-2xl bg-amber-700 order-3"><span class="text-7xl mb-2">🥉</span><p class="text-white font-black text-2xl uppercase">${top3[2].nome}</p><p class="text-white font-black text-5xl">${top3[2].valor.toFixed(1)}%</p></div>
+                        </div>
+                    </div>`;
+                container.appendChild(pSlide);
+            }
+
+            // SLIDE DAS MÉDIAS COM CORES DINÂMICAS
             const mSem = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const mTot = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
             
-            // Definição dinâmica das cores das médias gerais
             const corTextoSemana = obterCorTexto(mSem);
             const corBordaSemana = obterCorBorda(mSem);
-            
             const corTextoAcumulada = obterCorTexto(mTot);
             const corBordaAcumulada = obterCorBorda(mTot);
 
