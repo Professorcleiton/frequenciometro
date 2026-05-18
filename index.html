@@ -73,6 +73,19 @@
         let loopInterval = null;
         let isPaused = false;
 
+        // FUNÇÕES DE CORES PEGOAS PARA O TOPO PARA EVITAR CONFLITO DE LEITURA
+        function obterCorTexto(valor) {
+            if (valor >= 95) return "text-emerald-600";
+            if (valor >= 90) return "text-amber-500";
+            return "text-rose-600";
+        }
+
+        function obterCorBorda(valor) {
+            if (valor >= 95) return "border-emerald-600";
+            if (valor >= 90) return "border-amber-500";
+            return "border-rose-600";
+        }
+
         function atualizarTextoSemana() {
             const hoje = new Date();
             const dataReferencia = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -115,7 +128,7 @@
                     if (cols.length >= 2) {
                         const nome = cols[0].replace(/"/g, "").trim();
                         const freq = parseFloat(cols[1].replace(/"/g, "").replace(",", ".").trim());
-                        const turno = cols[2]?.toLowerCase().replace(/"/g, "").trim() || "tarde";
+                        const turno = cols[2]?.toLowerCase().replace(/"/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "tarde";
                         const trof = parseInt(cols[3]) || 0;
                         
                         let valHist = cols[4] ? cols[4].replace(/"/g, "").replace(",", ".").trim() : null;
@@ -130,20 +143,13 @@
                 if (todasTurmas.length > 0) {
                     atualizarTextoSemana();
                     gerarSlides();
+                } else {
+                    document.getElementById("status-msg").innerText = "Nenhum dado válido encontrado na planilha.";
                 }
-            } catch (err) { console.error(err); }
-        }
-
-        function obterCorTexto(valor) {
-            if (valor >= 95) return "text-emerald-600";
-            if (valor >= 90) return "text-amber-500";
-            return "text-rose-600";
-        }
-
-        function obterCorBorda(valor) {
-            if (valor >= 95) return "border-emerald-600";
-            if (valor >= 90) return "border-amber-500";
-            return "border-rose-600";
+            } catch (err) { 
+                console.error(err); 
+                document.getElementById("status-msg").innerText = "Erro ao carregar dados da planilha.";
+            }
         }
 
         function gerarSlides() {
@@ -153,17 +159,19 @@
             const manha = todasTurmas.filter(t => t.bloco.includes("man"));
             const tarde = todasTurmas.filter(t => t.bloco.includes("tard"));
             
-            // 1. CARDS TURNOS + PÓDIOS POR TURNO
+            // 1. TURNO MANHÃ
             if (manha.length > 0) {
                 montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
                 montarSlideRankingTurno(manha, "RANKING MENSAL - MANHÃ", "bg-blue-600");
             }
+            
+            // 2. TURNO TARDE
             if (tarde.length > 0) {
                 montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
                 montarSlideRankingTurno(tarde, "RANKING MENSAL - TARDE", "bg-blue-900");
             }
 
-            // 2. NOVO: SLIDE DE COMPARAÇÃO DE MÉDIAS POR TURNO
+            // 3. DISPUTA DE TURNOS (COMPARAÇÃO)
             if (manha.length > 0 && tarde.length > 0) {
                 const medManha = manha.reduce((acc, t) => acc + t.valor, 0) / manha.length;
                 const medTarde = tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length;
@@ -187,7 +195,7 @@
                 container.appendChild(tSlide);
             }
 
-            // 3. NOVO: SLIDE RANKING TOP 5 GERAL DA ESCOLA
+            // 4. RANKING TOP 5 GERAL DA ESCOLA
             const top5Geral = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 5);
             if (top5Geral.length > 0) {
                 const gSlide = document.createElement("div");
@@ -200,7 +208,7 @@
                                 const medalhas = ['🥇', '🥈', '🥉', '✨', '✨'];
                                 const bgCard = idx === 0 ? 'bg-yellow-50 border-yellow-400' : 'bg-white/90 border-slate-200';
                                 return `
-                                    <div class="flex justify-between items-center ${bgCard} border-2 px-8 py-3 rounded-2xl shadow-md transition-all">
+                                    <div class="flex justify-between items-center ${bgCard} border-2 px-8 py-3 rounded-2xl shadow-md">
                                         <div class="flex items-center gap-6">
                                             <span class="text-4xl">${medalhas[idx]}</span>
                                             <span class="text-2xl font-black text-slate-400 w-10">${idx+1}º</span>
@@ -215,7 +223,7 @@
                 container.appendChild(gSlide);
             }
 
-            // 4. SLIDE DE MÉDIAS GERAIS ACUMULADAS
+            // 5. SLIDE DE MÉDIAS GERAIS ACUMULADAS
             const mSem = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const mTot = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
             
@@ -294,9 +302,4 @@
 
         function iniciarAnimacao() {
             if (loopInterval) clearInterval(loopInterval);
-            const slides = document.querySelectorAll(".pagina-slide");
-            if (slides.length === 0) return;
-            if (!slides[indexSlide]) indexSlide = 0;
-            slides.forEach(s => s.classList.remove("active"));
-            slides[indexSlide].classList.add('active');
-            document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de $
+ 
