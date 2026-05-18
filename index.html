@@ -14,9 +14,9 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .card-turma { border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
         
-        /* Layout do Pódio Compacto com Lista Integrada */
-        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 15px; height: 210px; margin-bottom: 20px; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; width: 180px; border-radius: 15px 15px 0 0; padding-bottom: 10px; }
+        /* Layout dos Pódios */
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 15px; height: 200px; margin-bottom: 15px; }
+        .podium-item { display: flex; flex-direction: column; align-items: center; width: 170px; border-radius: 15px 15px 0 0; padding-bottom: 10px; }
         
         .btn-ctrl { background: rgba(255, 255, 255, 0.15); color: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s; }
         .btn-ctrl:hover { background: #2563eb; transform: scale(1.1); }
@@ -153,39 +153,84 @@
             const manha = todasTurmas.filter(t => t.bloco.includes("man"));
             const tarde = todasTurmas.filter(t => t.bloco.includes("tard"));
             
-            // 1. CARDS MANHÃ + PÓDIO MANHÃ
+            // 1. CARDS TURNOS + PÓDIOS POR TURNO
             if (manha.length > 0) {
                 montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600");
                 montarSlideRankingTurno(manha, "RANKING MENSAL - MANHÃ", "bg-blue-600");
             }
-            
-            // 2. CARDS TARDE + PÓDIO TARDE
             if (tarde.length > 0) {
                 montarPaginas(tarde, "TURNO TARDE", "bg-blue-900");
                 montarSlideRankingTurno(tarde, "RANKING MENSAL - TARDE", "bg-blue-900");
             }
 
-            // 3. SLIDE DE MÉDIAS GERAIS FINAIS
+            // 2. NOVO: SLIDE DE COMPARAÇÃO DE MÉDIAS POR TURNO
+            if (manha.length > 0 && tarde.length > 0) {
+                const medManha = manha.reduce((acc, t) => acc + t.valor, 0) / manha.length;
+                const medTarde = tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length;
+                
+                const tSlide = document.createElement("div");
+                tSlide.className = "pagina-slide w-full h-full";
+                tSlide.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full gap-8">
+                        <div class="bg-slate-800 text-white py-3 px-16 rounded-full font-black text-3xl mb-4 uppercase shadow-md">⚔️ DISPUTA ENTRE TURNOS ⚔️</div>
+                        <div class="grid grid-cols-2 gap-12 w-full max-w-5xl">
+                            <div class="bg-white/90 p-8 rounded-[2.5rem] shadow-2xl border-b-[15px] ${obterCorBorda(medManha)} text-center">
+                                <h3 class="text-3xl font-black text-blue-600 uppercase mb-2">Média Manhã</h3>
+                                <div class="text-8xl font-black ${obterCorTexto(medManha)}">${medManha.toFixed(1)}%</div>
+                            </div>
+                            <div class="bg-white/90 p-8 rounded-[2.5rem] shadow-2xl border-b-[15px] ${obterCorBorda(medTarde)} text-center">
+                                <h3 class="text-3xl font-black text-blue-900 uppercase mb-2">Média Tarde</h3>
+                                <div class="text-8xl font-black ${obterCorTexto(medTarde)}">${medTarde.toFixed(1)}%</div>
+                            </div>
+                        </div>
+                    </div>`;
+                container.appendChild(tSlide);
+            }
+
+            // 3. NOVO: SLIDE RANKING TOP 5 GERAL DA ESCOLA
+            const top5Geral = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 5);
+            if (top5Geral.length > 0) {
+                const gSlide = document.createElement("div");
+                gSlide.className = "pagina-slide w-full h-full pt-4";
+                gSlide.innerHTML = `
+                    <div class="flex flex-col h-full items-center justify-center max-w-4xl mx-auto">
+                        <div class="bg-gradient-to-r from-amber-500 to-yellow-500 text-blue-950 py-3 px-20 rounded-full font-black text-3xl mb-6 shadow-xl border-4 border-yellow-200 uppercase tracking-wide">🏆 TOP 5 GERAL DA ESCOLA 🏆</div>
+                        <div class="w-full flex flex-col gap-3">
+                            ${top5Geral.map((t, idx) => {
+                                const medalhas = ['🥇', '🥈', '🥉', '✨', '✨'];
+                                const bgCard = idx === 0 ? 'bg-yellow-50 border-yellow-400' : 'bg-white/90 border-slate-200';
+                                return `
+                                    <div class="flex justify-between items-center ${bgCard} border-2 px-8 py-3 rounded-2xl shadow-md transition-all">
+                                        <div class="flex items-center gap-6">
+                                            <span class="text-4xl">${medalhas[idx]}</span>
+                                            <span class="text-2xl font-black text-slate-400 w-10">${idx+1}º</span>
+                                            <span class="font-black text-3xl text-slate-800 uppercase">${t.nome}</span>
+                                            <span class="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-500 rounded-full uppercase">${t.bloco.includes('man') ? 'Manhã' : 'Tarde'}</span>
+                                        </div>
+                                        <span class="font-black text-4xl ${obterCorTexto(t.valor)}">${t.valor.toFixed(1)}%</span>
+                                    </div>`;
+                            }).join("")}
+                        </div>
+                    </div>`;
+                container.appendChild(gSlide);
+            }
+
+            // 4. SLIDE DE MÉDIAS GERAIS ACUMULADAS
             const mSem = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const mTot = todasTurmas.reduce((acc, t) => acc + t.historico, 0) / todasTurmas.length;
             
-            const corTextoSemana = obterCorTexto(mSem);
-            const corBordaSemana = obterCorBorda(mSem);
-            const corTextoAcumulada = obterCorTexto(mTot);
-            const corBordaAcumulada = obterCorBorda(mTot);
-
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
             mSlide.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full gap-10">
                     <div class="grid grid-cols-2 gap-12 w-full max-w-6xl">
-                        <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] ${corBordaSemana} text-center">
+                        <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] ${obterCorBorda(mSem)} text-center">
                             <h3 class="text-3xl font-black text-blue-900 uppercase mb-4">Média Semanal</h3>
-                            <div class="text-[10rem] leading-none font-black ${corTextoSemana}">${mSem.toFixed(1)}%</div>
+                            <div class="text-[10rem] leading-none font-black ${obterCorTexto(mSem)}">${mSem.toFixed(1)}%</div>
                         </div>
-                        <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] ${corBordaAcumulada} text-center">
+                        <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] ${obterCorBorda(mTot)} text-center">
                             <h3 class="text-3xl font-black text-slate-800 uppercase mb-4">Média Acumulada</h3>
-                            <div class="text-[10rem] leading-none font-black ${corTextoAcumulada}">${mTot.toFixed(1)}%</div>
+                            <div class="text-[10rem] leading-none font-black ${obterCorTexto(mTot)}">${mTot.toFixed(1)}%</div>
                         </div>
                     </div>
                 </div>`;
@@ -204,23 +249,17 @@
             }
         }
 
-        // Nova Função que monta o Pódio + Lista Classificatória para cada Turno
         function montarSlideRankingTurno(listaTurno, titulo, corFundoHeader) {
             const container = document.getElementById("container-slides");
-            
-            // Ordena as turmas pelo valor mensal/semanal de forma decrescente
             const ordenadas = [...listaTurno].sort((a, b) => b.valor - a.valor);
-            
             const top3 = ordenadas.slice(0, 3);
-            const restante = ordenadas.slice(3); // Do 4º lugar em diante
+            const restante = ordenadas.slice(3);
 
-            // Garante que só monta o slide se houver turmas suficientes
             if (top3.length < 1) return;
 
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-2";
             
-            // Renderiza as medalhas de acordo com o tamanho disponível
             const nome1 = top3[0] ? top3[0].nome : "-";
             const val1 = top3[0] ? top3[0].valor.toFixed(1) + "%" : "-";
             const nome2 = top3[1] ? top3[1].nome : "-";
@@ -231,14 +270,12 @@
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="${corFundoHeader} text-white py-2 px-14 rounded-full font-black text-2xl mb-4 shadow-md uppercase w-fit tracking-wide">${titulo}</div>
-                    
                     <div class="podium-container shrink-0">
                         ${top3[1] ? `<div class="podium-item bg-slate-300 border-b-4 border-slate-400 shadow-lg order-1 h-[80%] justify-end"><span class="text-4xl mb-1">🥈</span><p class="text-slate-800 font-black text-xl uppercase leading-none">${nome2}</p><p class="text-slate-900 font-black text-2xl mt-1">${val2}</p></div>` : ''}
                         ${top3[0] ? `<div class="podium-item bg-yellow-400 border-b-4 border-yellow-500 shadow-xl order-2 h-[100%] scale-105 justify-end"><span class="text-5xl mb-1">🥇</span><p class="text-blue-950 font-black text-2xl uppercase leading-none">${nome1}</p><p class="text-blue-900 font-black text-3xl mt-1">${val1}</p></div>` : ''}
                         ${top3[2] ? `<div class="podium-item bg-amber-600 border-b-4 border-amber-700 shadow-lg order-3 h-[65%] justify-end"><span class="text-4xl mb-1">🥉</span><p class="text-amber-50 font-black text-xl uppercase leading-none">${nome3}</p><p class="text-amber-950 font-black text-2xl mt-1">${val3}</p></div>` : ''}
                     </div>
-
-                    <div class="w-full bg-white/90 rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[250px] overflow-y-auto mb-2">
+                    <div class="w-full bg-white/90 rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[240px] overflow-y-auto mb-2">
                         <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-2 border-b pb-1">Demais Classificações:</h4>
                         <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-left">
                             ${restante.map((t, index) => {
@@ -247,14 +284,11 @@
                                     <div class="flex justify-between items-center bg-slate-50/50 px-4 py-1.5 rounded-lg border border-slate-100">
                                         <span class="font-bold text-slate-700 text-lg uppercase"><span class="text-slate-400 mr-2 font-black">${index + 4}º</span> ${t.nome}</span>
                                         <span class="font-black text-xl ${cText}">${t.valor.toFixed(1)}%</span>
-                                    </div>
-                                `;
+                                    </div>`;
                             }).join("")}
-                            ${restante.length === 0 ? '<p class="text-slate-400 font-bold text-sm col-span-2 text-center py-2">Sem mais turmas registradas neste turno.</p>' : ''}
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
             container.appendChild(slide);
         }
 
@@ -265,11 +299,4 @@
             if (!slides[indexSlide]) indexSlide = 0;
             slides.forEach(s => s.classList.remove("active"));
             slides[indexSlide].classList.add('active');
-            document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
-            if (!isPaused) loopInterval = setInterval(() => mudarSlide(1), 10000);
-        }
-
-        window.onload = carregarDados;
-    </script>
-</body>
-</html>
+            document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de $
