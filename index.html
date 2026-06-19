@@ -15,6 +15,7 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .card-turma { border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); min-height: 130px; transition: border-color 0.3s ease; }
         
+        /* Efeito de entrada genérico para listas dinâmicas */
         .card-animado { animation: itemEntrada 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         .card-animado:nth-child(1) { animation-delay: 0.05s; }
         .card-animado:nth-child(2) { animation-delay: 0.1s; }
@@ -32,7 +33,6 @@
             from { opacity: 0; transform: translateY(150px) scale(0.9); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
 
         #barra-tempo { height: 4px; background: #3b82f6; width: 0%; position: absolute; top: 0; left: 0; }
         
@@ -94,11 +94,11 @@
         let indexSlide = 0;
         let loopInterval = null;
         let isPaused = false;
-        let tempoSlideMs = 22000; 
+        let tempoSlideMs = 9000; // FIXADO EM 9 SEGUNDOS POR SLIDE
         let tInicioSlide = 0;
-        let tRestante = 22000;
+        let tRestante = 9000;
         let animBarra = null;
-        let timersPodio = []; 
+        let timersPagina = []; 
 
         function obterCoresPorValor(valor) {
             if (valor >= 95) return { hex: "#10b981", tailwindTxt: "text-emerald-600", tailwindBorder: "border-emerald-600" };
@@ -120,12 +120,13 @@
             document.getElementById("info-semana-detalhada").innerText = `DADOS DA SEMANA ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
         }
 
+        // MOTOR DE SUBIDA DAS BARRAS E CONTADORES
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
             const cardElement = document.getElementById(`card-${idCard}`);
             const barraElement = document.getElementById(`barra-${idCard}`);
             
             let valorAtual = 0;
-            let tempoTotalEstimado = tempoCustomizado || 9500; 
+            let tempoTotalEstimado = tempoCustomizado || 4500; // Ajustado proporcionalmente para caber nos 9s
             let tempoInicio = null;
 
             function executarSubida(timestamp) {
@@ -133,18 +134,17 @@
                 let tempoDecorrido = timestamp - tempoInicio;
 
                 let tNorm = tempoDecorrido / tempoTotalEstimado;
-                let fatorCurva = 1 - Math.pow(1 - Math.min(tNorm, 1), 5); 
+                let fatorCurva = 1 - Math.pow(1 - Math.min(tNorm, 1), 4); 
                 
                 valorAtual = fatorCurva * valorFinal;
 
-                if (valorAtual >= 88.5 && valorAtual < 90) {
-                    let faixa1 = (tempoDecorrido - (tempoTotalEstimado * 0.3)) / (tempoTotalEstimado * 0.3);
-                    faixa1 = Math.max(0, Math.min(faixa1, 1));
-                    valorAtual = 88.5 + (Math.sin(faixa1 * Math.PI / 2) * 1.4);
-                } else if (valorAtual >= 93.2 && valorAtual < 95) {
-                    let faixa2 = (tempoDecorrido - (tempoTotalEstimado * 0.5)) / (tempoTotalEstimado * 0.5);
-                    faixa2 = Math.max(0, Math.min(faixa2, 1));
-                    valorAtual = 93.2 + (Math.sin(faixa2 * Math.PI / 2) * 1.7);
+                // Frenagem suave perto das metas de mudança de cor
+                if (valorAtual >= 88.8 && valorAtual < 90) {
+                    let f1 = (tempoDecorrido - (tempoTotalEstimado * 0.3)) / (tempoTotalEstimado * 0.4);
+                    valorAtual = 88.8 + (Math.sin(Math.max(0, Math.min(f1, 1)) * Math.PI / 2) * 1.1);
+                } else if (valorAtual >= 93.5 && valorAtual < 95) {
+                    let f2 = (tempoDecorrido - (tempoTotalEstimado * 0.5)) / (tempoTotalEstimado * 0.4);
+                    valorAtual = 93.5 + (Math.sin(Math.max(0, Math.min(f2, 1)) * Math.PI / 2) * 1.4);
                 }
 
                 if (tNorm >= 1 || valorAtual >= valorFinal) {
@@ -168,9 +168,9 @@
                     if (txtContador) {
                         txtContador.innerText = valorAtual.toFixed(1) + "%";
                         if(cardElement.classList.contains('podium-item')) {
-                            txtContador.className = `text-4xl md:text-5xl font-black tracking-tight mt-2 block w-full num-contador-txt ${coresDinamicas.tailwindTxt}`;
+                            txtContador.className = `text-4xl font-black mt-2 block w-full num-contador-txt ${coresDinamicas.tailwindTxt}`;
                         } else {
-                            txtContador.className = `text-5xl md:text-6xl font-black num-contador-txt ${coresDinamicas.tailwindTxt}`;
+                            txtContador.className = `text-5xl font-black num-contador-txt ${coresDinamicas.tailwindTxt}`;
                         }
                     }
                 }
@@ -211,75 +211,137 @@
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length <= 1) return;
 
-            timersPodio.forEach(t => clearTimeout(t));
-            timersPodio = [];
+            // Reseta e limpa timers e animações ativas da página anterior
+            timersPagina.forEach(t => clearTimeout(t));
+            timersPagina = [];
             
             slides[indexSlide].classList.remove("active");
             indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             slides[indexSlide].classList.add("active");
             document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
             
-            const isRanking = slides[indexSlide].classList.contains('slide-tipo-ranking');
+            const currentSlide = slides[indexSlide];
 
-            if (!isRanking) {
-                slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
+            // 1. COMPORTAMENTO: SLIDES NORMAIS (LISTAGENS DE TURMAS)
+            if (currentSlide.classList.contains('slide-tipo-lista')) {
+                currentSlide.querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                     const idTarget = el.dataset.id;
                     const valTarget = parseFloat(el.dataset.target);
                     if(idTarget && !isNaN(valTarget)) {
                         const b = document.getElementById(`barra-${idTarget}`);
                         if (b) { b.style.width = "0%"; b.style.backgroundColor = "#e11d48"; b.innerText = "0.0%"; }
-                        setTimeout(() => animarBarraECounter(idTarget, valTarget, 9500), 150);
+                        setTimeout(() => animarBarraECounter(idTarget, valTarget, 5000), 150);
                     }
                 });
-                if (slides[indexSlide].dataset.hasElite === "true") {
-                    setTimeout(dispararConfetesEspeciais, 8500);
+                if (currentSlide.dataset.hasElite === "true") {
+                    let tc = setTimeout(dispararConfetesEspeciais, 5200);
+                    timersPagina.push(tc);
                 }
-            } else {
-                const pod1 = slides[indexSlide].querySelector('.pod-ouro');
-                const pod2 = slides[indexSlide].querySelector('.pod-prata');
-                const pod3 = slides[indexSlide].querySelector('.pod-bronze');
-                const demaisClass = slides[indexSlide].querySelector('.demais-class-box');
+            } 
+            
+            // 2. COMPORTAMENTO: DISPUTA ENTRE TURNOS
+            else if (currentSlide.classList.contains('slide-tipo-disputa')) {
+                const coroaManha = currentSlide.querySelector('.coroa-m');
+                const coroaTarde = currentSlide.querySelector('.coroa-t');
+                if (coroaManha) coroaManha.style.opacity = "0";
+                if (coroaTarde) coroaTarde.style.opacity = "0";
+
+                currentSlide.querySelectorAll('.card-bloco-media').forEach(el => {
+                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500);
+                });
+
+                // REVELAÇÃO DA COROA SÓ NO FINAL DA SUBIDA (4.7 segundos)
+                let tCoroa = setTimeout(() => {
+                    if (coroaManha && coroaManha.dataset.vencedor === "true") coroaManha.style.opacity = "1";
+                    if (coroaTarde && coroaTarde.dataset.vencedor === "true") coroaTarde.style.opacity = "1";
+                }, 4700);
+                timersPagina.push(tCoroa);
+            }
+            
+            // 3. COMPORTAMENTO: DESAFIO COLETIVO (META OURO)
+            else if (currentSlide.classList.contains('slide-tipo-desafio')) {
+                currentSlide.querySelectorAll('.card-bloco-media').forEach(el => {
+                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
+                });
+            }
+
+            // 4. COMPORTAMENTO: RANKING SEMANAL POR TURNO (PÓDIO EM CASCATA)
+            else if (currentSlide.classList.contains('slide-tipo-ranking')) {
+                const pod1 = currentSlide.querySelector('.pod-ouro');
+                const pod2 = currentSlide.querySelector('.pod-prata');
+                const pod3 = currentSlide.querySelector('.pod-bronze');
+                const demaisClass = currentSlide.querySelector('.demais-class-box');
 
                 if (pod1) pod1.style.animation = "none";
                 if (pod2) pod2.style.animation = "none";
                 if (pod3) pod3.style.animation = "none";
                 if (demaisClass) demaisClass.style.opacity = "0";
 
-                let t3 = setTimeout(() => {
+                // Revela 3º Lugar (Bronze) - 1.0s
+                let r3 = setTimeout(() => {
                     if (pod3) {
-                        pod3.style.animation = "subirPodio 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
-                        animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 3500);
+                        pod3.style.animation = "subirPodio 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards";
+                        animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000);
                     }
-                }, 1500);
-                timersPodio.push(t3);
+                }, 1000);
+                timersPagina.push(r3);
 
-                let t2 = setTimeout(() => {
+                // Revela 2º Lugar (Prata) - 3.2s
+                let r2 = setTimeout(() => {
                     if (pod2) {
-                        pod2.style.animation = "subirPodio 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
-                        animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 3500);
+                        pod2.style.animation = "subirPodio 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards";
+                        animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000);
                     }
-                }, 5500);
-                timersPodio.push(t2);
+                }, 3200);
+                timersPagina.push(r2);
 
-                let t1 = setTimeout(() => {
+                // Revela 1º Lugar (Ouro) + Lista - 5.4s
+                let r1 = setTimeout(() => {
                     if (pod1) {
-                        pod1.style.animation = "subirPodio 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards";
-                        animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 4000);
+                        pod1.style.animation = "subirPodio 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards";
+                        animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000);
                     }
                     if (demaisClass) {
-                        demaisClass.style.transition = "opacity 1s ease";
+                        demaisClass.style.transition = "opacity 0.6s ease";
                         demaisClass.style.opacity = "1";
                         demaisClass.querySelectorAll('.card-bloco-media').forEach(el => {
-                            animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4000);
+                            animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 2000);
                         });
                     }
-                }, 9500);
-                timersPodio.push(t1);
+                }, 5400);
+                timersPagina.push(r1);
 
-                let tc = setTimeout(() => {
-                    dispararConfetesEspeciais();
-                }, 13500);
-                timersPodio.push(tc);
+                // Confete com o pódio coroado - 7.5s
+                let rConf = setTimeout(dispararConfetesEspeciais, 7500);
+                timersPagina.push(rConf);
+            }
+
+            // 5. COMPORTAMENTO: TOP 5 GERAL DA ESCOLA (REVELAÇÃO EM CASCATA INVERTIDA)
+            else if (currentSlide.classList.contains('slide-tipo-top5')) {
+                const linhasTop5 = currentSlide.querySelectorAll('.linha-top5');
+                linhasTop5.forEach(l => { l.style.opacity = "0"; l.style.transform = "translateY(20px)"; });
+
+                // Faz brotar do 5º colocado até o 1º de forma escalonada
+                for (let idx = 4; idx >= 0; idx--) {
+                    let delayRevelacao = (4 - idx) * 1200 + 500; // Distribui os gatilhos ao longo do slide
+                    let tLinha = setTimeout(() => {
+                        if (linhasTop5[idx]) {
+                            linhasTop5[idx].style.transition = "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
+                            linhasTop5[idx].style.opacity = "1";
+                            linhasTop5[idx].style.transform = "translateY(0)";
+                            
+                            const idTarget = linhasTop5[idx].dataset.id;
+                            const valTarget = parseFloat(linhasTop5[idx].dataset.target);
+                            animarBarraECounter(idTarget, valTarget, 1500);
+
+                            // Se acabou de revelar o 1º Colocado Geral da Escola, solta os confetes dele!
+                            if(idx === 0) {
+                                setTimeout(dispararConfetesEspeciais, 1200);
+                            }
+                        }
+                    }, delayRevelacao);
+                    timersPagina.push(tLinha);
+                }
             }
 
             tRestante = tempoSlideMs;
@@ -294,7 +356,7 @@
         }
 
         function dispararConfetesEspeciais() {
-            var duracao = 2.5 * 1000;
+            var duracao = 1.5 * 1000;
             var fim = Date.now() + duracao;
             (function moldura() {
                 confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 } });
@@ -348,28 +410,30 @@
                 idGlobal = montarSlideRankingTurno(tarde, "RANKING SEMANAL - TARDE", "bg-blue-900", idGlobal);
             }
 
+            // DISPUTA INTERTURNOS (Com Coroa Oculta Temporizada)
             if (manha.length > 0 && tarde.length > 0) {
                 const medManha = manha.reduce((acc, t) => acc + t.valor, 0) / manha.length;
                 const medTarde = tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length;
-                const vM = medManha > medTarde ? "👑" : "";
-                const vT = medTarde > medManha ? "👑" : "";
+                const vM = medManha > medTarde ? "true" : "false";
+                const vT = medTarde > medManha ? "true" : "false";
                 
                 idGlobal++; let idM = idGlobal;
                 idGlobal++; let idT = idGlobal;
 
                 const tSlide = document.createElement("div");
-                tSlide.className = "pagina-slide w-full h-full";
+                tSlide.className = "pagina-slide w-full h-full slide-tipo-disput";
+                tSlide.classList.add('slide-tipo-disputa');
                 tSlide.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full gap-8">
                         <div class="bg-slate-800 text-white py-3 px-16 rounded-full font-black text-3xl mb-4 uppercase shadow-md">⚔️ DISPUTA ENTRE TURNOS ⚔️</div>
                         <div class="grid grid-cols-2 gap-12 w-full max-w-5xl">
                             <div id="card-${idM}" data-id="${idM}" data-target="${medManha}" class="bg-white/90 p-8 rounded-[2.5rem] shadow-2xl border-b-[15px] card-bloco-media border-rose-600 text-center relative">
-                                <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl">${vM}</span>
+                                <span class="coroa-m absolute -top-8 left-1/2 -translate-x-1/2 text-5xl transition-opacity duration-500 opacity-0" data-vencedor="${vM}">👑</span>
                                 <h3 class="text-3xl font-black text-blue-600 uppercase mb-2">Média Manhã</h3>
                                 <div class="text-6xl font-black text-rose-600 num-contador-txt">0.0%</div>
                             </div>
                             <div id="card-${idT}" data-id="${idT}" data-target="${medTarde}" class="bg-white/90 p-8 rounded-[2.5rem] shadow-2xl border-b-[15px] card-bloco-media border-rose-600 text-center relative">
-                                <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl">${vT}</span>
+                                <span class="coroa-t absolute -top-8 left-1/2 -translate-x-1/2 text-5xl transition-opacity duration-500 opacity-0" data-vencedor="${vT}">👑</span>
                                 <h3 class="text-3xl font-black text-blue-900 uppercase mb-2">Média Tarde</h3>
                                 <div class="text-6xl font-black text-rose-600 num-contador-txt">0.0%</div>
                             </div>
@@ -378,10 +442,10 @@
                 container.appendChild(tSlide);
             }
 
+            // DESAFIO COLETIVO (META OURO)
             const mediaGeralEscola = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const metaOuro = 95.0;
             const faltaParaMeta = Math.max(metaOuro - mediaGeralEscola, 0);
-            
             const msgMissao = faltaParaMeta > 0 
                 ? `Faltam apenas <span class="text-blue-600 font-black">${faltaParaMeta.toFixed(1)}%</span> para o Anchieta atingir a Meta!`
                 : `Parabéns Anchieta! Superamos a Meta de Elite Nacional! 🎉`;
@@ -389,7 +453,7 @@
             idGlobal++; let idEscola = idGlobal;
 
             const mSlide = document.createElement("div");
-            mSlide.className = "pagina-slide w-full h-full";
+            mSlide.className = "pagina-slide w-full h-full slide-tipo-desafio";
             mSlide.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full gap-8">
                     <div class="bg-slate-800 text-white py-3 px-20 rounded-full font-black text-3xl mb-2 uppercase shadow-md">🎯 DESAFIO COLETIVO ANCHIETA 🎯</div>
@@ -398,7 +462,7 @@
                             <h3 class="text-3xl font-black text-slate-700 uppercase mb-4">Frequência da Escola</h3>
                             <div class="text-6xl font-black text-rose-600 num-contador-txt">0.0%</div>
                         </div>
-                        <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-yellow-500 text-center card-animado flex flex-col justify-center">
+                        <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-yellow-500 text-center flex flex-col justify-center">
                             <h3 class="text-4xl font-black text-yellow-600 uppercase mb-4">🏆 META OURO</h3>
                             <div class="text-2xl text-slate-600 font-bold uppercase leading-snug px-4">${msgMissao}</div>
                         </div>
@@ -406,10 +470,11 @@
                 </div>`;
             container.appendChild(mSlide);
 
+            // TOP 5 GERAL DA ESCOLA (Com Revelação em Cascata Oculta)
             const top5Geral = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 5);
             if (top5Geral.length > 0) {
                 const gSlide = document.createElement("div");
-                gSlide.className = "pagina-slide w-full h-full pt-4";
+                gSlide.className = "pagina-slide w-full h-full pt-4 slide-tipo-top5";
                 gSlide.innerHTML = `
                     <div class="flex flex-col h-full items-center justify-center max-w-4xl mx-auto">
                         <div class="bg-gradient-to-r from-amber-500 to-yellow-500 text-blue-950 py-3 px-20 rounded-full font-black text-3xl mb-6 shadow-xl border-4 border-yellow-200 uppercase tracking-wide">🏆 TOP 5 GERAL DA ESCOLA 🏆</div>
@@ -419,7 +484,7 @@
                                 const idx = top5Geral.indexOf(t);
                                 idGlobal++;
                                 return `
-                                    <div id="card-${idGlobal}" data-id="${idGlobal}" data-target="${t.valor}" class="flex justify-between items-center bg-white/90 border-l-[16px] border-rose-600 px-8 py-3 rounded-2xl shadow-md card-bloco-media">
+                                    <div id="card-${idGlobal}" data-id="${idGlobal}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center bg-white/90 border-l-[16px] border-rose-600 px-8 py-3 rounded-2xl shadow-md card-bloco-media opacity-0">
                                         <div class="flex items-center gap-6">
                                             <span class="text-4xl">${medalhas[idx]}</span>
                                             <span class="text-2xl font-black text-slate-400 w-10">${idx+1}º</span>
@@ -442,7 +507,7 @@
             for (let i = 0; i < lista.length; i += 6) {
                 const pedaço = lista.slice(i, i + 6);
                 const slide = document.createElement("div");
-                slide.className = "pagina-slide w-full h-full pt-2";
+                slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-lista";
                 
                 const temElite = pedaço.some(t => t.valor >= 95);
                 if(temElite) slide.dataset.hasElite = "true";
@@ -505,7 +570,7 @@
                         ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-orange-100 border-b-8 border-orange-400 shadow-lg order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                     </div>
                     
-                    <div class="w-full bg-white/90 rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[220px] overflow-y-auto mb-2 demais-class-box opacity-0">
+                    <div class="w-full bg-white/90 rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[220px] overflow-y-auto mb-2MAIS-CLASS-BOX demais-class-box opacity-0">
                         <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b pb-1">Demais Classificações:</h4>
                         <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-left">
                             ${restante.map((t) => {
@@ -527,24 +592,26 @@
             if (loopInterval) clearTimeout(loopInterval);
             cancelAnimationFrame(animBarra);
             
-            timersPodio.forEach(t => clearTimeout(t));
-            timersPodio = [];
+            timersPagina.forEach(t => clearTimeout(t));
+            timersPagina = [];
 
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length === 0) return;
             indexSlide = 0;
             
-            slides.forEach(s => s.classList.remove("active"));
             slides[indexSlide].classList.add('active');
-            document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
+            document.getElementById("indicador-pagina").innerText = `Página 1 de ${slides.length}`;
             
-            slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
-                const idTarget = el.dataset.id;
-                const valTarget = parseFloat(el.dataset.target);
-                if(idTarget && !isNaN(valTarget)) {
-                    animarBarraECounter(idTarget, valTarget, 9500);
-                }
-            });
+            // Ativa o gatilho inicial do primeiro slide carregado
+            if (slides[indexSlide].classList.contains('slide-tipo-lista')) {
+                slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
+                    const idTarget = el.dataset.id;
+                    const valTarget = parseFloat(el.dataset.target);
+                    if(idTarget && !isNaN(valTarget)) {
+                        animarBarraECounter(idTarget, valTarget, 5000);
+                    }
+                });
+            }
 
             tRestante = tempoSlideMs;
             tInicioSlide = Date.now();
