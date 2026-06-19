@@ -56,9 +56,15 @@
             <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] uppercase italic block mb-1">FREQUENCIÔMETRO DIGITAL</p>
             <p id="info-semana-detalhada" class="text-blue-700 font-bold text-lg bg-blue-50 px-6 py-1 rounded-full inline-block border border-blue-100 italic">Calculando...</p>
         </div>
-        <div class="text-right">
-            <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Página --</p>
-            <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
+        <div class="text-right flex items-center gap-4">
+            <!-- NOVO: Botão Rápido para Chamar o Sorteio de qualquer lugar -->
+            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-xs px-4 py-2 rounded-xl shadow-md hover:from-purple-700 hover:to-indigo-700 transition-all uppercase border-b-4 border-indigo-900 mr-2">
+                🎁 Abrir Sorteador
+            </button>
+            <div>
+                <p id="indicador-pagina" class="text-blue-900 font-black text-[10px] uppercase bg-blue-100 px-4 py-1 rounded-full mb-1">Página --</p>
+                <p class="text-[#1e3a8a] font-bold text-[10px] uppercase tracking-widest">Cruzeiro do Oeste - PR</p>
+            </div>
         </div>
     </header>
 
@@ -74,11 +80,15 @@
                 <div class="flex items-center gap-2"><span>👍</span> 90-95%</div>
                 <div class="flex items-center gap-2"><span>👏</span> > 95%</div>
             </div>
+            
             <div class="flex gap-4 items-center bg-white/5 px-4 py-1 rounded-full">
                 <div class="btn-ctrl" onclick="mudarSlide(-1)">⬅️</div>
                 <div id="btn-pause" class="btn-ctrl" onclick="togglePause()">⏸️</div>
+                <!-- NOVO: Botão de Sorteio rápido também na barra inferior caso use passador -->
+                <button onclick="forçarAberturaSorteio()" class="bg-purple-600 text-white font-black text-[10px] px-3 py-1 rounded-full shadow hover:bg-purple-700 uppercase transition-all">🎁 Sorteio</button>
                 <div class="btn-ctrl" onclick="mudarSlide(1)">➡️</div>
             </div>
+            
             <div class="flex items-center gap-4">
                 <span class="opacity-50 text-[10px]">CCM ANCHIETA</span>
                 <img src="criancas.png" alt="Estudantes" class="h-10 object-contain">
@@ -88,7 +98,6 @@
 
     <script>
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
-        // ATUALIZADO: Usando o novo link que você enviou para os alunos!
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
         
         let todasTurmas = [];
@@ -186,7 +195,8 @@
         }
 
         function atualizarBarraTempoAvançado() {
-            if (isPaused || sorteioEmAndamento) return;
+            const currentSlide = document.querySelector(".pagina-slide.active");
+            if (isPaused || sorteioEmAndamento || (currentSlide && currentSlide.classList.contains('slide-tipo-sorteio'))) return;
             const barra = document.getElementById('barra-tempo');
             const decorrido = Date.now() - tInicioSlide;
             const pct = Math.min((decorrido / tRestante) * 100, 100);
@@ -308,21 +318,43 @@
                     timersPagina.push(tLinha);
                 }
             }
-            else if (currentSlide.classList.contains('slide-tipo-sorteio')) {
-                clearInterval(loopInterval);
-                cancelAnimationFrame(animBarra);
-                document.getElementById('barra-tempo').style.width = "0%";
+
+            // ATENÇÃO: Se o loop automático bater na tela de sorteio, ele ignora e pula para a página 1
+            if (currentSlide.classList.contains('slide-tipo-sorteio')) {
+                mudarSlide(1);
+                return;
             }
 
-            if (!currentSlide.classList.contains('slide-tipo-sorteio')) {
-                tRestante = tempoSlideMs;
-                tInicioSlide = Date.now();
-                if (!isPaused) {
-                    clearTimeout(loopInterval);
-                    cancelAnimationFrame(animBarra);
-                    loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
-                    atualizarBarraTempoAvançado();
-                }
+            tRestante = tempoSlideMs;
+            tInicioSlide = Date.now();
+            if (!isPaused) {
+                clearTimeout(loopInterval);
+                cancelAnimationFrame(animBarra);
+                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
+                atualizarBarraTempoAvançado();
+            }
+        }
+
+        // NOVO GATILHO MANUAL: Força o congelamento total do painel e abre exclusivamente o sorteador
+        function forçarAberturaSorteio() {
+            if (sorteioEmAndamento) return;
+            
+            clearInterval(loopInterval);
+            cancelAnimationFrame(animBarra);
+            timersPagina.forEach(t => clearTimeout(t));
+            
+            document.getElementById('barra-tempo').style.width = "0%";
+            
+            const slides = document.querySelectorAll(".pagina-slide");
+            slides.forEach(s => s.classList.remove("active"));
+            
+            const slideSorteio = document.querySelector(".slide-tipo-sorteio");
+            if(slideSorteio) {
+                slideSorteio.classList.add("active");
+                // Atualiza o indicador para mostrar que está no modo Sorteio isolado
+                document.getElementById("indicador-pagina").innerText = `MODO SORTEIO`;
+                // Reseta o display para nova escolha
+                document.getElementById("nome-sorteado-display").innerText = "???";
             }
         }
 
@@ -336,20 +368,25 @@
             }());
         }
 
-        function iniciarSorteioVirtual(turmaAlvo) {
+        function iniciarSorteioVirtual() {
             if (sorteioEmAndamento) return;
+            
+            // Captura dinamicamente qual turma está selecionada na caixa suspensa
+            const seletor = document.getElementById("seletor-turma-sorteio");
+            const turmaAlvo = seletor.value;
             
             const alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
             const displayNome = document.getElementById("nome-sorteado-display");
             const btn = document.getElementById("btn-trigger-sorteio");
 
             if (alunosFiltrados.length === 0) {
-                displayNome.innerText = "Nenhum aluno cadastrado nesta turma!";
+                displayNome.innerText = "Sem alunos cadastrados nesta turma!";
                 return;
             }
 
             sorteioEmAndamento = true;
             if(btn) btn.style.display = "none"; 
+            seletor.disabled = true; // Bloqueia o seletor enquanto gira
             
             let giros = 0;
             let velocidade = 60; 
@@ -370,11 +407,8 @@
                     setTimeout(() => {
                         clearInterval(cLoop);
                         sorteioEmAndamento = false;
+                        seletor.disabled = false;
                         if(btn) { btn.style.display = "inline-block"; btn.innerText = "🎰 REFAZER SORTEIO"; }
-                        tRestante = tempoSlideMs;
-                        tInicioSlide = Date.now();
-                        loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
-                        atualizarBarraTempoAvançado();
                     }, 6000);
                 }
             }
@@ -440,6 +474,7 @@
                 idGlobal = montarSlideRankingTurno(tarde, "RANKING SEMANAL - TARDE", "bg-blue-900", idGlobal);
             }
 
+            // DISPUTA INTERTURNOS
             if (manha.length > 0 && tarde.length > 0) {
                 const medManha = manha.reduce((acc, t) => acc + t.valor, 0) / manha.length;
                 const medTarde = tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length;
@@ -469,6 +504,7 @@
                 container.appendChild(tSlide);
             }
 
+            // DESAFIO COLETIVO (META OURO)
             const mediaGeralEscola = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const metaOuro = 95.0;
             const faltaParaMeta = Math.max(metaOuro - mediaGeralEscola, 0);
@@ -496,6 +532,7 @@
                 </div>`;
             container.appendChild(mSlide);
 
+            // TOP 5 GERAL DA ESCOLA
             const top5Geral = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 5);
             if (top5Geral.length > 0) {
                 const gSlide = document.createElement("div");
@@ -524,32 +561,37 @@
                 container.appendChild(gSlide);
             }
 
-            if (top5Geral.length > 0) {
-                const turmaVencedoraGeral = top5Geral[0].nome; 
-                const sSlide = document.createElement("div");
-                sSlide.className = "pagina-slide w-full h-full slide-tipo-sorteio";
-                sSlide.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full gap-8 max-w-5xl mx-auto">
-                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 px-16 rounded-full font-black text-3xl shadow-2xl uppercase tracking-widest border-b-8 border-indigo-900 animate-pulse">
-                            🎁 SORTEIO DE BRINDES DA SEMANA 🎁
-                        </div>
-                        <div class="bg-white/90 p-12 rounded-[3rem] shadow-2xl border-4 border-purple-500 w-full text-center flex flex-col items-center justify-center min-h-[350px]">
-                            <h3 class="text-3xl font-bold text-slate-500 uppercase tracking-wide">🏆 Turma Concorrente (Melhor Frequência)</h3>
-                            <div class="text-5xl font-black text-purple-700 uppercase tracking-tight my-4 bg-purple-50 px-10 py-2 rounded-2xl border border-purple-200">
-                                ${turmaVencedoraGeral}
-                            </div>
-                            
-                            <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black text-slate-800 uppercase tracking-tight my-8 h-24 flex items-center justify-center min-w-[300px]">
-                                ???
-                            </div>
+            // FLASHCARD DE SORTEIO REFORMULADO (MANUAL E INDEPENDENTE)
+            const ordenadasAlfabetico = [...todasTurmas].sort((a,b) => a.nome.localeCompare(b.nome));
+            const a_primeira = top5Geral.length > 0 ? top5Geral[0].nome : ""; // Deixa a campeã pré-selecionada de brinde
 
-                            <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual('${turmaVencedoraGeral}')" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-3xl px-12 py-5 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all uppercase border-b-4 border-amber-700">
-                                🎰 INICIAR SORTEIO
-                            </button>
+            const sSlide = document.createElement("div");
+            sSlide.className = "pagina-slide w-full h-full slide-tipo-sorteio";
+            sSlide.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full gap-6 max-w-5xl mx-auto">
+                    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-16 rounded-full font-black text-2xl shadow-2xl uppercase tracking-widest border-b-8 border-indigo-900 animate-pulse">
+                        🎁 SORTEIO DE BRINDES DA SEMANA 🎁
+                    </div>
+                    <div class="bg-white/90 p-8 rounded-[3rem] shadow-2xl border-4 border-purple-500 w-full text-center flex flex-col items-center justify-center min-h-[350px]">
+                        
+                        <!-- NOVO: Caixa de Seleção Dinâmica para Trocar a Turma Manualmente -->
+                        <div class="flex flex-col items-center gap-2 mb-4 w-full max-w-md">
+                            <label for="seletor-turma-sorteio" class="text-slate-500 font-bold uppercase tracking-wider text-sm">Selecione a Turma Concorrente:</label>
+                            <select id="seletor-turma-sorteio" onchange="document.getElementById('nome-sorteado-display').innerText='???'" class="w-full p-3 bg-purple-50 border-2 border-purple-200 text-purple-900 font-black text-xl rounded-2xl outline-none focus:border-purple-500 text-center cursor-pointer shadow-inner">
+                                ${ordenadasAlfabetico.map(t => `<option value="${t.nome}" ${t.nome === a_primeira ? 'selected' : ''}>${t.nome}</option>`).join('')}
+                            </select>
                         </div>
-                    </div>`;
-                container.appendChild(sSlide);
-            }
+                        
+                        <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black text-slate-800 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]">
+                            ???
+                        </div>
+
+                        <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-2xl px-12 py-4 rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all uppercase border-b-4 border-amber-700 mt-2">
+                            🎰 INICIAR SORTEIO
+                        </button>
+                    </div>
+                </div>`;
+            container.appendChild(sSlide);
 
             iniciarAnimacao();
         }
