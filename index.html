@@ -7,29 +7,31 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        /* Removida a transition CSS para o JS controlar o preenchimento e a cor milímetro por milímetro */
         .barra-frequencia { display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         body { background-color: #f1f5f9; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
         .fundo-textura { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('LogoA.png'); background-repeat: no-repeat; background-position: center; background-size: cover; opacity: 0.05; z-index: -1; pointer-events: none; }
         .pagina-slide { display: none; animation: fadeIn 0.8s forwards; }
         .pagina-slide.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card-turma { border-left-width: 24px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); min-height: 160px; transition: border-color 0.3s ease; }
+        /* Cards ajustados para 6 por página de forma harmônica */
+        .card-turma { border-left-width: 16px; background-color: rgba(255, 255, 255, 0.98); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); min-height: 130px; transition: border-color 0.3s ease; }
         
         .card-animado { animation: itemEntrada 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .card-animado:nth-child(1) { animation-delay: 0.1s; }
-        .card-animado:nth-child(2) { animation-delay: 0.2s; }
-        .card-animado:nth-child(3) { animation-delay: 0.3s; }
-        .card-animado:nth-child(4) { animation-delay: 0.4s; }
+        .card-animado:nth-child(1) { animation-delay: 0.05s; }
+        .card-animado:nth-child(2) { animation-delay: 0.1s; }
+        .card-animado:nth-child(3) { animation-delay: 0.15s; }
+        .card-animado:nth-child(4) { animation-delay: 0.2s; }
+        .card-animado:nth-child(5) { animation-delay: 0.25s; }
+        .card-animado:nth-child(6) { animation-delay: 0.3s; }
 
         @keyframes itemEntrada {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            from { opacity: 0; transform: translateY(15px) scale(0.97); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         #barra-tempo { height: 4px; background: #3b82f6; width: 0%; position: absolute; top: 0; left: 0; }
-        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 15px; height: 200px; margin-bottom: 15px; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; width: 170px; border-radius: 15px 15px 0 0; padding-bottom: 10px; animation: itemEntrada 0.8s ease forwards; }
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 15px; height: 180px; margin-bottom: 10px; }
+        .podium-item { display: flex; flex-direction: column; align-items: center; width: 160px; border-radius: 15px 15px 0 0; padding-bottom: 10px; animation: itemEntrada 0.8s ease forwards; }
         .btn-ctrl { background: rgba(255, 255, 255, 0.15); color: white; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); transition: all 0.2s; }
         .btn-ctrl:hover { background: #2563eb; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
@@ -55,7 +57,7 @@
         </div>
     </header>
 
-    <main id="container-slides" class="flex-grow p-6 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
+    <main id="container-slides" class="flex-grow p-4 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
         <p id="status-msg" class="text-blue-900 font-bold animate-pulse text-2xl uppercase">Carregando painel...</p>
     </main>
 
@@ -85,9 +87,9 @@
         let indexSlide = 0;
         let loopInterval = null;
         let isPaused = false;
-        let tempoSlideMs = 14000; // Aumentado para 14s para dar tempo de curtir a subida lenta
+        let tempoSlideMs = 15000; // Tempo de tela para apreciar a subida
         let tInicioSlide = 0;
-        let tRestante = 14000;
+        let tRestante = 15000;
         let animBarra = null;
 
         function obterCoresPorValor(valor) {
@@ -110,67 +112,56 @@
             document.getElementById("info-semana-detalhada").innerText = `DADOS DA SEMANA ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
         }
 
-        // MOTOR DE ANIMAÇÃO AVANÇADO: Controla número, barra, cor e velocidade de aproximação simulada
+        // ANIMAÇÃO DE SUBIDA DESACELERADA E CONTROLADA (Mais lenta)
         function animarBarraECounter(idCard, valorFinal) {
             const cardElement = document.getElementById(`card-${idCard}`);
             const barraElement = document.getElementById(`barra-${idCard}`);
             
             let valorAtual = 0;
-            let tempoTotalEstimado = 2800; // Tempo total da jornada
+            let tempoTotalEstimado = 5500; // Subida esticada para 5.5 segundos para nitidez máxima das cores
             let tempoInicio = null;
 
             function executarSubida(timestamp) {
                 if (!tempoInicio) tempoInicio = timestamp;
                 let tempoDecorrido = timestamp - tempoInicio;
 
-                // Fração de tempo linear (de 0 a 1)
                 let t = Math.min(tempoDecorrido / tempoTotalEstimado, 1);
-
-                // EFEITO SUSPENSE COGNITIVO: Desacelera drasticamente perto de 90% e muito mais perto de 95%
-                // Usando uma curva bezier customizada calculada via JS para gerar o "peso" da subida
-                let fatorCurva = 1 - Math.pow(1 - t, 3); // Ease Out cúbico base
+                let fatorCurva = 1 - Math.pow(1 - t, 4); // Suavização de quarta ordem (Quartic Ease Out)
                 
                 valorAtual = fatorCurva * valorFinal;
 
-                // Forçar desaceleração manual extra quando entra na zona crítica de mudança (perto de 90 e perto de 95)
+                // Atenuação severa nas proximidades das metas de cor
                 if (valorAtual >= 88 && valorAtual < 90) {
-                    valorAtual = 88 + (fatorCurva - 0.7) * 4; // Deixa mais lento perto de 90
+                    valorAtual = 88 + (fatorCurva - 0.6) * 3;
                 } else if (valorAtual >= 93 && valorAtual < 95) {
-                    // Quase parando perto dos 95%
-                    let progressoLento = (tempoDecorrido - (tempoTotalEstimado * 0.6)) / (tempoTotalEstimado * 0.4);
+                    let progressoLento = (tempoDecorrido - (tempoTotalEstimado * 0.5)) / (tempoTotalEstimado * 0.5);
                     progressoLento = Math.max(0, Math.min(progressoLento, 1));
-                    valorAtual = 93 + (Math.sin(progressoLento * Math.PI / 2) * 2);
+                    valorAtual = 93 + (Math.sin(progressoLento * Math.PI / 2) * 1.9);
                 }
 
-                // Garantir o teto e o ajuste final
                 if (t >= 1 || valorAtual >= valorFinal) {
                     valorAtual = valorFinal;
                 }
 
-                // Captura a cor correspondente exata ao valor dinâmico daquele milissegundo
                 const coresDinamicas = obterCoresPorValor(valorAtual);
 
-                // Aplica as atualizações estéticas sincronizadas simultaneamente
                 if (barraElement) {
                     barraElement.innerText = valorAtual.toFixed(1) + "%";
-                    // Limita a largura visual para a barra não quebrar o container caso passe de 100
                     barraElement.style.width = Math.min(valorAtual, 100) + "%";
                     barraElement.style.backgroundColor = coresDinamicas.hex;
                 }
 
                 if (cardElement) {
-                    // Troca dinamicamente a borda esquerda do Card de acordo com o nível alcançado
                     cardElement.style.borderColor = coresDinamicas.hex;
                     
-                    // Se houver um contador de texto isolado fora da barra (como nas médias) atualiza também
                     const txtContador = cardElement.querySelector('.num-contador-txt');
                     if (txtContador) {
                         txtContador.innerText = valorAtual.toFixed(1) + "%";
-                        txtContador.className = `text-8xl font-black num-contador-txt ${coresDinamicas.tailwindTxt}`;
+                        // Evita o estouro mantendo em text-7xl nas médias grandes
+                        txtContador.className = `text-7xl font-black num-contador-txt ${coresDinamicas.tailwindTxt}`;
                     }
                 }
 
-                // Continua a animação enquanto não chegar ao objetivo final
                 if (t < 1 && valorAtual < valorFinal) {
                     window.requestAnimationFrame(executarSubida);
                 }
@@ -212,17 +203,14 @@
             slides[indexSlide].classList.add("active");
             document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
             
-            // Disparar o motor de animação unificado em todos os elementos válidos da página ativa
             slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                 const idTarget = el.dataset.id;
                 const valTarget = parseFloat(el.dataset.target);
                 if(idTarget && !isNaN(valTarget)) {
-                    // Força reset inicial visual em vermelho e 0% antes de subir
                     const b = document.getElementById(`barra-${idTarget}`);
                     if (b) { b.style.width = "0%"; b.style.backgroundColor = "#e11d48"; b.innerText = "0.0%"; }
                     el.style.borderColor = "#e11d48";
                     
-                    // Começa a escalada dramática
                     setTimeout(() => {
                         animarBarraECounter(idTarget, valTarget);
                     }, 150);
@@ -230,8 +218,8 @@
             });
 
             if (slides[indexSlide].dataset.hasElite === "true") {
-                // Dispara os confetes com um leve atraso para dar tempo de a barra subir e bater a meta na tela!
-                setTimeout(dispararConfetesEspeciais, 2200);
+                // Confete estoura um pouco mais tarde acompanhando a subida lenta
+                setTimeout(dispararConfetesEspeciais, 4500);
             }
 
             tRestante = tempoSlideMs;
@@ -246,7 +234,7 @@
         }
 
         function dispararConfetesEspeciais() {
-            var duracao = 2.5 * 1000;
+            var duracao = 2 * 1000;
             var fim = Date.now() + duracao;
             (function moldura() {
                 confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 } });
@@ -307,10 +295,8 @@
                 const vM = medManha > medTarde ? "👑" : "";
                 const vT = medTarde > medManha ? "👑" : "";
                 
-                idGlobal++;
-                let idM = idGlobal;
-                idGlobal++;
-                let idT = idGlobal;
+                idGlobal++; let idM = idGlobal;
+                idGlobal++; let idT = idGlobal;
 
                 const tSlide = document.createElement("div");
                 tSlide.className = "pagina-slide w-full h-full";
@@ -321,12 +307,12 @@
                             <div id="card-${idM}" data-id="${idM}" data-target="${medManha}" class="bg-white/90 p-8 rounded-[2.5rem] shadow-2xl border-b-[15px] card-bloco-media border-rose-600 text-center relative">
                                 <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl">${vM}</span>
                                 <h3 class="text-3xl font-black text-blue-600 uppercase mb-2">Média Manhã</h3>
-                                <div class="text-8xl font-black text-rose-600 num-contador-txt">0.0%</div>
+                                <div class="text-7xl font-black text-rose-600 num-contador-txt">0.0%</div>
                             </div>
                             <div id="card-${idT}" data-id="${idT}" data-target="${medTarde}" class="bg-white/90 p-8 rounded-[2.5rem] shadow-2xl border-b-[15px] card-bloco-media border-rose-600 text-center relative">
                                 <span class="absolute -top-6 left-1/2 -translate-x-1/2 text-4xl">${vT}</span>
                                 <h3 class="text-3xl font-black text-blue-900 uppercase mb-2">Média Tarde</h3>
-                                <div class="text-8xl font-black text-rose-600 num-contador-txt">0.0%</div>
+                                <div class="text-7xl font-black text-rose-600 num-contador-txt">0.0%</div>
                             </div>
                         </div>
                     </div>`;
@@ -342,8 +328,7 @@
                 ? `Faltam apenas <span class="text-blue-600 font-black">${faltaParaMeta.toFixed(1)}%</span> para o Anchieta atingir a Meta!`
                 : `Parabéns Anchieta! Superamos a Meta de Elite Nacional! 🎉`;
 
-            idGlobal++;
-            let idEscola = idGlobal;
+            idGlobal++; let idEscola = idGlobal;
 
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full";
@@ -353,11 +338,11 @@
                     <div class="grid grid-cols-2 gap-12 w-full max-w-6xl">
                         <div id="card-${idEscola}" data-id="${idEscola}" data-target="${mediaGeralEscola}" class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] card-bloco-media border-rose-600 text-center">
                             <h3 class="text-3xl font-black text-slate-700 uppercase mb-4">Frequência da Escola</h3>
-                            <div class="text-[9rem] leading-none font-black text-rose-600 num-contador-txt">0.0%</div>
+                            <div class="text-7xl font-black text-rose-600 num-contador-txt">0.0%</div>
                         </div>
                         <div class="bg-white/90 p-10 rounded-[3rem] shadow-2xl border-b-[15px] border-yellow-500 text-center card-animado flex flex-col justify-center">
                             <h3 class="text-4xl font-black text-yellow-600 uppercase mb-4">🏆 META OURO</h3>
-                            <div class="text-3xl text-slate-600 font-bold uppercase leading-snug px-4">${msgMissao}</div>
+                            <div class="text-2xl text-slate-600 font-bold uppercase leading-snug px-4">${msgMissao}</div>
                         </div>
                     </div>
                 </div>`;
@@ -381,10 +366,10 @@
                                         <div class="flex items-center gap-6">
                                             <span class="text-4xl">${medalhas[idx]}</span>
                                             <span class="text-2xl font-black text-slate-400 w-10">${idx+1}º</span>
-                                            <span class="font-black text-3xl text-slate-800 uppercase">${t.nome}</span>
+                                            <span class="font-black text-2xl text-slate-800 uppercase">${t.nome}</span>
                                             <span class="text-xs font-bold px-3 py-1 bg-slate-100 text-slate-500 rounded-full uppercase">${t.bloco.includes('man') ? 'Manhã' : 'Tarde'}</span>
                                         </div>
-                                        <span class="font-black text-4xl text-rose-600 num-contador-txt">0.0%</span>
+                                        <span class="font-black text-3xl text-rose-600 num-contador-txt">0.0%</span>
                                     </div>`;
                             }).join("")}
                         </div>
@@ -397,28 +382,29 @@
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             let localId = idStart;
-            for (let i = 0; i < lista.length; i += 4) {
-                const pedaço = lista.slice(i, i + 4);
+            // Retornado de 4 para 6 turmas por página (Grid balanceado de 3x2)
+            for (let i = 0; i < lista.length; i += 6) {
+                const pedaço = lista.slice(i, i + 6);
                 const slide = document.createElement("div");
-                slide.className = "pagina-slide w-full h-full pt-4";
+                slide.className = "pagina-slide w-full h-full pt-2";
                 
                 const temElite = pedaço.some(t => t.valor >= 95);
                 if(temElite) slide.dataset.hasElite = "true";
 
                 slide.innerHTML = `
                     <div class="flex flex-col h-full items-center">
-                        <div class="${col} text-white py-3 px-20 rounded-full font-black text-3xl mb-8 shadow-md uppercase w-fit tracking-widest">${titulo}</div>
-                        <div class="grid grid-cols-2 gap-10 w-full max-w-6xl mx-auto">
+                        <div class="${col} text-white py-2 px-16 rounded-full font-black text-2xl mb-4 shadow-md uppercase w-fit tracking-widest">${titulo}</div>
+                        <div class="grid grid-cols-3 gap-6 w-full max-w-[1750px] mx-auto">
                             ${pedaço.map(t => { 
                                 localId++;
                                 return `
-                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-8 rounded-[2.5rem] card-turma card-animado text-left flex flex-col justify-between border-rose-600">
-                                        <div class="flex justify-between items-center mb-4">
-                                            <p class="font-black text-slate-950 text-5xl uppercase truncate max-w-[70%]">${t.nome}</p>
-                                            <p class="text-3xl">${"🏆".repeat(t.trofeus)}</p>
+                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-5 rounded-[2rem] card-turma card-animado text-left flex flex-col justify-between border-rose-600">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <p class="font-black text-slate-950 text-2xl md:text-3xl uppercase truncate max-w-[70%] leading-none">${t.nome}</p>
+                                            <p class="text-2xl leading-none">${"🏆".repeat(t.trofeus)}</p>
                                         </div>
-                                        <div class="w-full bg-slate-200 rounded-2xl h-20 overflow-hidden relative shadow-inner flex items-center">
-                                            <div id="barra-${localId}" class="barra-frequencia h-full text-4xl bg-rose-600" style="width: 0%">
+                                        <div class="w-full bg-slate-200 rounded-xl h-14 overflow-hidden relative shadow-inner flex items-center">
+                                            <div id="barra-${localId}" class="barra-frequencia h-full text-2xl bg-rose-600" style="width: 0%">
                                                 0.0%
                                             </div>
                                         </div>
@@ -457,19 +443,19 @@
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="${col} text-white py-2 px-14 rounded-full font-black text-2xl mb-4 shadow-md uppercase w-fit tracking-wide">${titulo}</div>
                     <div class="podium-container shrink-0">
-                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item bg-slate-300 border-b-4 border-slate-400 shadow-lg order-1 h-[80%] justify-end card-bloco-media"><span class="text-4xl mb-1">🥈</span><p class="text-slate-800 font-black text-xl uppercase leading-none">${nome2}</p><p class="text-slate-900 font-black text-2xl mt-1 num-contador-txt">0.0%</p></div>` : ''}
-                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item bg-yellow-400 border-b-4 border-yellow-500 shadow-xl order-2 h-[100%] scale-105 justify-end card-bloco-media"><span class="text-5xl mb-1">🥇</span><p class="text-blue-950 font-black text-2xl uppercase leading-none">${nome1}</p><p class="text-blue-900 font-black text-3xl mt-1 num-contador-txt">0.0%</p></div>` : ''}
-                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-amber-600 border-b-4 border-amber-700 shadow-lg order-3 h-[65%] justify-end card-bloco-media"><span class="text-4xl mb-1">🥉</span><p class="text-amber-50 font-black text-xl uppercase leading-none">${nome3}</p><p class="text-amber-950 font-black text-2xl mt-1 num-contador-txt">0.0%</p></div>` : ''}
+                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item bg-slate-300 border-b-4 border-slate-400 shadow-lg order-1 h-[80%] justify-end card-bloco-media"><span class="text-4xl mb-1">🥈</span><p class="text-slate-800 font-black text-lg uppercase leading-none">${nome2}</p><p class="text-slate-900 font-black text-xl mt-1 num-contador-txt">0.0%</p></div>` : ''}
+                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item bg-yellow-400 border-b-4 border-yellow-500 shadow-xl order-2 h-[100%] scale-105 justify-end card-bloco-media"><span class="text-4xl mb-1">🥇</span><p class="text-blue-950 font-black text-xl uppercase leading-none">${nome1}</p><p class="text-blue-900 font-black text-2xl mt-1 num-contador-txt">0.0%</p></div>` : ''}
+                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-amber-600 border-b-4 border-amber-700 shadow-lg order-3 h-[65%] justify-end card-bloco-media"><span class="text-4xl mb-1">🥉</span><p class="text-amber-50 font-black text-lg uppercase leading-none">${nome3}</p><p class="text-amber-950 font-black text-xl mt-1 num-contador-txt">0.0%</p></div>` : ''}
                     </div>
-                    <div class="w-full bg-white/90 rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[240px] overflow-y-auto mb-2 card-animado">
-                        <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-2 border-b pb-1">Demais Classificações:</h4>
-                        <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-left">
+                    <div class="w-full bg-white/90 rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[220px] overflow-y-auto mb-2 card-animado">
+                        <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b pb-1">Demais Classificações:</h4>
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-left">
                             ${restante.map((t) => {
                                 localId++;
                                 return `
-                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-slate-50/50 px-4 py-1.5 rounded-lg border border-slate-100 card-bloco-media">
-                                        <span class="font-bold text-slate-700 text-lg uppercase"><span class="text-slate-400 mr-2 font-black">º</span> ${t.nome}</span>
-                                        <span class="font-black text-xl text-rose-600 num-contador-txt">0.0%</span>
+                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-slate-50/50 px-3 py-1 rounded-lg border border-slate-100 card-bloco-media">
+                                        <span class="font-bold text-slate-700 text-base uppercase truncate max-w-[70%]">${t.nome}</span>
+                                        <span class="font-black text-lg text-rose-600 num-contador-txt">0.0%</span>
                                     </div>`;
                             }).join("")}
                         </div>
@@ -491,7 +477,6 @@
             slides[indexSlide].classList.add('active');
             document.getElementById("indicador-pagina").innerText = `Página ${indexSlide + 1} de ${slides.length}`;
             
-            // Ativa os primeiros contadores da primeira página
             slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                 const idTarget = el.dataset.id;
                 const valTarget = parseFloat(el.dataset.target);
@@ -500,7 +485,7 @@
                 }
             });
             if (slides[indexSlide].dataset.hasElite === "true") {
-                setTimeout(dispararConfetesEspeciais, 2200);
+                setTimeout(dispararConfetesEspeciais, 4500);
             }
 
             tRestante = tempoSlideMs;
