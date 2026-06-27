@@ -286,17 +286,17 @@
 
             if (currentSlide.classList.contains('slide-tipo-lista')) {
                 const containerGrafico = currentSlide.querySelector('.box-plot-grafico');
-                if (containerGrafico) { renderizerGraficoHistorico(containerGrafico.id); }
+                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
                 currentSlide.querySelectorAll('.card-turma').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
             } 
             else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
-                renderizerGraficoHistorico('grafico-full-desafio', true);
+                renderizarGraficoHistorico('grafico-full-desafio', true);
                 animarBarraECounter(currentSlide.querySelector('.card-bloco-media').dataset.id, mediaGeralEscolaGlobal, 5000);
             }
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
-                renderizerGraficoTrimestral('grafico-trimestral-box');
+                renderizarGraficoTrimestral('grafico-trimestral-box');
             }
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); });
@@ -675,7 +675,7 @@ async function carregarDados() {
                 slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
             } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
                 const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
-                if (containerGraficoFull) { renderizerGraficoHistorico('grafico-full-desafio', true); }
+                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
                 slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
