@@ -50,9 +50,10 @@
         .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
-        .error-message { background: #fee2e2; border: 2px solid #ef4444; color: #991b1b; padding: 20px; border-radius: 16px; margin: 20px; text-align: center; }
+        .error-message { background: #fee2e2; border: 2px solid #ef4444; color: #991b1b; padding: 20px; border-radius: 16px; margin: 20px; text-align: center; max-width: 600px; }
         .loading-spinner { border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .success-message { background: #d1fae5; border: 2px solid #10b981; color: #065f46; padding: 20px; border-radius: 16px; margin: 20px; text-align: center; }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
@@ -61,9 +62,9 @@
 
     <header class="bg-white/80 backdrop-blur-md px-10 py-3 shadow-sm border-b border-slate-200/50 flex justify-between items-center shrink-0 z-10 mx-6 mt-4 rounded-2xl">
         <div class="flex items-center gap-5">
-            <img src="nucleo.png" alt="NRE" class="h-12 object-contain filter drop-shadow-sm">
+            <img src="nucleo.png" alt="NRE" class="h-12 object-contain filter drop-shadow-sm" onerror="this.style.display='none'">
             <div class="h-10 w-[2px] bg-slate-300/60"></div>
-            <img src="Design sem nome (1) (1).jpg" alt="CCM Anchieta" class="h-16 object-contain rounded-xl shadow-sm border border-white">
+            <img src="Design sem nome (1) (1).jpg" alt="CCM Anchieta" class="h-16 object-contain rounded-xl shadow-sm border border-white" onerror="this.style.display='none'">
         </div>
         <div class="text-center">
             <h1 class="text-3xl font-black bg-gradient-to-r from-blue-900 to-indigo-950 bg-clip-text text-transparent uppercase leading-none tracking-tight">CCM ANCHIETA</h1>
@@ -85,7 +86,7 @@
         <div class="text-center">
             <div class="loading-spinner"></div>
             <p class="text-slate-600 font-bold text-lg">Carregando dados das planilhas...</p>
-            <p class="text-slate-400 text-sm mt-2">Isso pode levar alguns segundos</p>
+            <p class="text-slate-400 text-sm mt-2">Conectando ao Google Sheets</p>
         </div>
     </main>
 
@@ -106,19 +107,39 @@
             
             <div class="flex items-center gap-4 font-black tracking-widest text-[10px] text-slate-300">
                 <span>FREQUENCIÔMETRO DIGITAL</span>
-                <img src="criancas.png" alt="Estudantes" class="h-8 object-contain opacity-90 filter drop-shadow">
+                <img src="criancas.png" alt="Estudantes" class="h-8 object-contain opacity-90 filter drop-shadow" onerror="this.style.display='none'">
             </div>
         </footer>
     </div>
 
     <script>
-        // CORRIGIDO: Use o formato export do Google Sheets
-        const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/export?format=csv";
-        const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/export?format=csv&gid=6658576";
-        const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI/export?format=csv&gid=2003914330";
-
+        // ============================================
+        // CONFIGURAÇÃO DAS PLANILHAS
+        // ============================================
+        
+        // ID da sua planilha principal
+        const SPREADSHEET_ID = "1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI";
+        
+        // Links no formato correto para CSV
+        // Aba principal (gid=0) - Dados das turmas
+        const LINK_PLANILHA = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=0&output=csv`;
+        
+        // Aba de alunos (se existir) - usando mesma aba principal por enquanto
+        const LINK_ALUNOS = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=0&output=csv`;
+        
+        // Aba de histórico (gid=2003914330) - Dados semanais
+        const LINK_HISTORICO = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?gid=2003914330&output=csv`;
+        
+        // ============================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================
+        
         let notaFechada1Trimestre = 91.9; 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
+
+        // ============================================
+        // FUNÇÕES UTILITÁRIAS
+        // ============================================
 
         function mostrarErro(mensagem) {
             const container = document.getElementById("container-slides");
@@ -126,11 +147,66 @@
                 <div class="error-message">
                     <h2 class="text-xl font-black mb-2">⚠️ Erro ao carregar dados</h2>
                     <p class="font-bold">${mensagem}</p>
-                    <p class="text-sm mt-2">Verifique se as planilhas estão publicadas corretamente</p>
+                    <div class="mt-4 text-left text-sm">
+                        <p class="font-bold mb-2">📋 Verifique:</p>
+                        <ol class="list-decimal list-inside space-y-1">
+                            <li>A planilha está publicada: Arquivo → Compartilhar → Publicar na web</li>
+                            <li>Formato selecionado: "Valores separados por vírgula (.csv)"</li>
+                            <li>As abas estão publicadas individualmente</li>
+                        </ol>
+                        <p class="mt-3 font-bold">Links que devem estar publicados:</p>
+                        <code class="text-xs bg-red-100 p-2 rounded block mt-1 break-all">
+                            ${LINK_PLANILHA}
+                        </code>
+                    </div>
                     <button onclick="location.reload()" class="mt-4 bg-red-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition">
                         🔄 Tentar Novamente
                     </button>
+                    <button onclick="testarLinks()" class="mt-2 bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition ml-2">
+                        🔍 Testar Links
+                    </button>
                 </div>`;
+        }
+
+        async function testarLinks() {
+            const container = document.getElementById("container-slides");
+            container.innerHTML = '<div class="text-center"><div class="loading-spinner"></div><p class="font-bold">Testando conexões...</p></div>';
+            
+            let resultado = '<div class="success-message"><h2 class="text-xl font-black mb-4">🔍 Resultado do Teste</h2>';
+            
+            // Testar planilha principal
+            try {
+                const res = await fetch(LINK_PLANILHA);
+                if (res.ok) {
+                    const text = await res.text();
+                    resultado += `<p class="text-green-600">✅ Planilha Principal: OK (${text.split('\\n').length} linhas)</p>`;
+                } else {
+                    resultado += `<p class="text-red-600">❌ Planilha Principal: Erro ${res.status}</p>`;
+                }
+            } catch (e) {
+                resultado += `<p class="text-red-600">❌ Planilha Principal: ${e.message}</p>`;
+            }
+            
+            // Testar histórico
+            try {
+                const res = await fetch(LINK_HISTORICO);
+                if (res.ok) {
+                    const text = await res.text();
+                    resultado += `<p class="text-green-600">✅ Histórico: OK (${text.split('\\n').length} linhas)</p>`;
+                } else {
+                    resultado += `<p class="text-yellow-600">⚠️ Histórico: Erro ${res.status} (opcional)</p>`;
+                }
+            } catch (e) {
+                resultado += `<p class="text-yellow-600">⚠️ Histórico: ${e.message} (opcional)</p>`;
+            }
+            
+            resultado += `
+                <button onclick="location.reload()" class="mt-4 bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    🔄 Recarregar Página
+                </button>
+            </div>`;
+            
+            container.innerHTML = resultado;
         }
 
         function ticarSom(frequenciaHz, duracaoMs) {
@@ -150,10 +226,14 @@
         }
 
         function atualizarTextoSemana() {
-            const hoje = new Date(); const inicioAnoLetivo = new Date(2026, 1, 2); 
-            const diaSemanaHoje = hoje.getDay(); const diferencaSegunda = hoje.getDate() - (diaSemanaHoje === 0 ? 6 : diaSemanaHoje - 1);
-            const segundaFeira = new Date(new Date(hoje).setDate(diferencaSegunda)); const domingo = new Date(new Date(segundaFeira).setDate(segundaFeira.getDate() + 6));
-            const diferencaTempo = segundaFeira.getTime() - inicioAnoLetivo.getTime(); const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
+            const hoje = new Date(); 
+            const inicioAnoLetivo = new Date(2026, 1, 2); 
+            const diaSemanaHoje = hoje.getDay(); 
+            const diferencaSegunda = hoje.getDate() - (diaSemanaHoje === 0 ? 6 : diaSemanaHoje - 1);
+            const segundaFeira = new Date(new Date(hoje).setDate(diferencaSegunda)); 
+            const domingo = new Date(new Date(segundaFeira).setDate(segundaFeira.getDate() + 6));
+            const diferencaTempo = segundaFeira.getTime() - inicioAnoLetivo.getTime(); 
+            const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
             const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
             document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
         }
@@ -161,7 +241,9 @@
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
             const cardElement = document.getElementById(`card-${idCard}`);
             const barraElement = document.getElementById(`barra-${idCard}`);
-            let valorAtual = 0; let tempoTotalEstimado = tempoCustomizado || 4500; let tempoInicio = null;
+            let valorAtual = 0; 
+            let tempoTotalEstimado = tempoCustomizado || 4500; 
+            let tempoInicio = null;
 
             function executarSubida(timestamp) {
                 if (!tempoInicio) tempoInicio = timestamp;
@@ -191,286 +273,34 @@
             window.requestAnimationFrame(executarSubida);
         }
 
-        function renderizarGraficoHistorico(idContainer, isFull = false) {
-            const wrapper = document.getElementById(idContainer);
-            if (!wrapper) return;
-            wrapper.innerHTML = "";
-            if (historicoEscola.length === 0) return;
-
-            const largura = isFull ? 1000 : 440; const altura = isFull ? 350 : 200; 
-            const margemX = isFull ? 50 : 30; const margemYBase = isFull ? 40 : 30;
-            const frequencias = historicoEscola.map(h => h.media);
-            let minF = Math.floor(Math.min(...frequencias, 85)) - 2; let maxF = 100;
-            const alturaUtil = altura - margemYBase - 20; const larguraUtil = largura - 2 * margemX;
-            const espacoPorBarra = larguraUtil / historicoEscola.length;
-            const larguraBarra = Math.min(espacoPorBarra * 0.65, isFull ? 60 : 32); 
-
-            let barrasHtml = "", labelsHtml = "";
-            historicoEscola.forEach((dado, i) => {
-                const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
-                const val = Math.min(Math.max(dado.media, minF), maxF); 
-                const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                const yText = altura - margemYBase - hBarra + (isFull ? 22 : 15);
-                const corPonto = obterCoresPorValor(dado.media).hex;
-
-                barrasHtml += `
-                    <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
-                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="#ffffff" font-size="${isFull ? '14' : '10'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
-                    </g>`;
-                labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - (isFull ? 15 : 10)}" fill="#64748b" font-size="${isFull ? '13' : '10'}" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
-            });
-
-            const yMeta = altura - margemYBase - (((95 - minF) / (maxF - minF)) * alturaUtil);
-            wrapper.innerHTML = `
-                <svg viewBox="0 0 ${largura} ${altura}" class="w-full h-full overflow-visible">
-                    <style>
-                        .grupo-barra { opacity: 0; animation: fadeUpBar 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-                        @keyframes fadeUpBar { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-                    </style>
-                    <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="5 5" stroke-width="2" opacity="0.5"/>
-                    ${labelsHtml}${barrasHtml}
-                </svg>`;
-        }
-
-        function renderizarGraficoTrimestral(idContainer) {
-            const wrapper = document.getElementById(idContainer);
-            if (!wrapper) return;
-            wrapper.innerHTML = "";
-
-            const dadosTrimestres = [
-                { nome: "1º Trimestre", valor: notaFechada1Trimestre, status: "Fechado" },
-                { nome: "2º Trimestre", valor: mediaGeralEscolaGlobal, status: "Parcial" },
-                { nome: "3º Trimestre", valor: 0.0, status: "Aguardando" }
-            ];
-
-            const largura = 900; const altura = 380; const margemX = 60; const margemYBase = 50;
-            const alturaUtil = altura - margemYBase - 30; const larguraUtil = largura - 2 * margemX;
-            const espacoBarra = larguraUtil / 3; const larguraBarra = 120;
-
-            let barHtml = "", labelHtml = "";
-            dadosTrimestres.forEach((t, i) => {
-                const x = margemX + (i * espacoBarra) + (espacoBarra / 2) - (larguraBarra / 2);
-                if (t.valor === 0) return;
-
-                const hBarra = ((t.valor - 70) / 30) * alturaUtil;
-                const yTextPercent = altura - margemYBase - hBarra + 32;
-                const yTextStatus = altura - margemYBase - hBarra + 62;
-                const cor = obterCoresPorValor(t.valor).hex;
-
-                barHtml += `
-                    <g class="grupo-barra" style="animation-delay: ${i * 150}ms;">
-                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${cor}" rx="12" />
-                        <text x="${x + larguraBarra/2}" y="${yTextPercent}" fill="#ffffff" font-size="22" font-weight="900" text-anchor="middle">${t.valor.toFixed(1)}%</text>
-                        <text x="${x + larguraBarra/2}" y="${yTextStatus}" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" opacity="0.8">${t.status.toUpperCase()}</text>
-                    </g>`;
-                
-                labelHtml += `<text x="${x + larguraBarra/2}" y="${altura - 15}" fill="#1e293b" font-size="16" font-weight="900" text-anchor="middle">${t.nome}</text>`;
-            });
-
-            const yMeta = altura - margemYBase - (((95 - 70) / 30) * alturaUtil);
-            wrapper.innerHTML = `
-                <svg viewBox="0 0 ${largura} ${altura}" class="w-full h-full overflow-visible">
-                    <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="6 6" stroke-width="2.5" opacity="0.6"/>
-                    <text x="${largura - margemX + 8}" y="${yMeta + 4}" fill="#10b981" font-size="12" font-weight="900">META</text>
-                    ${labelHtml}${barHtml}
-                </svg>`;
-        }
-
-        function mudarSlide(direcao) {
-            if (sorteioEmAndamento) return;
-            const slides = document.querySelectorAll(".pagina-slide");
-            if (slides.length <= 1) return;
-            timersPagina.forEach(t => clearTimeout(t)); timersPagina = [];
-            
-            slides[indexSlide].classList.remove("active");
-            indexSlide = (indexSlide + direcao + slides.length) % slides.length;
-            
-            if (slides[indexSlide].classList.contains('slide-tipo-sorteio')) {
-                indexSlide = (indexSlide + direcao + slides.length) % slides.length;
-            }
-            
-            slides[indexSlide].classList.add("active");
-            document.getElementById("indicador-pagina").innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
-            
-            const currentSlide = slides[indexSlide];
-            if (indexSlide === 0) { carregarDadosEmBack(); }
-
-            if (currentSlide.classList.contains('slide-tipo-lista')) {
-                const containerGrafico = currentSlide.querySelector('.box-plot-grafico');
-                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
-                currentSlide.querySelectorAll('.card-turma').forEach(el => {
-                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
-                });
-            } 
-            else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
-                renderizarGraficoHistorico('grafico-full-desafio', true);
-                animarBarraECounter(currentSlide.querySelector('.card-bloco-media').dataset.id, mediaGeralEscolaGlobal, 5000);
-            }
-            else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
-                renderizarGraficoTrimestral('grafico-trimestral-box');
-            }
-            else if (currentSlide.classList.contains('slide-tipo-disputa')) {
-                currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); });
-            }
-            else if (currentSlide.classList.contains('slide-tipo-top5')) {
-                const lines = currentSlide.querySelectorAll('.linha-top5');
-                lines.forEach((l, idx) => {
-                    setTimeout(() => {
-                        l.style.opacity = "1";
-                        l.style.transform = "translateY(0)";
-                        animarBarraECounter(l.dataset.id, parseFloat(l.dataset.target), 2500);
-                    }, idx * 250);
-                });
-            }
-            else if (currentSlide.classList.contains('slide-tipo-ranking')) {
-                const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
-                if (pod3) setTimeout(() => { pod3.style.animation = "subirPodio 0.6s forwards"; animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000); }, 1000);
-                if (pod2) setTimeout(() => { pod2.style.animation = "subirPodio 0.6s forwards"; animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000); }, 3200);
-                if (pod1) setTimeout(() => { pod1.style.animation = "subirPodio 0.6s forwards"; animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000); }, 5400);
-                setTimeout(dispararConfetesEspeciais, 7500);
-            }
-
-            tRestante = tempoSlideMs; tInicioSlide = Date.now();
-            if (!isPaused) {
-                clearTimeout(loopInterval); cancelAnimationFrame(animBarra);
-                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs); 
-                atualizarBarraTempoAvançado();
-            }
-        }
-
-        function atualizarBarraTempoAvançado() {
-            cancelAnimationFrame(animBarra);
-            function animar() {
-                const decorrido = Date.now() - tInicioSlide;
-                const progresso = Math.min((decorrido / tRestante) * 100, 100);
-                document.getElementById('barra-tempo').style.width = progresso + '%';
-                if (progresso < 100 && !isPaused) animBarra = requestAnimationFrame(animar);
-            }
-            animar();
-        }
-
-        function togglePause() {
-            isPaused = !isPaused;
-            document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
-            if (isPaused) {
-                clearTimeout(loopInterval);
-                cancelAnimationFrame(animBarra);
-                const decorrido = Date.now() - tInicioSlide;
-                tRestante = Math.max(tempoSlideMs - decorrido, 0);
-            } else {
-                tInicioSlide = Date.now();
-                loopInterval = setTimeout(() => mudarSlide(1), tRestante);
-                atualizarBarraTempoAvançado();
-            }
-        }
-
-        function forçarAberturaSorteio() {
-            if (sorteioEmAndamento) return;
-            clearInterval(loopInterval); cancelAnimationFrame(animBarra);
-            timersPagina.forEach(t => clearTimeout(t));
-            document.getElementById('barra-tempo').style.width = "0%";
-            
-            const slides = document.querySelectorAll(".pagina-slide");
-            slides.forEach(s => s.classList.remove("active"));
-            
-            const slideSorteio = document.querySelector(".slide-tipo-sorteio");
-            if(slideSorteio) {
-                slideSorteio.classList.add("active");
-                document.getElementById("indicador-pagina").innerText = `MODO SORTEIO`;
-                document.getElementById("nome-sorteado-display").innerText = "???";
-            }
-        }
-
-        function fecharModoSorteio() {
-            if (sorteioEmAndamento) return;
-            const slides = document.querySelectorAll(".pagina-slide");
-            slides.forEach(s => s.classList.remove("active"));
-            indexSlide = 0; slides[indexSlide].classList.add("active");
-            isPaused = false; document.getElementById('btn-pause').innerText = '⏸️';
-            iniciarAnimacao();
-        }
-
-        function dispararConfetesEspeciais() {
-            var duracao = 1.5 * 1000; var fim = Date.now() + duracao;
-            (function moldura() {
-                confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 } });
-                confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.75 } });
-                if (Date.now() < fim) { requestAnimationFrame(moldura); }
-            }());
-        }
-
-        async function iniciarSorteioVirtual() {
-            if (sorteioEmAndamento) return;
-            sorteioEmAndamento = true;
-            const display = document.getElementById("nome-sorteado-display");
-            const btnSorteio = document.getElementById("btn-trigger-sorteio");
-            const seletor = document.getElementById("seletor-turma-sorteio");
-            btnSorteio.disabled = true;
-            
-            const turmaAlvo = seletor.value;
-            const alunosDaTurma = todosAlunos.filter(a => a.turma.trim().toUpperCase() === turmaAlvo.trim().toUpperCase());
-            
-            if (alunosDaTurma.length === 0) {
-                display.innerText = "SEM ALUNOS";
-                sorteioEmAndamento = false;
-                btnSorteio.disabled = false;
-                return;
-            }
-
-            let iterations = 0;
-            const maxIterations = 25;
-            let interval = setInterval(() => {
-                const randomAluno = alunosDaTurma[Math.floor(Math.random() * alunosDaTurma.length)];
-                display.innerText = randomAluno.nome;
-                ticarSom(800 + Math.random() * 400, 80);
-                iterations++;
-                if (iterations >= maxIterations) {
-                    clearInterval(interval);
-                    const vencedorFinal = alunosDaTurma[Math.floor(Math.random() * alunosDaTurma.length)];
-                    display.innerText = vencedorFinal.nome;
-                    ticarSom(1200, 300);
-                    confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
-                    sorteioEmAndamento = false;
-                    btnSorteio.disabled = false;
-                }
-            }, 100);
-        }
-
-        async function carregarDadosEmBack() {
-            try {
-                const resAlunos = await fetch(LINK_ALUNOS);
-                const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
-                let novosAlunos = [];
-                for (let j = 1; j < linhasAlunos.length; j++) {
-                    if (linhasAlunos[j].trim().length < 3) continue;
-                    const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
-                }
-                if (novosAlunos.length > 0) todosAlunos = novosAlunos;
-            } catch(e) { console.warn("Erro ao carregar alunos:", e); }
-        }
+        // ============================================
+        // CARREGAMENTO DE DADOS
+        // ============================================
 
         async function carregarDados() {
             try {
-                console.log("Iniciando carregamento dos dados...");
+                console.log("🚀 Iniciando carregamento dos dados...");
                 
                 // Carregar dados principais
+                console.log("📡 Buscando:", LINK_PLANILHA);
                 const res = await fetch(LINK_PLANILHA);
-                if(!res.ok) throw new Error(`Erro ao carregar planilha principal: ${res.status}`);
+                
+                if(!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
                 
                 const txt = await res.text();
-                console.log("Dados recebidos:", txt.substring(0, 200) + "...");
+                console.log("📄 Dados recebidos:", txt.substring(0, 200));
                 
                 const linhas = txt.split(/\r?\n/);
-                console.log(`Total de linhas: ${linhas.length}`);
+                console.log(`📊 Total de linhas: ${linhas.length}`);
                 
                 todasTurmas = [];
-                // CORRIGIDO: Agora usando 'linhas' em vez de 'lines'
                 for (let i = 1; i < linhas.length; i++) {
                     if (linhas[i].trim().length < 4) continue;
+                    
+                    // Suporta tanto vírgula quanto ponto e vírgula como separador
                     const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                    console.log(`Linha ${i}:`, cols);
                     
                     if (cols.length >= 2) {
                         const nome = cols[0]; 
@@ -479,93 +309,100 @@
                         const trof = parseInt(cols[3]) || 0;
                         
                         if (!isNaN(freq) && nome.length > 0) {
-                            todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof });
-                            console.log(`Turma adicionada: ${nome} - ${freq}% - ${turno}`);
+                            todasTurmas.push({ 
+                                nome: nome, 
+                                valor: freq, 
+                                bloco: turno.includes("man") ? "manha" : "tarde", 
+                                trofeus: trof 
+                            });
+                            console.log(`✅ ${nome}: ${freq}% - ${turno}`);
                         }
                     }
                 }
                 
-                console.log(`Total de turmas carregadas: ${todasTurmas.length}`);
+                console.log(`🎯 Total de turmas: ${todasTurmas.length}`);
                 
                 if (todasTurmas.length === 0) {
-                    throw new Error("Nenhuma turma encontrada na planilha");
+                    throw new Error("Nenhuma turma encontrada. Verifique o formato: Nome,Porcentagem,Turno,Troféus");
                 }
                 
-                // Carregar alunos
+                // Tentar carregar histórico
                 try {
-                    const resAlunos = await fetch(LINK_ALUNOS);
-                    const txtAlunos = await resAlunos.text(); 
-                    const linhasAlunos = txtAlunos.split(/\r?\n/);
-                    todosAlunos = [];
-                    for (let j = 1; j < linhasAlunos.length; j++) {
-                        if (linhasAlunos[j].trim().length < 3) continue;
-                        const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                        if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
-                    }
-                    console.log(`Total de alunos carregados: ${todosAlunos.length}`);
-                } catch(eA) { 
-                    console.warn("Erro ao carregar alunos:", eA);
-                }
-
-                // Carregar histórico
-                try {
+                    console.log("📡 Buscando histórico:", LINK_HISTORICO);
                     const resHist = await fetch(LINK_HISTORICO);
-                    const txtHist = await resHist.text(); 
-                    const linhasHist = txtHist.split(/\r?\n/);
-                    historicoEscola = [];
-                    for(let k = 1; k < linhasHist.length; k++) {
-                        if (linhasHist[k].trim().length < 3) continue;
-                        const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                        if(colsH.length >= 2) {
-                            let semNome = colsH[0]; 
-                            if(semNome.toLowerCase() !== "esta") { semNome = "S" + semNome; }
-                            const medVal = parseFloat(colsH[1].replace(",", "."));
-                            if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
+                    if (resHist.ok) {
+                        const txtHist = await resHist.text(); 
+                        const linhasHist = txtHist.split(/\r?\n/);
+                        historicoEscola = [];
+                        for(let k = 1; k < linhasHist.length; k++) {
+                            if (linhasHist[k].trim().length < 3) continue;
+                            const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                            if(colsH.length >= 2) {
+                                let semNome = colsH[0]; 
+                                if(!semNome.toLowerCase().includes("semana")) {
+                                    semNome = "S" + semNome;
+                                }
+                                const medVal = parseFloat(colsH[1].replace(",", "."));
+                                if(!isNaN(medVal)) {
+                                    historicoEscola.push({ semana: semNome, media: medVal });
+                                }
+                            }
                         }
+                        console.log(`📈 Histórico: ${historicoEscola.length} semanas`);
                     }
-                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
-                    console.log(`Histórico carregado: ${historicoEscola.length} semanas`);
                 } catch(errH) { 
-                    console.warn("Erro ao carregar histórico:", errH);
+                    console.warn("⚠️ Histórico não disponível:", errH.message);
                 }
 
-                if (todasTurmas.length > 0) {
-                    mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-                    if (historicoEscola.length > 0 && historicoEscola[historicoEscola.length - 1].semana.toLowerCase() === "esta") {
-                        historicoEscola[historicoEscola.length - 1].media = mediaGeralEscolaGlobal;
-                    }
-                    atualizarTextoSemana(); 
-                    gerarSlides();
-                }
+                // Calcular média geral
+                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+                console.log(`📊 Média geral: ${mediaGeralEscolaGlobal.toFixed(2)}%`);
+                
+                atualizarTextoSemana(); 
+                gerarSlides();
+                
             } catch (err) { 
-                console.error("Erro detalhado:", err);
+                console.error("❌ ERRO:", err);
                 mostrarErro(err.message);
             }
         }
 
+        // ============================================
+        // GERAÇÃO DOS SLIDES
+        // ============================================
+
         function gerarSlides() {
             const container = document.getElementById("container-slides");
             container.innerHTML = "";
-            const manha = todasTurmas.filter(t => t.bloco.includes("man"));
-            const tarde = todasTurmas.filter(t => t.bloco.includes("tard"));
+            
+            const manha = todasTurmas.filter(t => t.bloco === "manha");
+            const tarde = todasTurmas.filter(t => t.bloco === "tarde");
             let idGlobal = 0;
 
-            console.log(`Gerando slides: ${manha.length} turmas manhã, ${tarde.length} turmas tarde`);
+            console.log(`📋 Gerando slides: ${manha.length} manhã, ${tarde.length} tarde`);
 
-            if (manha.length > 0) {
-                idGlobal = montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600/90", idGlobal);
-                idGlobal = montarSlideRankingTurno(manha, "RANKING SEMANAL - MANHÃ", "bg-blue-600/90", idGlobal);
-            }
-            if (tarde.length > 0) {
-                idGlobal = montarPaginas(tarde, "TURNO TARDE", "bg-blue-950/90", idGlobal);
-                idGlobal = montarSlideRankingTurno(tarde, "RANKING SEMANAL - TARDE", "bg-blue-950/90", idGlobal);
+            // Se não tiver dados de turno, coloca tudo junto
+            if (manha.length === 0 && tarde.length === 0) {
+                // Todas as turmas juntas
+                idGlobal = montarPaginas(todasTurmas, "TODAS AS TURMAS", "bg-indigo-600/90", idGlobal);
+            } else {
+                if (manha.length > 0) {
+                    idGlobal = montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600/90", idGlobal);
+                    idGlobal = montarSlideRankingTurno(manha, "RANKING - MANHÃ", "bg-blue-600/90", idGlobal);
+                }
+                if (tarde.length > 0) {
+                    idGlobal = montarPaginas(tarde, "TURNO TARDE", "bg-blue-950/90", idGlobal);
+                    idGlobal = montarSlideRankingTurno(tarde, "RANKING - TARDE", "bg-blue-950/90", idGlobal);
+                }
             }
 
+            // Slide de disputa entre turnos (se tiver os dois)
             if (manha.length > 0 && tarde.length > 0) {
                 const medManha = manha.reduce((acc, t) => acc + t.valor, 0) / manha.length;
                 const medTarde = tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length;
-                const vM = medManha > medTarde ? "true" : "false"; const vT = medTarde > medManha ? "true" : "false";
-                idGlobal++; let idM = idGlobal; idGlobal++; let idT = idGlobal;
+                
+                idGlobal++; let idM = idGlobal; 
+                idGlobal++; let idT = idGlobal;
 
                 const tSlide = document.createElement("div");
                 tSlide.className = "pagina-slide w-full h-full slide-tipo-disputa";
@@ -573,74 +410,67 @@
                     <div class="flex flex-col items-center justify-center h-full gap-8">
                         <div class="bg-slate-800/90 backdrop-blur-md text-white py-3 px-16 rounded-2xl font-black text-2xl mb-4 uppercase shadow-lg border border-white/20">⚔️ DISPUTA ENTRE TURNOS ⚔️</div>
                         <div class="grid grid-cols-2 gap-12 w-full max-w-5xl">
-                            <div id="card-${idM}" data-id="${idM}" data-target="${medManha}" class="glass-card p-10 rounded-[2.5rem] card-bloco-media border-t-8 border-rose-500 text-center relative">
-                                <span class="coroa-m absolute -top-10 left-1/2 -translate-x-1/2 text-6xl filter drop-shadow transition-opacity duration-500 opacity-0" data-vencedor="${vM}">👑</span>
+                            <div id="card-${idM}" data-id="${idM}" data-target="${medManha}" class="glass-card p-10 rounded-[2.5rem] card-bloco-media border-t-8 border-blue-500 text-center">
                                 <h3 class="text-2xl font-extrabold text-blue-700 uppercase tracking-wide mb-2">Média Manhã</h3>
-                                <div class="text-7xl font-black text-rose-500 num-contador-txt">0.0%</div>
+                                <div class="text-7xl font-black text-blue-600 num-contador-txt">0.0%</div>
                             </div>
-                            <div id="card-${idT}" data-id="${idT}" data-target="${medTarde}" class="glass-card p-10 rounded-[2.5rem] card-bloco-media border-t-8 border-rose-500 text-center relative">
-                                <span class="coroa-t absolute -top-10 left-1/2 -translate-x-1/2 text-6xl filter drop-shadow transition-opacity duration-500 opacity-0" data-vencedor="${vT}">👑</span>
-                                <h3 class="text-2xl font-extrabold text-blue-900 uppercase tracking-wide mb-2">Média Tarde</h3>
-                                <div class="text-7xl font-black text-rose-500 num-contador-txt">0.0%</div>
+                            <div id="card-${idT}" data-id="${idT}" data-target="${medTarde}" class="glass-card p-10 rounded-[2.5rem] card-bloco-media border-t-8 border-indigo-500 text-center">
+                                <h3 class="text-2xl font-extrabold text-indigo-700 uppercase tracking-wide mb-2">Média Tarde</h3>
+                                <div class="text-7xl font-black text-indigo-600 num-contador-txt">0.0%</div>
                             </div>
                         </div>
                     </div>`;
                 container.appendChild(tSlide);
             }
 
-            const metaOuro = 95.0; const faltaParaMeta = Math.max(metaOuro - mediaGeralEscolaGlobal, 0);
-            const msgMissao = faltaParaMeta > 0 ? `FALTAM <span class="text-rose-600 font-black">${faltaParaMeta.toFixed(1)}%</span> PARA A META!` : `A META FOI ATINGIDA! 🎉`;
+            // Slide de missão/desafio
+            const metaOuro = 95.0; 
+            const faltaParaMeta = Math.max(metaOuro - mediaGeralEscolaGlobal, 0);
+            const msgMissao = faltaParaMeta > 0 ? 
+                `FALTAM <span class="text-rose-600 font-black">${faltaParaMeta.toFixed(1)}%</span> PARA A META!` : 
+                `🎉 META ATINGIDA! 🎉`;
 
             idGlobal++; let idEscola = idGlobal;
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full p-6 slide-tipo-desafio-full";
             mSlide.innerHTML = `
                 <div class="h-full flex flex-col gap-6 items-center justify-center max-w-6xl mx-auto">
-                    <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white py-4 px-12 rounded-2xl font-black text-3xl uppercase tracking-widest shadow-xl border border-white/20">🚀 Evolução Coletiva Anchieta</div>
-                    <div class="w-full flex-grow glass-card rounded-[3rem] p-8 flex flex-col justify-center border-t-8 border-indigo-500 relative">
-                        <div id="grafico-full-desafio" class="w-full h-full min-h-[300px]"></div>
-                    </div>
+                    <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white py-4 px-12 rounded-2xl font-black text-3xl uppercase tracking-widest shadow-xl border border-white/20">🚀 Missão Coletiva Anchieta</div>
                     <div class="grid grid-cols-3 gap-6 w-full">
                         <div id="card-${idEscola}" data-id="${idEscola}" data-target="${mediaGeralEscolaGlobal}" class="glass-card p-6 rounded-2xl text-center border-b-8 border-indigo-500 card-bloco-media">
                             <p class="text-slate-500 font-extrabold uppercase text-xs tracking-widest mb-1">Média Geral</p>
                             <p class="text-5xl font-black text-indigo-700 num-contador-txt">0.0%</p>
                         </div>
-                        <div class="glass-card p-6 rounded-2xl text-center border-b-8 border-emerald-500"><p class="text-slate-500 font-extrabold uppercase text-xs tracking-widest mb-1">Meta Ouro</p><p class="text-5xl font-black text-emerald-600">95.0%</p></div>
-                        <div class="glass-card p-6 rounded-2xl text-center border-b-8 border-rose-500 flex flex-col justify-center"><p class="text-2xl font-black text-slate-700 uppercase leading-snug">${msgMissao}</p></div>
+                        <div class="glass-card p-6 rounded-2xl text-center border-b-8 border-emerald-500">
+                            <p class="text-slate-500 font-extrabold uppercase text-xs tracking-widest mb-1">Meta Ouro</p>
+                            <p class="text-5xl font-black text-emerald-600">95.0%</p>
+                        </div>
+                        <div class="glass-card p-6 rounded-2xl text-center border-b-8 border-rose-500 flex flex-col justify-center">
+                            <p class="text-2xl font-black text-slate-700 uppercase leading-snug">${msgMissao}</p>
+                        </div>
                     </div>
                 </div>`;
             container.appendChild(mSlide);
 
-            const trimSlide = document.createElement("div");
-            trimSlide.className = "pagina-slide w-full h-full p-6 slide-tipo-trimestral";
-            trimSlide.innerHTML = `
-                <div class="h-full flex flex-col gap-6 items-center justify-center max-w-5xl mx-auto">
-                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-4 px-16 rounded-2xl font-black text-3xl uppercase tracking-widest shadow-xl border border-white/20">📈 RENDIMENTO POR TRIMESTRE</div>
-                    <div class="w-full flex-grow glass-card rounded-[3rem] p-10 flex flex-col justify-center border-t-8 border-emerald-500">
-                        <div id="grafico-trimestral-box" class="w-full h-full min-h-[340px]"></div>
-                    </div>
-                </div>`;
-            container.appendChild(trimSlide);
-
+            // Slide Top 5
             const top5Geral = [...todasTurmas].sort((a, b) => b.valor - a.valor).slice(0, 5);
             if (top5Geral.length > 0) {
                 const gSlide = document.createElement("div");
                 gSlide.className = "pagina-slide w-full h-full pt-4 slide-tipo-top5";
                 gSlide.innerHTML = `
                     <div class="flex flex-col h-full items-center justify-center max-w-4xl mx-auto">
-                        <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-6 shadow-lg uppercase tracking-wide border border-white/20">🏆 TOP 5 GERAL DA ESCOLA 🏆</div>
+                        <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-6 shadow-lg uppercase tracking-wide border border-white/20">🏆 TOP 5 GERAL 🏆</div>
                         <div class="w-full flex flex-col gap-4">
                             ${top5Geral.map((t, idx) => {
-                                const medalhas = ['🥇', '🥈', '🥉', '✨', '✨']; idGlobal++;
+                                const medalhas = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣']; 
+                                idGlobal++;
                                 return `
                                     <div id="card-${idGlobal}" data-id="${idGlobal}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center glass-card border-l-[12px] border-l-rose-500 px-8 py-4 rounded-2xl shadow-sm opacity-0 transform translate-y-4 transition-all duration-500">
                                         <div class="flex items-center gap-6">
-                                            <span class="text-4xl filter drop-shadow-sm">${medalhas[idx]}</span>
-                                            <span class="text-xl font-black text-slate-400 w-10">${idx+1}º</span>
-                                            <span class="font-black text-2xl text-slate-800 uppercase tracking-tight">${t.nome}</span>
-                                            <span class="text-[10px] font-extrabold px-3 py-1 bg-slate-200/50 text-slate-500 rounded-lg uppercase tracking-wider">${t.bloco.includes('man') ? 'Manhã' : 'Tarde'}</span>
+                                            <span class="text-4xl">${medalhas[idx]}</span>
+                                            <span class="font-black text-2xl text-slate-800 uppercase">${t.nome}</span>
                                         </div>
-                                        <span class="font-black text-3xl num-contador-txt">0.0%</span>
+                                        <span class="font-black text-3xl num-contador-txt text-rose-500">0.0%</span>
                                     </div>`;
                             }).join("")}
                         </div>
@@ -648,79 +478,38 @@
                 container.appendChild(gSlide);
             }
 
-            if (top5Geral.length > 0) {
-                const turmaVencedoraGeral = top5Geral[0].nome; 
-                const sSlide = document.createElement("div");
-                sSlide.className = "pagina-slide w-full h-full slide-tipo-sorteio";
-                sSlide.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full gap-6 max-w-4xl mx-auto">
-                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 px-16 rounded-2xl font-black text-2xl shadow-xl shadow-indigo-600/10 uppercase tracking-widest border-b-4 border-indigo-900 animate-pulse border border-white/20">🎁 SORTEIO DE BRINDES DA SEMANA 🎁</div>
-                        <div class="bg-white/90 backdrop-blur-xl p-10 rounded-[3rem] shadow-2xl border border-white w-full text-center flex flex-col items-center justify-center min-h-[380px]">
-                            <div class="flex flex-col items-center gap-1.5 mb-4 w-full max-w-sm">
-                                <label for="seletor-turma-sorteio" class="text-slate-500 font-extrabold uppercase tracking-widest text-xs">Selecione a Turma Concorrente:</label>
-                                <select id="seletor-turma-sorteio" onchange="document.getElementById('nome-sorteado-display').innerText='???'" class="w-full p-3 bg-purple-50/60 border border-purple-200/50 text-purple-900 font-black text-lg rounded-xl outline-none focus:border-purple-400 text-center cursor-pointer shadow-inner">
-                                    ${todasTurmas.map(t => `<option value="${t.nome}" ${t.nome === turmaVencedoraGeral ? 'selected' : ''}>${t.nome} (${t.valor.toFixed(1)}%)</option>`).join('')}
-                                </select>
-                            </div>
-                            <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]">???</div>
-                            <div class="flex items-center gap-4 mt-2">
-                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-[0.97] transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
-                                <button id="btn-fechar-sorteio" onclick="ocluiSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
-                            </div>
-                        </div>
-                    </div>`;
-                container.appendChild(sSlide);
-            }
+            // Iniciar a animação dos slides
             iniciarAnimacao();
         }
-
-        function ocluiSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             let localId = idStart;
+            
             for (let i = 0; i < lista.length; i += 6) {
-                const pedaço = lista.slice(i, i + 6);
+                const pedaco = lista.slice(i, i + 6);
                 const slide = document.createElement("div");
                 slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-lista";
-                const temElite = pedaço.some(t => t.valor >= 95);
-                if(temElite) slide.dataset.hasElite = "true";
-
-                const idGraficoPagina = `grafico-split-box-${localId}`;
 
                 slide.innerHTML = `
-                    <div class="flex items-stretch gap-6 w-full max-w-[1800px] h-full mx-auto">
-                        <div class="w-[38%] glass-card rounded-[2.5rem] p-6 flex flex-col justify-between border-t-8 border-t-indigo-600 text-center">
-                            <div>
-                                <span class="text-indigo-600 font-black text-sm tracking-widest uppercase block mb-0.5">EVOLUÇÃO ANCHIETA</span>
-                                <h2 class="text-slate-500 font-extrabold text-xs uppercase tracking-wider">Histórico de Frequência da Escola</h2>
-                            </div>
-                            <div id="${idGraficoPagina}" class="box-plot-grafico w-full h-[190px] my-2 bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center">
-                                <span class="text-slate-400 font-bold text-xs animate-pulse">Carregando gráfico...</span>
-                            </div>
-                            <div class="bg-indigo-50/70 border border-indigo-100/50 p-3 rounded-2xl flex justify-between items-center px-6">
-                                <span class="font-extrabold text-slate-500 text-xs uppercase tracking-wide">Média da Semana Atual:</span>
-                                <span class="font-black text-2xl text-indigo-600">${mediaGeralEscolaGlobal.toFixed(1)}%</span>
-                            </div>
+                    <div class="flex flex-col items-center h-full max-w-[1800px] mx-auto">
+                        <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20">
+                            ${titulo} ${lista.length > 6 ? `(${i+1}-${Math.min(i+6, lista.length)} de ${lista.length})` : ''}
                         </div>
-
-                        <div class="w-[62%] flex flex-col justify-between">
-                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20 self-center">${titulo}</div>
-                            <div class="grid grid-cols-2 gap-4 w-full h-full">
-                                ${pedaço.map(t => { 
-                                    localId++;
-                                    return `
-                                        <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-4 rounded-[2rem] card-turma glass-card card-animado text-left flex flex-col justify-between border-l-rose-500">
-                                            <div class="flex justify-between items-center mb-1">
-                                                <p class="font-black text-slate-900 text-xl md:text-2xl uppercase tracking-tight truncate max-w-[75%] leading-none">${t.nome}</p>
-                                                <p class="text-lg leading-none filter drop-shadow-sm">${"🏆".repeat(t.trofeus)}</p>
-                                            </div>
-                                            <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center border border-slate-300/10">
-                                                <div id="barra-${localId}" class="barra-frequencia h-full text-lg bg-rose-500" style="width: 0%">0.0%</div>
-                                            </div>
-                                        </div>`; 
-                                }).join("")}
-                            </div>
+                        <div class="grid grid-cols-2 gap-4 w-full h-full">
+                            ${pedaco.map(t => { 
+                                localId++;
+                                return `
+                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-4 rounded-[2rem] card-turma glass-card text-left flex flex-col justify-between border-l-rose-500">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <p class="font-black text-slate-900 text-xl md:text-2xl uppercase tracking-tight truncate max-w-[75%]">${t.nome}</p>
+                                            <p class="text-lg">${t.trofeus > 0 ? "🏆".repeat(Math.min(t.trofeus, 5)) : ""}</p>
+                                        </div>
+                                        <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center border border-slate-300/10">
+                                            <div id="barra-${localId}" class="barra-frequencia h-full text-lg bg-rose-500" style="width: 0%">0.0%</div>
+                                        </div>
+                                    </div>`; 
+                            }).join("")}
                         </div>
                     </div>`;
                 container.appendChild(slide);
@@ -731,67 +520,90 @@
         function montarSlideRankingTurno(listaTurno, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             const ordenadas = [...listaTurno].sort((a, b) => b.valor - a.valor);
-            const top3 = ordenadas.slice(0, 3); const restante = ordenadas.slice(3);
+            const top3 = ordenadas.slice(0, 3);
+            
             if (top3.length < 1) return idStart;
 
-            let localId = idStart; const slide = document.createElement("div");
+            let localId = idStart; 
+            const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-ranking";
-            const nome1 = top3[0] ? top3[0].nome : "-"; const val1 = top3[0] ? top3[0].valor : 0;
-            const nome2 = top3[1] ? top3[1].nome : "-"; const val2 = top3[1] ? top3[1].valor : 0;
-            const nome3 = top3[2] ? top3[2].nome : "-"; const val3 = top3[2] ? top3[2].valor : 0;
-
-            localId++; let idPod1 = localId; localId++; let idPod2 = localId; localId++; let idPod3 = localId;
+            
+            localId++; let idPod1 = localId; 
+            localId++; let idPod2 = localId; 
+            localId++; let idPod3 = localId;
 
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
                     <div class="podium-container shrink-0">
-                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                    </div>
-                    <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
-                        <h4 class="text-slate-400 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-200/60 pb-1">Demais Classificações:</h4>
-                        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
-                            ${restante.map((t) => {
-                                localId++;
-                                return `
-                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-white/60 px-4 py-1 rounded-xl border border-white shadow-sm card-bloco-media">
-                                        <span class="font-black text-slate-700 text-base uppercase truncate max-w-[65%] tracking-tight">${t.nome}</span>
-                                        <span class="font-black text-xl text-rose-500 shrink-0 num-contador-txt">0.0%</span>
-                                    </div>`;
-                            }).join("")}
-                        </div>
+                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${top3[1].valor}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0">
+                            <span class="text-4xl mb-1">🥈</span>
+                            <p class="text-slate-800 font-black text-lg uppercase">${top3[1].nome}</p>
+                            <span class="text-4xl font-black text-rose-500 mt-2 num-contador-txt">0.0%</span>
+                        </div>` : ''}
+                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${top3[0].valor}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0">
+                            <span class="text-5xl mb-1">🥇</span>
+                            <p class="text-blue-950 font-black text-xl uppercase">${top3[0].nome}</p>
+                            <span class="text-5xl font-black text-rose-600 mt-2 num-contador-txt">0.0%</span>
+                        </div>` : ''}
+                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${top3[2].valor}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0">
+                            <span class="text-4xl mb-1">🥉</span>
+                            <p class="text-amber-900 font-black text-lg uppercase">${top3[2].nome}</p>
+                            <span class="text-4xl font-black text-rose-600 mt-2 num-contador-txt">0.0%</span>
+                        </div>` : ''}
                     </div>
                 </div>`;
             container.appendChild(slide);
             return localId;
         }
 
+        // ============================================
+        // CONTROLE DE ANIMAÇÃO E SLIDES
+        // ============================================
+
         function iniciarAnimacao() {
             if (loopInterval) clearTimeout(loopInterval);
             cancelAnimationFrame(animBarra);
-            timersPagina.forEach(t => clearTimeout(t)); timersPagina = [];
+            timersPagina.forEach(t => clearTimeout(t)); 
+            timersPagina = [];
 
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length === 0) return;
-            indexSlide = 0; slides[indexSlide].classList.add('active');
+            
+            indexSlide = 0; 
+            slides[indexSlide].classList.add('active');
             document.getElementById("indicador-pagina").innerText = `Pág. 1 de ${slides.length}`;
             
-            if (slides[indexSlide].classList.contains('slide-tipo-lista')) {
-                const containerGrafico = slides[indexSlide].querySelector('.box-plot-grafico');
-                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
-                slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
-            } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
-                const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
-                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
-                slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
+            // Animar o primeiro slide
+            animarSlideAtual();
+            
+            tRestante = tempoSlideMs; 
+            tInicioSlide = Date.now();
+            
+            if (!isPaused) {
+                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
+                atualizarBarraTempo();
+            }
+        }
+
+        function animarSlideAtual() {
+            const slides = document.querySelectorAll(".pagina-slide");
+            const currentSlide = slides[indexSlide];
+            
+            if (currentSlide.classList.contains('slide-tipo-lista')) {
+                currentSlide.querySelectorAll('.card-turma').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
-            } else if (slides[indexSlide].classList.contains('slide-tipo-trimestral')) {
-                renderizarGraficoTrimestral('grafico-trimestral-box');
-            } else if (slides[indexSlide].classList.contains('slide-tipo-top5')) {
-                const lines = slides[indexSlide].querySelectorAll('.linha-top5');
+            } else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
+                currentSlide.querySelectorAll('.card-bloco-media').forEach(el => {
+                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
+                });
+            } else if (currentSlide.classList.contains('slide-tipo-disputa')) {
+                currentSlide.querySelectorAll('.card-bloco-media').forEach(el => {
+                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500);
+                });
+            } else if (currentSlide.classList.contains('slide-tipo-top5')) {
+                const lines = currentSlide.querySelectorAll('.linha-top5');
                 lines.forEach((l, idx) => {
                     setTimeout(() => {
                         l.style.opacity = "1";
@@ -799,17 +611,101 @@
                         animarBarraECounter(l.dataset.id, parseFloat(l.dataset.target), 2500);
                     }, idx * 250);
                 });
-            }
-
-            tRestante = tempoSlideMs; tInicioSlide = Date.now();
-            if (!isPaused) {
-                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
-                atualizarBarraTempoAvançado();
+            } else if (currentSlide.classList.contains('slide-tipo-ranking')) {
+                const pod3 = currentSlide.querySelector('.pod-bronze');
+                const pod2 = currentSlide.querySelector('.pod-prata');
+                const pod1 = currentSlide.querySelector('.pod-ouro');
+                
+                if (pod3) setTimeout(() => { 
+                    pod3.style.opacity = "1";
+                    pod3.style.animation = "subirPodio 0.6s forwards"; 
+                    animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000); 
+                }, 300);
+                
+                if (pod2) setTimeout(() => { 
+                    pod2.style.opacity = "1";
+                    pod2.style.animation = "subirPodio 0.6s forwards"; 
+                    animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000); 
+                }, 800);
+                
+                if (pod1) setTimeout(() => { 
+                    pod1.style.opacity = "1";
+                    pod1.style.animation = "subirPodio 0.6s forwards"; 
+                    animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000); 
+                }, 1300);
             }
         }
 
-        // Iniciar o carregamento quando a página carregar
-        window.onload = carregarDados;
+        function mudarSlide(direcao) {
+            const slides = document.querySelectorAll(".pagina-slide");
+            if (slides.length <= 1) return;
+            
+            timersPagina.forEach(t => clearTimeout(t)); 
+            timersPagina = [];
+            
+            slides[indexSlide].classList.remove("active");
+            indexSlide = (indexSlide + direcao + slides.length) % slides.length;
+            slides[indexSlide].classList.add("active");
+            
+            document.getElementById("indicador-pagina").innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
+            
+            animarSlideAtual();
+            
+            tRestante = tempoSlideMs; 
+            tInicioSlide = Date.now();
+            
+            if (!isPaused) {
+                clearTimeout(loopInterval); 
+                cancelAnimationFrame(animBarra);
+                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
+                atualizarBarraTempo();
+            }
+        }
+
+        function atualizarBarraTempo() {
+            cancelAnimationFrame(animBarra);
+            function animar() {
+                const decorrido = Date.now() - tInicioSlide;
+                const progresso = Math.min((decorrido / tRestante) * 100, 100);
+                document.getElementById('barra-tempo').style.width = progresso + '%';
+                if (progresso < 100 && !isPaused) {
+                    animBarra = requestAnimationFrame(animar);
+                }
+            }
+            animar();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
+            
+            if (isPaused) {
+                clearTimeout(loopInterval);
+                cancelAnimationFrame(animBarra);
+                const decorrido = Date.now() - tInicioSlide;
+                tRestante = Math.max(tempoSlideMs - decorrido, 0);
+            } else {
+                tInicioSlide = Date.now();
+                loopInterval = setTimeout(() => mudarSlide(1), tRestante);
+                atualizarBarraTempo();
+            }
+        }
+
+        function forçarAberturaSorteio() {
+            // Função simplificada - mostra mensagem
+            alert("🎁 Função de sorteio em desenvolvimento!\n\nEm breve será possível sortear brindes entre os alunos.");
+        }
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        
+        window.onload = function() {
+            console.log("🟢 Página carregada!");
+            console.log("🔗 Link planilha:", LINK_PLANILHA);
+            console.log("🔗 Link histórico:", LINK_HISTORICO);
+            carregarDados();
+        };
     </script>
 </body>
 </html>
