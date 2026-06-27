@@ -22,14 +22,24 @@
     </script>
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
-        body { background: radial-gradient(at 0% 0%, #e0e7ff 0px, transparent 50%), radial-gradient(at 100% 100%, #fef3c7 0px, transparent 50%), #f8fafc; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
-        .fundo-textura { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('LogoA.png'); background-repeat: no-repeat; background-position: center; background-size: contain; opacity: 0.025; z-index: -1; pointer-events: none; }
+        /* Fundo com a imagem do Paraná e Brasil */
+        body { 
+            margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; 
+            background: url('Captura de tela 2026-06-27 144032.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        
+        /* Camada de desfoque/clareamento para leitura dos dados */
+        .overlay-fundo {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.88); z-index: -1;
+        }
         
         .pagina-slide { display: none; animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .pagina-slide.active { display: block; }
         @keyframes slideIn { from { opacity: 0; transform: scale(0.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
-        .glass-card { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.03), 0 10px 10px -5px rgba(0, 0, 0, 0.03); }
+        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
         .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
         @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
@@ -37,17 +47,17 @@
         #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
         
         .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 24px; height: 260px; margin-bottom: 20px; width: 100%; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 220px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.4); }
-        .btn-ctrl { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.8); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 220px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.8); }
+        .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
 
-    <div class="fundo-textura"></div>
+    <div class="overlay-fundo"></div>
 
-    <header class="bg-white/70 backdrop-blur-md px-10 py-3 shadow-sm border-b border-slate-200/50 flex justify-between items-center shrink-0 z-10 mx-6 mt-4 rounded-2xl">
+    <header class="bg-white/80 backdrop-blur-md px-10 py-3 shadow-sm border-b border-slate-200/50 flex justify-between items-center shrink-0 z-10 mx-6 mt-4 rounded-2xl">
         <div class="flex items-center gap-5">
             <img src="nucleo.png" alt="NRE" class="h-12 object-contain filter drop-shadow-sm">
             <div class="h-10 w-[2px] bg-slate-300/60"></div>
@@ -58,13 +68,13 @@
             <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase">Sincronizando estatísticas...</p>
         </div>
         <div class="text-right flex items-center gap-4">
-            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider">
+            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
                 🎁 Realizar Sorteio
             </button>
             <div class="h-10 w-[1px] bg-slate-300/60"></div>
             <div class="text-left">
-                <p id="indicador-pagina" class="text-blue-900 font-black text-xs uppercase bg-blue-100/80 backdrop-blur-sm px-4 py-1 rounded-full mb-0.5 tracking-wider border border-blue-200/50">Carregando...</p>
-                <p class="text-slate-400 font-bold text-[9px] uppercase tracking-widest pl-2">Cruzeiro do Oeste - PR</p>
+                <p id="indicador-pagina" class="text-blue-900 font-black text-xs uppercase bg-blue-100/90 backdrop-blur-sm px-4 py-1 rounded-full mb-0.5 tracking-wider border border-blue-200/50">Carregando...</p>
+                <p class="text-slate-500 font-bold text-[9px] uppercase tracking-widest pl-2">Cruzeiro do Oeste - PR</p>
             </div>
         </div>
     </header>
@@ -73,11 +83,11 @@
 
     <div class="relative shrink-0 mx-6 mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200/30">
         <div id="barra-tempo"></div>
-        <footer class="w-full bg-slate-900/95 backdrop-blur-md text-white p-3.5 flex justify-between items-center px-12 text-xs font-bold uppercase tracking-wider z-50">
+        <footer class="w-full bg-slate-900/90 backdrop-blur-md text-white p-3.5 flex justify-between items-center px-12 text-xs font-bold uppercase tracking-wider z-50">
             <div class="flex gap-8 items-center text-[11px] font-extrabold">
-                <div class="flex items-center gap-2 bg-rose-500/10 text-rose-400 px-3 py-1 rounded-lg border border-rose-500/20"><span>✋</span> < 90%</div>
-                <div class="flex items-center gap-2 bg-amber-500/10 text-amber-400 px-3 py-1 rounded-lg border border-amber-500/20"><span>👍</span> 90-95%</div>
-                <div class="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-lg border border-emerald-500/20"><span>👏</span> > 95%</div>
+                <div class="flex items-center gap-2 bg-rose-500/10 text-rose-300 px-3 py-1 rounded-lg border border-rose-500/20"><span>✋</span> < 90%</div>
+                <div class="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-3 py-1 rounded-lg border border-amber-500/20"><span>👍</span> 90-95%</div>
+                <div class="flex items-center gap-2 bg-emerald-500/10 text-emerald-300 px-3 py-1 rounded-lg border border-emerald-500/20"><span>👏</span> > 95%</div>
             </div>
             
             <div class="flex gap-4 items-center bg-white/10 px-5 py-1.5 rounded-full border border-white/10">
@@ -86,9 +96,9 @@
                 <div class="btn-ctrl" onclick="mudarSlide(1)">➡️</div>
             </div>
             
-            <div class="flex items-center gap-4 font-black tracking-widest text-[10px] text-slate-400">
+            <div class="flex items-center gap-4 font-black tracking-widest text-[10px] text-slate-300">
                 <span>FREQUENCIÔMETRO DIGITAL</span>
-                <img src="criancas.png" alt="Estudantes" class="h-8 object-contain opacity-80 filter drop-shadow">
+                <img src="criancas.png" alt="Estudantes" class="h-8 object-contain opacity-90 filter drop-shadow">
             </div>
         </footer>
     </div>
@@ -195,8 +205,7 @@
             window.requestAnimationFrame(executarSubida);
         }
 
-        // NOVO MOTOR: Gráfico de Barras Elegante e à prova de quebras
-        function renderizarGraficoHistorico(idContainer) {
+        function renderizarGraficoHistorico(idContainer, isFull = false) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
             
@@ -209,10 +218,10 @@
                 return;
             }
 
-            const largura = 440; 
-            const altura = 200; 
-            const margemX = 30;
-            const margemYBase = 30;
+            const largura = isFull ? 1000 : 440; 
+            const altura = isFull ? 350 : 200; 
+            const margemX = isFull ? 50 : 30;
+            const margemYBase = isFull ? 40 : 30;
 
             const frequencias = historicoEscola.map(h => h.media);
             let minF = Math.floor(Math.min(...frequencias, 85)) - 2; 
@@ -221,7 +230,7 @@
             const alturaUtil = altura - margemYBase - 20; 
             const larguraUtil = largura - 2 * margemX;
             const espacoPorBarra = larguraUtil / historicoEscola.length;
-            const larguraBarra = Math.min(espacoPorBarra * 0.65, 32); 
+            const larguraBarra = Math.min(espacoPorBarra * 0.65, isFull ? 60 : 32); 
 
             let barrasHtml = ""; 
             let labelsHtml = "";
@@ -230,17 +239,17 @@
                 const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                const yText = altura - margemYBase - hBarra - 6;
+                const yText = altura - margemYBase - hBarra - (isFull ? 10 : 6);
                 
                 const corPonto = obterCoresPorValor(dado.media).hex;
 
                 barrasHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
                         <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="11" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
+                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="${isFull ? '16' : '11'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
                     </g>
                 `;
-                labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - 10}" fill="#64748b" font-size="10" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
+                labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - (isFull ? 15 : 10)}" fill="#64748b" font-size="${isFull ? '14' : '10'}" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
             });
 
             const yMeta = altura - margemYBase - (((95 - minF) / (maxF - minF)) * alturaUtil);
@@ -255,7 +264,7 @@
                         }
                     </style>
                     <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="5 5" stroke-width="2" opacity="0.5"/>
-                    <text x="${largura - margemX + 5}" y="${yMeta + 3}" fill="#10b981" font-size="9" font-weight="900">META</text>
+                    <text x="${largura - margemX + 5}" y="${yMeta + 3}" fill="#10b981" font-size="${isFull ? '12' : '9'}" font-weight="900">META</text>
                     ${labelsHtml}
                     ${barrasHtml}
                 </svg>`;
@@ -330,7 +339,9 @@
                 }, 4700);
                 timersPagina.push(tCoroa);
             }
-            else if (currentSlide.classList.contains('slide-tipo-desafio')) {
+            else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
+                const containerGraficoFull = currentSlide.querySelector('#grafico-full-desafio');
+                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
@@ -572,7 +583,7 @@
                 tSlide.className = "pagina-slide w-full h-full slide-tipo-disputa";
                 tSlide.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full gap-8">
-                        <div class="bg-slate-800 text-white py-3 px-16 rounded-2xl font-black text-2xl mb-4 uppercase shadow-lg tracking-wide">⚔️ DISPUTA ENTRE TURNOS ⚔️</div>
+                        <div class="bg-slate-800/90 backdrop-blur-md text-white py-3 px-16 rounded-2xl font-black text-2xl mb-4 uppercase shadow-lg tracking-wide border border-white/20">⚔️ DISPUTA ENTRE TURNOS ⚔️</div>
                         <div class="grid grid-cols-2 gap-12 w-full max-w-5xl">
                             <div id="card-${idM}" data-id="${idM}" data-target="${medManha}" class="glass-card p-10 rounded-[2.5rem] card-bloco-media border-t-8 border-rose-500 text-center relative">
                                 <span class="coroa-m absolute -top-10 left-1/2 -translate-x-1/2 text-6xl filter drop-shadow transition-opacity duration-500 opacity-0" data-vencedor="${vM}">👑</span>
@@ -591,23 +602,34 @@
 
             const metaOuro = 95.0; const faltaParaMeta = Math.max(metaOuro - mediaGeralEscolaGlobal, 0);
             const msgMissao = faltaParaMeta > 0 
-                ? `Faltam apenas <span class="text-indigo-600 font-black">${faltaParaMeta.toFixed(1)}%</span> para o Anchieta atingir a Meta!`
-                : `Parabéns Anchieta! Superamos a Meta de Elite Nacional! 🎉`;
+                ? `FALTAM <span class="text-rose-600 font-black">${faltaParaMeta.toFixed(1)}%</span> PARA A META!`
+                : `A META FOI ATINGIDA! 🎉`;
 
+            // NOVO SLIDE DE DESAFIO (Tela Cheia com Gráfico e Métricas)
             idGlobal++; let idEscola = idGlobal;
             const mSlide = document.createElement("div");
-            mSlide.className = "pagina-slide w-full h-full slide-tipo-desafio";
+            mSlide.className = "pagina-slide w-full h-full p-6 slide-tipo-desafio-full";
             mSlide.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full gap-8">
-                    <div class="bg-slate-800 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-2 uppercase shadow-lg tracking-wide">🎯 DESAFIO COLETIVO ANCHIETA 🎯</div>
-                    <div class="grid grid-cols-2 gap-12 w-full max-w-6xl">
-                        <div id="card-${idEscola}" data-id="${idEscola}" data-target="${mediaGeralEscolaGlobal}" class="glass-card p-12 rounded-[3rem] card-bloco-media border-t-8 border-rose-500 text-center">
-                            <h3 class="text-2xl font-extrabold text-slate-600 uppercase tracking-wide mb-4">Frequência da Escola</h3>
-                            <div class="text-8xl font-black text-rose-500 num-contador-txt">0.0%</div>
+                <div class="h-full flex flex-col gap-6 items-center justify-center max-w-6xl mx-auto">
+                    <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white py-4 px-12 rounded-2xl font-black text-3xl uppercase tracking-widest shadow-xl border border-white/20">
+                        🚀 Evolução Coletiva Anchieta
+                    </div>
+                    
+                    <div class="w-full flex-grow glass-card rounded-[3rem] p-8 flex flex-col justify-center border-t-8 border-indigo-500 relative">
+                        <div id="grafico-full-desafio" class="w-full h-full min-h-[300px]"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-6 w-full">
+                        <div id="card-${idEscola}" data-id="${idEscola}" data-target="${mediaGeralEscolaGlobal}" class="glass-card p-6 rounded-2xl text-center border-b-8 border-indigo-500 card-bloco-media">
+                            <p class="text-slate-500 font-extrabold uppercase text-xs tracking-widest mb-1">Média Geral</p>
+                            <p class="text-5xl font-black text-indigo-700 num-contador-txt">0.0%</p>
                         </div>
-                        <div class="glass-card p-12 rounded-[3rem] border-t-8 border-amber-400 text-center flex flex-col justify-center items-center">
-                            <h3 class="text-3xl font-black text-amber-500 uppercase tracking-wider mb-4">🏆 META OURO</h3>
-                            <div class="text-2xl text-slate-600 font-bold uppercase leading-snug px-4 max-w-md">${msgMissao}</div>
+                        <div class="glass-card p-6 rounded-2xl text-center border-b-8 border-emerald-500">
+                            <p class="text-slate-500 font-extrabold uppercase text-xs tracking-widest mb-1">Meta Ouro</p>
+                            <p class="text-5xl font-black text-emerald-600">95.0%</p>
+                        </div>
+                        <div class="glass-card p-6 rounded-2xl text-center border-b-8 border-rose-500 flex flex-col justify-center">
+                            <p class="text-2xl font-black text-slate-700 uppercase leading-snug">${msgMissao}</p>
                         </div>
                     </div>
                 </div>`;
@@ -619,7 +641,7 @@
                 gSlide.className = "pagina-slide w-full h-full pt-4 slide-tipo-top5";
                 gSlide.innerHTML = `
                     <div class="flex flex-col h-full items-center justify-center max-w-4xl mx-auto">
-                        <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-6 shadow-lg uppercase tracking-wide">🏆 TOP 5 GERAL DA ESCOLA 🏆</div>
+                        <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-6 shadow-lg uppercase tracking-wide border border-white/20">🏆 TOP 5 GERAL DA ESCOLA 🏆</div>
                         <div class="w-full flex flex-col gap-4">
                             ${top5Geral.map((t) => {
                                 const medalhas = ['🥇', '🥈', '🥉', '✨', '✨']; const idx = top5Geral.indexOf(t); idGlobal++;
@@ -627,7 +649,7 @@
                                     <div id="card-${idGlobal}" data-id="${idGlobal}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center glass-card border-l-[12px] border-l-rose-500 px-8 py-4 rounded-2xl shadow-sm card-bloco-media opacity-0">
                                         <div class="flex items-center gap-6">
                                             <span class="text-4xl filter drop-shadow-sm">${medalhas[idx]}</span>
-                                            <span class="text-xl font-black text-slate-300 w-10">${idx+1}º</span>
+                                            <span class="text-xl font-black text-slate-400 w-10">${idx+1}º</span>
                                             <span class="font-black text-2xl text-slate-800 uppercase tracking-tight">${t.nome}</span>
                                             <span class="text-[10px] font-extrabold px-3 py-1 bg-slate-200/50 text-slate-500 rounded-lg uppercase tracking-wider">${t.bloco.includes('man') ? 'Manhã' : 'Tarde'}</span>
                                         </div>
@@ -645,19 +667,19 @@
                 sSlide.className = "pagina-slide w-full h-full slide-tipo-sorteio";
                 sSlide.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full gap-6 max-w-4xl mx-auto">
-                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 px-16 rounded-2xl font-black text-2xl shadow-xl shadow-indigo-600/10 uppercase tracking-widest border-b-4 border-indigo-900 animate-pulse">
+                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-4 px-16 rounded-2xl font-black text-2xl shadow-xl shadow-indigo-600/10 uppercase tracking-widest border-b-4 border-indigo-900 animate-pulse border border-white/20">
                             🎁 SORTEIO DE BRINDES DA SEMANA 🎁
                         </div>
-                        <div class="bg-white/80 backdrop-blur-xl p-10 rounded-[3rem] shadow-2xl border border-white w-full text-center flex flex-col items-center justify-center min-h-[380px]">
+                        <div class="bg-white/90 backdrop-blur-xl p-10 rounded-[3rem] shadow-2xl border border-white w-full text-center flex flex-col items-center justify-center min-h-[380px]">
                             <div class="flex flex-col items-center gap-1.5 mb-4 w-full max-w-sm">
-                                <label for="seletor-turma-sorteio" class="text-slate-400 font-extrabold uppercase tracking-widest text-xs">Selecione a Turma Concorrente:</label>
+                                <label for="seletor-turma-sorteio" class="text-slate-500 font-extrabold uppercase tracking-widest text-xs">Selecione a Turma Concorrente:</label>
                                 <select id="seletor-turma-sorteio" onchange="document.getElementById('nome-sorteado-display').innerText='???'" class="w-full p-3 bg-purple-50/60 border border-purple-200/50 text-purple-900 font-black text-lg rounded-xl outline-none focus:border-purple-400 text-center cursor-pointer shadow-inner">
                                     ${todasTurmas.map(t => `<option value="${t.nome}" ${t.nome === turmaVencedoraGeral ? 'selected' : ''}>${t.nome} (${t.valor.toFixed(1)}%)</option>`).join('')}
                                 </select>
                             </div>
                             <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]">???</div>
                             <div class="flex items-center gap-4 mt-2">
-                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
+                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-[0.97] transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
                                 <button id="btn-fechar-sorteio" onclick="fecharModoSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
                             </div>
                         </div>
@@ -684,7 +706,7 @@
                         <div class="w-[38%] glass-card rounded-[2.5rem] p-6 flex flex-col justify-between border-t-8 border-t-indigo-600 text-center">
                             <div>
                                 <span class="text-indigo-600 font-black text-sm tracking-widest uppercase block mb-0.5">EVOLUÇÃO ANCHIETA</span>
-                                <h2 class="text-slate-400 font-extrabold text-xs uppercase tracking-wider">Histórico de Frequência da Escola</h2>
+                                <h2 class="text-slate-500 font-extrabold text-xs uppercase tracking-wider">Histórico de Frequência da Escola</h2>
                             </div>
                             <div id="${idGraficoPagina}" class="box-plot-grafico w-full h-[190px] my-2 bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center">
                                 <span class="text-slate-400 font-bold text-xs animate-pulse">Carregando gráfico...</span>
@@ -696,7 +718,7 @@
                         </div>
 
                         <div class="w-[62%] flex flex-col justify-between">
-                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/10 self-center">${titulo}</div>
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20 self-center">${titulo}</div>
                             <div class="grid grid-cols-2 gap-4 w-full h-full">
                                 ${pedaço.map(t => { 
                                     localId++;
@@ -735,14 +757,14 @@
 
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
-                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
+                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/20">${titulo}</div>
                     <div class="podium-container shrink-0">
-                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item bg-slate-100/70 backdrop-blur-md border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item bg-amber-50/70 backdrop-blur-md border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-orange-50/70 backdrop-blur-md border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
-                        <h4 class="text-slate-400 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-200/60 pb-1">Demais Classificações:</h4>
+                        <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
                         <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
                             ${restante.map((t) => {
                                 localId++;
@@ -776,6 +798,12 @@
                 slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                     const idTarget = el.dataset.id; const valTarget = parseFloat(el.dataset.target);
                     if(idTarget && !isNaN(valTarget)) animarBarraECounter(idTarget, valTarget, 5000);
+                });
+            } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
+                const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
+                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
+                slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
+                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
             }
 
