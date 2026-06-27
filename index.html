@@ -378,17 +378,22 @@
             } catch(e) { }
         }
 
-        async function carregarDados() {
+async function carregarDados() {
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
                 if(!res.ok) throw new Error("Erro Planilha Principal");
-                const txt = await res.text(); const linhas = txt.split(/\r?\n/);
+                const txt = await res.text(); 
+                // CORREÇÃO: Variável nomeada corretamente como 'linhas'
+                const linhas = txt.split(/\r?\n/); 
                 todasTurmas = [];
+                
                 for (let i = 1; i < linhas.length; i++) {
                     if (linhas[i].trim().length < 4) continue;
-                    const cols = lines[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    // CORREÇÃO: Referenciando 'linhas' (com 'a')
+                    const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols.length >= 2) {
-                        const nome = cols[0]; const freq = parseFloat(cols[1].replace(",", "."));
+                        const nome = cols[0]; 
+                        const freq = parseFloat(cols[1].replace(",", "."));
                         const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
                         const trof = parseInt(cols[3]) || 0;
                         if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof });
