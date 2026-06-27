@@ -23,14 +23,14 @@
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         
-        /* Fundo com a imagem do Paraná e Brasil */
+        /* Fundo definitivo com a imagem das bandeiras */
         body { 
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; 
-            background: url('bandeiras.png') no-repeat center center fixed;
+            background: url('fundo.jpg') no-repeat center center fixed;
             background-size: cover;
         }
         
-        /* Camada de desfoque/clareamento para leitura dos dados */
+        /* Película protetora para garantir o contraste e leitura absoluta das letras */
         .overlay-fundo {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.88); z-index: -1;
@@ -40,15 +40,15 @@
         .pagina-slide.active { display: block; }
         @keyframes slideIn { from { opacity: 0; transform: scale(0.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
-        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
+        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
         .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
         @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
         .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
         
-        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 24px; height: 260px; margin-bottom: 20px; width: 100%; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 220px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.8); }
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 30px; height: 260px; margin-bottom: 20px; width: 100%; }
+        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 240px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
         .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
@@ -109,7 +109,6 @@
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
         const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI/export?format=csv&gid=2003914330";
 
-        // 🌟 CONFIGURAÇÃO MANUAL DOS TRIMESTRES
         let notaFechada1Trimestre = 91.9; 
 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
@@ -172,6 +171,7 @@
             window.requestAnimationFrame(executarSubida);
         }
 
+        // CORRIGIDO: Valores agora são impressos por DENTRO das colunas semanais
         function renderizarGraficoHistorico(idContainer, isFull = false) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -191,13 +191,15 @@
                 const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                const yText = altura - margemYBase - hBarra - (isFull ? 10 : 6);
+                
+                // AJUSTE: Move o yText para dentro do topo da barra com margem de segurança
+                const yText = altura - margemYBase - hBarra + (isFull ? 22 : 15);
                 const corPonto = obterCoresPorValor(dado.media).hex;
 
                 barrasHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
-                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="${isFull ? '15' : '11'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
+                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
+                        <text x="${x + larguraBarra/2}" y="${yText}" fill="#ffffff" font-size="${isFull ? '14' : '10'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
                     </g>`;
                 labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - (isFull ? 15 : 10)}" fill="#64748b" font-size="${isFull ? '13' : '10'}" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
             });
@@ -214,6 +216,7 @@
                 </svg>`;
         }
 
+        // CORRIGIDO: Valores agora são impressos por DENTRO dos blocos trimestrais
         function renderizarGraficoTrimestral(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -235,14 +238,17 @@
                 if (t.valor === 0) return;
 
                 const hBarra = ((t.valor - 70) / 30) * alturaUtil;
-                const yText = altura - margemYBase - hBarra - 12;
+                
+                // AJUSTE: Forçando o percentual e o status empilhados harmonicamente DENTRO da barra
+                const yTextPercent = altura - margemYBase - hBarra + 32;
+                const yTextStatus = altura - margemYBase - hBarra + 62;
                 const cor = obterCoresPorValor(t.valor).hex;
 
                 barHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 150}ms;">
                         <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${cor}" rx="12" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${cor}" font-size="24" font-weight="900" text-anchor="middle">${t.valor.toFixed(1)}%</text>
-                        <text x="${x + larguraBarra/2}" y="${altura - margemYBase - hBarra + 35}" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" opacity="0.85">${t.status.toUpperCase()}</text>
+                        <text x="${x + larguraBarra/2}" y="${yTextPercent}" fill="#ffffff" font-size="22" font-weight="900" text-anchor="middle">${t.valor.toFixed(1)}%</text>
+                        <text x="${x + larguraBarra/2}" y="${yTextStatus}" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" opacity="0.8">${t.status.toUpperCase()}</text>
                     </g>`;
                 
                 labelHtml += `<text x="${x + larguraBarra/2}" y="${altura - 15}" fill="#1e293b" font-size="16" font-weight="900" text-anchor="middle">${t.nome}</text>`;
@@ -257,6 +263,7 @@
                 </svg>`;
         }
 
+        // CORRIGIDO: O slide de sorteio agora é ignorado e pulado no fluxo cronológico automático
         function mudarSlide(direcao) {
             if (sorteioEmAndamento) return;
             const slides = document.querySelectorAll(".pagina-slide");
@@ -265,6 +272,12 @@
             
             slides[indexSlide].classList.remove("active");
             indexSlide = (indexSlide + direcao + slides.length) % slides.length;
+            
+            // FILTRO DE SEGURANÇA: Se o índice bater no slide do Sorteio, pula para o seguinte instantaneamente
+            if (slides[indexSlide].classList.contains('slide-tipo-sorteio')) {
+                indexSlide = (indexSlide + direcao + slides.length) % slides.length;
+            }
+            
             slides[indexSlide].classList.add("active");
             document.getElementById("indicador-pagina").innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
             
@@ -273,20 +286,31 @@
 
             if (currentSlide.classList.contains('slide-tipo-lista')) {
                 const containerGrafico = currentSlide.querySelector('.box-plot-grafico');
-                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
+                if (containerGrafico) { renderizerGraficoHistorico(containerGrafico.id); }
                 currentSlide.querySelectorAll('.card-turma').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
             } 
             else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
-                renderizarGraficoHistorico('grafico-full-desafio', true);
+                renderizerGraficoHistorico('grafico-full-desafio', true);
                 animarBarraECounter(currentSlide.querySelector('.card-bloco-media').dataset.id, mediaGeralEscolaGlobal, 5000);
             }
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
-                renderizarGraficoTrimestral('grafico-trimestral-box');
+                renderizerGraficoTrimestral('grafico-trimestral-box');
             }
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); });
+            }
+            // CORRIGIDO: Ativação dos contadores progressivos e efeito cascata do Top 5 Geral
+            else if (currentSlide.classList.contains('slide-tipo-top5')) {
+                const lines = currentSlide.querySelectorAll('.linha-top5');
+                lines.forEach((l, idx) => {
+                    setTimeout(() => {
+                        l.style.opacity = "1";
+                        l.style.transform = "translateY(0)";
+                        animarBarraECounter(l.dataset.id, parseFloat(l.dataset.target), 2500);
+                    }, idx * 250);
+                });
             }
             else if (currentSlide.classList.contains('slide-tipo-ranking')) {
                 const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
@@ -303,39 +327,42 @@
             }
         }
 
-        function ajustarFonteNomeSorteado(nome) {
-            const display = document.getElementById("nome-sorteado-display");
-            if (!display) return;
-            if (nome.length > 24) display.className = "text-2xl md:text-3xl font-black text-purple-600 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px] bg-purple-50/40 p-4 rounded-xl border border-purple-200/30";
-            else if (nome.length > 15) display.className = "text-4xl md:text-4xl font-black text-purple-600 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]";
-            else display.className = "text-5xl md:text-6xl font-black text-slate-800 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]";
-        }
-
-        function iniciarSorteioVirtual() {
+        function forçarAberturaSorteio() {
             if (sorteioEmAndamento) return;
-            const seletor = document.getElementById("seletor-turma-sorteio"); const turmaAlvo = seletor.value;
-            const alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
-            const displayNome = document.getElementById("nome-sorteado-display");
-            const btn = document.getElementById("btn-trigger-sorteio"); const btnFechar = document.getElementById("btn-fechar-sorteio");
-            if (alunosFiltrados.length === 0) { displayNome.innerText = "Sem alunos na turma!"; return; }
-
-            sorteioEmAndamento = true; btn.style.display = "none"; btnFechar.style.display = "none"; seletor.disabled = true; 
-            let giros = 0; let velocidade = 50; let totalGiros = 50; 
-
-            function roletar() {
-                giros++; const indiceAleatorio = Math.floor(Math.random() * alunosFiltrados.length);
-                const nomeCandidato = alunosFiltrados[indiceAleatorio].nome;
-                displayNome.innerText = nomeCandidato; ajustarFonteNomeSorteado(nomeCandidato);
-                ticarSom(600 - (giros * 5), 40);
-                if (giros < totalGiros) { if (giros > totalGiros - 15) velocidade += 35; setTimeout(roletar, velocidade); } 
-                else {
-                    ticarSom(880, 250); setTimeout(() => ticarSom(1200, 300), 150); dispararConfetesEspeciais();
-                    let cLoop = setInterval(dispararConfetesEspeciais, 800);
-                    setTimeout(() => { clearInterval(cLoop); sorteioEmAndamento = false; seletor.disabled = false; btn.style.display = "inline-block"; btn.innerText = "🎰 REFAZER SORTEIO"; btnFechar.style.display = "inline-block"; }, 6000);
-                }
+            clearInterval(loopInterval); cancelAnimationFrame(animBarra);
+            timersPagina.forEach(t => clearTimeout(t));
+            document.getElementById('barra-tempo').style.width = "0%";
+            
+            const slides = document.querySelectorAll(".pagina-slide");
+            slides.forEach(s => s.classList.remove("active"));
+            
+            const slideSorteio = document.querySelector(".slide-tipo-sorteio");
+            if(slideSorteio) {
+                slideSorteio.classList.add("active");
+                document.getElementById("indicador-pagina").innerText = `MODO SORTEIO`;
+                document.getElementById("nome-sorteado-display").innerText = "???";
             }
-            roletar();
         }
+
+        function fecharModoSorteio() {
+            if (sorteioEmAndamento) return;
+            const slides = document.querySelectorAll(".pagina-slide");
+            slides.forEach(s => s.classList.remove("active"));
+            indexSlide = 0; slides[indexSlide].classList.add("active");
+            isPaused = false; document.getElementById('btn-pause').innerText = '⏸️';
+            iniciarAnimacao();
+        }
+
+        function dispararConfetesEspeciais() {
+            var duracao = 1.5 * 1000; var fim = Date.now() + duracao;
+            (function moldura() {
+                confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 } });
+                confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.75 } });
+                if (Date.now() < fim) { requestAnimationFrame(moldura); }
+            }());
+        }
+
+        function ocluirSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
         async function carregarDadosEmBack() {
             try {
@@ -359,7 +386,7 @@
                 todasTurmas = [];
                 for (let i = 1; i < linhas.length; i++) {
                     if (linhas[i].trim().length < 4) continue;
-                    const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    const cols = lines[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols.length >= 2) {
                         const nome = cols[0]; const freq = parseFloat(cols[1].replace(",", "."));
                         const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
@@ -474,9 +501,7 @@
             trimSlide.className = "pagina-slide w-full h-full p-6 slide-tipo-trimestral";
             trimSlide.innerHTML = `
                 <div class="h-full flex flex-col gap-6 items-center justify-center max-w-5xl mx-auto">
-                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-4 px-16 rounded-2xl font-black text-3xl uppercase tracking-widest shadow-xl border border-white/20">
-                        📈 RENDIMENTO POR TRIMESTRE
-                    </div>
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-4 px-16 rounded-2xl font-black text-3xl uppercase tracking-widest shadow-xl border border-white/20">📈 RENDIMENTO POR TRIMESTRE</div>
                     <div class="w-full flex-grow glass-card rounded-[3rem] p-10 flex flex-col justify-center border-t-8 border-emerald-500">
                         <div id="grafico-trimestral-box" class="w-full h-full min-h-[340px]"></div>
                     </div>
@@ -491,17 +516,17 @@
                     <div class="flex flex-col h-full items-center justify-center max-w-4xl mx-auto">
                         <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-6 shadow-lg uppercase tracking-wide border border-white/20">🏆 TOP 5 GERAL DA ESCOLA 🏆</div>
                         <div class="w-full flex flex-col gap-4">
-                            ${top5Geral.map((t) => {
-                                const medalhas = ['🥇', '🥈', '🥉', '✨', '✨']; const idx = top5Geral.indexOf(t); idGlobal++;
+                            ${top5Geral.map((t, idx) => {
+                                const medalhas = ['🥇', '🥈', '🥉', '✨', '✨']; idGlobal++;
                                 return `
-                                    <div id="card-${idGlobal}" data-id="${idGlobal}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center glass-card border-l-[12px] border-l-rose-500 px-8 py-4 rounded-2xl shadow-sm card-bloco-media opacity-0">
+                                    <div id="card-${idGlobal}" data-id="${idGlobal}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center glass-card border-l-[12px] border-l-rose-500 px-8 py-4 rounded-2xl shadow-sm opacity-0 transform translate-y-4 transition-all duration-500">
                                         <div class="flex items-center gap-6">
                                             <span class="text-4xl filter drop-shadow-sm">${medalhas[idx]}</span>
                                             <span class="text-xl font-black text-slate-400 w-10">${idx+1}º</span>
                                             <span class="font-black text-2xl text-slate-800 uppercase tracking-tight">${t.nome}</span>
                                             <span class="text-[10px] font-extrabold px-3 py-1 bg-slate-200/50 text-slate-500 rounded-lg uppercase tracking-wider">${t.bloco.includes('man') ? 'Manhã' : 'Tarde'}</span>
                                         </div>
-                                        <span class="font-black text-3xl text-rose-500 num-contador-txt">0.0%</span>
+                                        <span class="font-black text-3xl num-contador-txt">0.0%</span>
                                     </div>`;
                             }).join("")}
                         </div>
@@ -526,7 +551,7 @@
                             <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]">???</div>
                             <div class="flex items-center gap-4 mt-2">
                                 <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-[0.97] transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
-                                <button id="btn-fechar-sorteio" onclick="fecharModoSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
+                                <button id="btn-fechar-sorteio" onclick="ocluiSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
                             </div>
                         </div>
                     </div>`;
@@ -534,6 +559,8 @@
             }
             iniciarAnimacao();
         }
+
+        function ocluiSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
@@ -603,14 +630,14 @@
 
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
-                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/20">${titulo}</div>
+                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
                     <div class="podium-container shrink-0">
                         ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                         ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                         ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
-                        <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
+                        <h4 class="text-slate-400 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-200/60 pb-1">Demais Classificações:</h4>
                         <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
                             ${restante.map((t) => {
                                 localId++;
@@ -643,12 +670,21 @@
                 slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
             } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
                 const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
-                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
+                if (containerGraficoFull) { renderizerGraficoHistorico('grafico-full-desafio', true); }
                 slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
             } else if (slides[indexSlide].classList.contains('slide-tipo-trimestral')) {
                 renderizarGraficoTrimestral('grafico-trimestral-box');
+            } else if (slides[indexSlide].classList.contains('slide-tipo-top5')) {
+                const lines = slides[indexSlide].querySelectorAll('.linha-top5');
+                lines.forEach((l, idx) => {
+                    setTimeout(() => {
+                        l.style.opacity = "1";
+                        l.style.transform = "translateY(0)";
+                        animarBarraECounter(l.dataset.id, parseFloat(l.dataset.target), 2500);
+                    }, idx * 250);
+                });
             }
 
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
@@ -658,15 +694,7 @@
             }
         }
 
-        function fecharModoSorteio() {
-            if (sorteioEmAndamento) return;
-            const slides = document.querySelectorAll(".pagina-slide");
-            slides.forEach(s => s.classList.remove("active"));
-            indexSlide = 0; slides[indexSlide].classList.add("active");
-            isPaused = false; document.getElementById('btn-pause').innerText = '⏸️';
-            iniciarAnimacao();
-        }
-
+        // DISPARO CRUCIAL DA PARTIDA
         window.onload = carregarDados;
     </script>
 </body>
