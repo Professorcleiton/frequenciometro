@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Frequenciômetro CCM Anchieta</title>
-    <!-- Importando fontes modernas do Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -24,28 +23,21 @@
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         body { background: radial-gradient(at 0% 0%, #e0e7ff 0px, transparent 50%), radial-gradient(at 100% 100%, #fef3c7 0px, transparent 50%), #f8fafc; margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; }
-        
-        /* Textura sutil de fundo */
         .fundo-textura { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: url('LogoA.png'); background-repeat: no-repeat; background-position: center; background-size: contain; opacity: 0.025; z-index: -1; pointer-events: none; }
         
         .pagina-slide { display: none; animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .pagina-slide.active { display: block; }
         @keyframes slideIn { from { opacity: 0; transform: scale(0.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
-        /* Efeito de Vidro Moderno (Glassmorphism) */
         .glass-card { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.03), 0 10px 10px -5px rgba(0, 0, 0, 0.03); }
         .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        @keyframes subirPodio {
-            from { opacity: 0; transform: translateY(100px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
         .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
         
         .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 24px; height: 260px; margin-bottom: 20px; width: 100%; }
         .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 220px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.4); }
-        
         .btn-ctrl { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.8); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
@@ -55,7 +47,6 @@
 
     <div class="fundo-textura"></div>
 
-    <!-- HEADER FLUTUANTE ESTILO GLASS -->
     <header class="bg-white/70 backdrop-blur-md px-10 py-3 shadow-sm border-b border-slate-200/50 flex justify-between items-center shrink-0 z-10 mx-6 mt-4 rounded-2xl">
         <div class="flex items-center gap-5">
             <img src="nucleo.png" alt="NRE" class="h-12 object-contain filter drop-shadow-sm">
@@ -78,10 +69,9 @@
         </div>
     </header>
 
-    <!-- CONTAINER PRINCIPAL -->
+    <!-- MAIN REESTRUTURADO PARA SUPORTAR O MODO ARENA SPLIT -->
     <main id="container-slides" class="flex-grow p-6 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center"></main>
 
-    <!-- FOOTER E BARRA DE TEMPO -->
     <div class="relative shrink-0 mx-6 mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200/30">
         <div id="barra-tempo"></div>
         <footer class="w-full bg-slate-900/95 backdrop-blur-md text-white p-3.5 flex justify-between items-center px-12 text-xs font-bold uppercase tracking-wider z-50">
@@ -119,6 +109,24 @@
         let animBarra = null;
         let timersPagina = []; 
         let sorteioEmAndamento = false;
+        let mediaGeralEscolaGlobal = 0; // Armazenagem global para o Layout Split
+
+        // EFEITO SONORO NATIVO: Gera o clique mecânico de roletas via Synth API do navegador
+        function ticarSom(frequenciaHz, duracaoMs) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frequenciaHz, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duracaoMs/1000);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duracaoMs/1000);
+            } catch(e) { console.log("Áudio pendente de interação."); }
+        }
 
         function obterCoresPorValor(valor) {
             if (valor >= 95) return { hex: "#10b981", tailwindTxt: "text-emerald-500", tailwindBorder: "border-emerald-500", shadow: "rgba(16,185,129,0.25)" };
@@ -169,7 +177,6 @@
                     barraElement.innerText = valorAtual.toFixed(1) + "%";
                     barraElement.style.width = Math.min(valorAtual, 100) + "%";
                     barraElement.style.backgroundColor = coresDinamicas.hex;
-                    // Adiciona brilho neon moderno na barra de progresso
                     barraElement.style.boxShadow = `0 0 12px ${coresDinamicas.shadow}`;
                 }
 
@@ -230,7 +237,14 @@
             
             const currentSlide = slides[indexSlide];
 
+            // AUTO-REFRESH DAS MATRÍCULAS E FREQUÊNCIAS: Atualiza os alunos do Sheets em segundo plano
+            if (indexSlide === 0) { carregarDadosEmBack(); }
+
             if (currentSlide.classList.contains('slide-tipo-lista')) {
+                // Atualiza dinamicamente o termômetro fixado do lado esquerdo da Arena Split
+                const splitCardEscola = currentSlide.querySelector('.split-card-escola');
+                if (splitCardEscola) { animarBarraECounter(splitCardEscola.dataset.id, mediaGeralEscolaGlobal, 5000); }
+
                 currentSlide.querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                     const idTarget = el.dataset.id;
                     const valTarget = parseFloat(el.dataset.target);
@@ -361,6 +375,7 @@
                 slideSorteio.classList.add("active");
                 document.getElementById("indicador-pagina").innerText = `MODO SORTEIO`;
                 document.getElementById("nome-sorteado-display").innerText = "???";
+                document.getElementById("nome-sorteado-display").className = "text-5xl md:text-6xl font-black text-slate-800 tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]";
             }
         }
 
@@ -385,6 +400,20 @@
             }());
         }
 
+        // CONTROLADOR DE INTENSIDADE DA FONTE: Impede nomes longos de quebrarem o layout de vidro
+        function ajustarFonteNomeSorteado(nome) {
+            const display = document.getElementById("nome-sorteado-display");
+            if (!display) return;
+            
+            if (nome.length > 24) {
+                display.className = "text-2xl md:text-3xl font-black text-purple-600 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px] bg-purple-50/40 p-4 rounded-xl border border-purple-200/30";
+            } else if (nome.length > 15) {
+                display.className = "text-4xl md:text-4xl font-black text-purple-600 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]";
+            } else {
+                display.className = "text-5xl md:text-6xl font-black text-slate-800 uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]";
+            }
+        }
+
         function iniciarSorteioVirtual() {
             if (sorteioEmAndamento) return;
             
@@ -407,18 +436,28 @@
             seletor.disabled = true; 
             
             let giros = 0;
-            let velocidade = 60; 
-            let totalGiros = 45; 
+            let velocidade = 50; 
+            let totalGiros = 50; 
 
             function roletar() {
                 giros++;
                 const indiceAleatorio = Math.floor(Math.random() * alunosFiltrados.length);
-                displayNome.innerText = alunosFiltrados[indiceAleatorio].nome;
+                const nomeCandidato = alunosFiltrados[indiceAleatorio].nome;
                 
+                displayNome.innerText = nomeCandidato;
+                ajustarFonteNomeSorteado(nomeCandidato);
+                
+                // DISPARA O SOM: Cliques agudos estilo roleta mecânica
+                ticarSom(600 - (giros * 5), 40);
+
                 if (giros < totalGiros) {
-                    if (giros > totalGiros - 10) velocidade += 45;
+                    if (giros > totalGiros - 15) velocidade += 35;
                     setTimeout(roletar, velocidade);
                 } else {
+                    // Parou no vencedor! Som grave de confirmação
+                    ticarSom(880, 250);
+                    setTimeout(() => ticarSom(1200, 300), 150);
+
                     dispararConfetesEspeciais();
                     let cLoop = setInterval(dispararConfetesEspeciais, 800);
                     
@@ -432,6 +471,22 @@
                 }
             }
             roletar();
+        }
+
+        // REFRESH EM SEGUNDO PLANO: Sincroniza sem dar F5 na tela
+        async function carregarDadosEmBack() {
+            try {
+                const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
+                const txtAlunos = await resAlunos.text();
+                const linhasAlunos = txtAlunos.split(/\r?\n/);
+                let novosAlunos = [];
+                for (let j = 1; j < linhasAlunos.length; j++) {
+                    if (linhasAlunos[j].trim().length < 3) continue;
+                    const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
+                }
+                if (novosAlunos.length > 0) todosAlunos = novosAlunos;
+            } catch(e) { console.log("Erro silencioso ao atualizar alunos."); }
         }
 
         async function carregarDados() {
@@ -469,6 +524,7 @@
                 }
 
                 if (todasTurmas.length > 0) {
+                    mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
                     atualizarTextoSemana();
                     gerarSlides();
                 }
@@ -522,9 +578,8 @@
                 container.appendChild(tSlide);
             }
 
-            const mediaGeralEscola = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
             const metaOuro = 95.0;
-            const faltaParaMeta = Math.max(metaOuro - mediaGeralEscola, 0);
+            const faltaParaMeta = Math.max(metaOuro - mediaGeralEscolaGlobal, 0);
             const msgMissao = faltaParaMeta > 0 
                 ? `Faltam apenas <span class="text-indigo-600 font-black">${faltaParaMeta.toFixed(1)}%</span> para o Anchieta atingir a Meta!`
                 : `Parabéns Anchieta! Superamos a Meta de Elite Nacional! 🎉`;
@@ -537,7 +592,7 @@
                 <div class="flex flex-col items-center justify-center h-full gap-8">
                     <div class="bg-slate-800 text-white py-3 px-20 rounded-2xl font-black text-2xl mb-2 uppercase shadow-lg tracking-wide">🎯 DESAFIO COLETIVO ANCHIETA 🎯</div>
                     <div class="grid grid-cols-2 gap-12 w-full max-w-6xl">
-                        <div id="card-${idEscola}" data-id="${idEscola}" data-target="${mediaGeralEscola}" class="glass-card p-12 rounded-[3rem] card-bloco-media border-t-8 border-rose-500 text-center">
+                        <div id="card-${idEscola}" data-id="${idEscola}" data-target="${mediaGeralEscolaGlobal}" class="glass-card p-12 rounded-[3rem] card-bloco-media border-t-8 border-rose-500 text-center">
                             <h3 class="text-2xl font-extrabold text-slate-600 uppercase tracking-wide mb-4">Frequência da Escola</h3>
                             <div class="text-8xl font-black text-rose-500 num-contador-txt">0.0%</div>
                         </div>
@@ -578,7 +633,11 @@
             }
 
             if (top5Geral.length > 0) {
-                const turmaVencedoraGeral = top5Geral[0].nome; 
+                // FILTRO DE ELITE PARA O SORTEIO: Destaca no topo apenas as turmas com frequência >= 95%
+                const turmasElite = todasTurmas.filter(t => t.valor >= 95.0).sort((a,b) => b.valor - a.valor);
+                const outrasTurmasLista = todasTurmas.filter(t => t.valor < 95.0).sort((a,b) => b.valor - a.valor);
+                const listagemSeletorGeral = [...turmasElite, ...outrasTurmasLista];
+
                 const sSlide = document.createElement("div");
                 sSlide.className = "pagina-slide w-full h-full slide-tipo-sorteio";
                 sSlide.innerHTML = `
@@ -591,7 +650,10 @@
                             <div class="flex flex-col items-center gap-1.5 mb-4 w-full max-w-sm">
                                 <label for="seletor-turma-sorteio" class="text-slate-400 font-extrabold uppercase tracking-widest text-xs">Selecione a Turma Concorrente:</label>
                                 <select id="seletor-turma-sorteio" onchange="document.getElementById('nome-sorteado-display').innerText='???'" class="w-full p-3 bg-purple-50/60 border border-purple-200/50 text-purple-900 font-black text-lg rounded-xl outline-none focus:border-purple-400 text-center cursor-pointer shadow-inner">
-                                    ${[...todasTurmas].sort((a,b)=>a.nome.localeCompare(b.nome)).map(t => `<option value="${t.nome}" ${t.nome === turmaVencedoraGeral ? 'selected' : ''}>${t.nome}</option>`).join('')}
+                                    ${listagemSeletorGeral.map(t => {
+                                        const tag = t.valor >= 95.0 ? "🌟 [ELITE] " : "⚠️ [REGULAR] ";
+                                        return `<option value="${t.nome}">${tag} ${t.nome} (${t.valor.toFixed(1)}%)</option>`;
+                                    }).join('')}
                                 </select>
                             </div>
                             
@@ -600,7 +662,7 @@
                             </div>
 
                             <div class="flex items-center gap-4 mt-2">
-                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all uppercase border-b-4 border-amber-700">
+                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-[0.97] transition-all uppercase border-b-4 border-amber-700">
                                     🎰 INICIAR SORTEIO
                                 </button>
                                 <button id="btn-fechar-sorteio" onclick="fecharModoSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">
@@ -615,6 +677,7 @@
             iniciarAnimacao();
         }
 
+        // NOVO FORMATO: Monta as turmas usando o "Modo Arena Split" (Termômetro geral fixo na esquerda)
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             let localId = idStart;
@@ -625,23 +688,41 @@
                 const temElite = pedaço.some(t => t.valor >= 95);
                 if(temElite) slide.dataset.hasElite = "true";
 
+                idGlobalSplit = localId + 1000; // ID fictício isolado para o termômetro fixado
+
                 slide.innerHTML = `
-                    <div class="flex flex-col h-full items-center">
-                        <div class="${col} text-white py-2 px-16 rounded-2xl font-black text-2xl mb-6 shadow-md uppercase w-fit tracking-wider border border-white/10">${titulo}</div>
-                        <div class="grid grid-cols-3 gap-6 w-full max-w-[1750px] mx-auto">
-                            ${pedaço.map(t => { 
-                                localId++;
-                                return `
-                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-6 rounded-[2rem] card-turma glass-card card-animado text-left flex flex-col justify-between border-l-rose-500">
-                                        <div class="flex justify-between items-center mb-3">
-                                            <p class="font-black text-slate-900 text-2xl md:text-3xl uppercase tracking-tight truncate max-w-[70%] leading-none">${t.nome}</p>
-                                            <p class="text-xl leading-none filter drop-shadow-sm">${"🏆".repeat(t.trofeus)}</p>
-                                        </div>
-                                        <div class="w-full bg-slate-200/50 rounded-xl h-14 overflow-hidden relative shadow-inner flex items-center border border-slate-300/10">
-                                            <div id="barra-${localId}" class="barra-frequencia h-full text-xl bg-rose-500" style="width: 0%">0.0%</div>
-                                        </div>
-                                    </div>`; 
-                            }).join("")}
+                    <div class="flex items-stretch gap-6 w-full max-w-[1800px] h-full mx-auto">
+                        
+                        <!-- LADO ESQUERDO: Termômetro Fixo da Escola (40% de largura) -->
+                        <div id="card-${idGlobalSplit}" data-id="${idGlobalSplit}" data-target="${mediaGeralEscolaGlobal}" class="w-[35%] glass-card rounded-[2.5rem] p-8 flex flex-col justify-between border-t-8 border-t-indigo-600 split-card-escola text-center">
+                            <div>
+                                <span class="text-indigo-600 font-black text-sm tracking-widest uppercase block mb-1">MÉDIA GERAL DO COLÉGIO</span>
+                                <h2 class="text-slate-400 font-extrabold text-xs uppercase tracking-wider">Impacto em Tempo Real</h2>
+                            </div>
+                            <div class="text-[5.5rem] font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent leading-none my-4 num-contador-txt">0.0%</div>
+                            <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center">
+                                <div id="barra-${idGlobalSplit}" class="barra-frequencia h-full text-sm bg-indigo-600" style="width: 0%">0.0%</div>
+                            </div>
+                        </div>
+
+                        <!-- LADO DIREITO: O Grid Rotativo de 6 Turmas (65% de largura) -->
+                        <div class="w-[65%] flex flex-col justify-between">
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/10 self-center">${titulo}</div>
+                            <div class="grid grid-cols-2 gap-4 w-full h-full">
+                                ${pedaço.map(t => { 
+                                    localId++;
+                                    return `
+                                        <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-4 rounded-[2rem] card-turma glass-card card-animado text-left flex flex-col justify-between border-l-rose-500">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <p class="font-black text-slate-900 text-xl md:text-2xl uppercase tracking-tight truncate max-w-[75%] leading-none">${t.nome}</p>
+                                                <p class="text-lg leading-none filter drop-shadow-sm">${"🏆".repeat(t.trofeus)}</p>
+                                            </div>
+                                            <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center border border-slate-300/10">
+                                                <div id="barra-${localId}" class="barra-frequencia h-full text-lg bg-rose-500" style="width: 0%">0.0%</div>
+                                            </div>
+                                        </div>`; 
+                                }).join("")}
+                            </div>
                         </div>
                     </div>`;
                 container.appendChild(slide);
@@ -666,20 +747,20 @@
             localId++; let idPod1 = localId; localId++; let idPod2 = localId; localId++; let idPod3 = localId;
 
             slide.innerHTML = `
-                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
-                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-2xl mb-6 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
+                <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
+                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
                     <div class="podium-container shrink-0">
                         ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item bg-slate-100/70 backdrop-blur-md border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                         ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item bg-amber-50/70 backdrop-blur-md border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                         ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-orange-50/70 backdrop-blur-md border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                     </div>
-                    <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[220px] overflow-y-auto mb-2 demais-class-box opacity-0">
+                    <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
                         <h4 class="text-slate-400 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-200/60 pb-1">Demais Classificações:</h4>
-                        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-left">
                             ${restante.map((t) => {
                                 localId++;
                                 return `
-                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-white/60 px-4 py-1.5 rounded-xl border border-white shadow-sm card-bloco-media">
+                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-white/60 px-4 py-1 rounded-xl border border-white shadow-sm card-bloco-media">
                                         <span class="font-black text-slate-700 text-base uppercase truncate max-w-[65%] tracking-tight">${t.nome}</span>
                                         <span class="font-black text-xl text-rose-500 shrink-0 num-contador-txt">0.0%</span>
                                     </div>`;
@@ -705,6 +786,9 @@
             document.getElementById("indicador-pagina").innerText = `Pág. 1 de ${slides.length}`;
             
             if (slides[indexSlide].classList.contains('slide-tipo-lista')) {
+                const splitCardEscola = slides[indexSlide].querySelector('.split-card-escola');
+                if (splitCardEscola) { animarBarraECounter(splitCardEscola.dataset.id, mediaGeralEscolaGlobal, 5000); }
+
                 slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                     const idTarget = el.dataset.id; const valTarget = parseFloat(el.dataset.target);
                     if(idTarget && !isNaN(valTarget)) animarBarraECounter(idTarget, valTarget, 5000);
