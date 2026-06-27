@@ -41,6 +41,12 @@
         .btn-ctrl { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.8); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
+
+        /* Animação do Gráfico Histórico SVG */
+        .svg-path-linha { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: desenharLinha 3.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes desenharLinha { to { stroke-dashoffset: 0; } }
+        .ponto-grafico { animation: brotarPonto 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; transform-origin: center; }
+        @keyframes brotarPonto { to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
@@ -69,7 +75,6 @@
         </div>
     </header>
 
-    <!-- MAIN REESTRUTURADO PARA SUPORTAR O MODO ARENA SPLIT -->
     <main id="container-slides" class="flex-grow p-6 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center"></main>
 
     <div class="relative shrink-0 mx-6 mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200/30">
@@ -98,8 +103,13 @@
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
         
+        // NOVO: Link para a aba de histórico geral das médias da escola (Gid da página de histórico)
+        const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=11223344&single=true&output=csv"; 
+        // 💡 Dica do Cleiton: Caso mude o GID da aba de histórico futuramente, substitua o número "11223344" acima pelo real da aba do histórico.
+
         let todasTurmas = [];
         let todosAlunos = [];
+        let historicoEscola = []; // Array estruturado: [{semana: "Sem 1", media: 93.4}, ...]
         let indexSlide = 0;
         let loopInterval = null;
         let isPaused = false;
@@ -109,9 +119,8 @@
         let animBarra = null;
         let timersPagina = []; 
         let sorteioEmAndamento = false;
-        let mediaGeralEscolaGlobal = 0; // Armazenagem global para o Layout Split
+        let mediaGeralEscolaGlobal = 0;
 
-        // EFEITO SONORO NATIVO: Gera o clique mecânico de roletas via Synth API do navegador
         function ticarSom(frequenciaHz, duracaoMs) {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -125,7 +134,7 @@
                 gain.connect(ctx.destination);
                 osc.start();
                 osc.stop(ctx.currentTime + duracaoMs/1000);
-            } catch(e) { console.log("Áudio pendente de interação."); }
+            } catch(e) { console.log("Áudio aguardando interação."); }
         }
 
         function obterCoresPorValor(valor) {
@@ -197,6 +206,70 @@
             window.requestAnimationFrame(executarSubida);
         }
 
+        // NOVO: Renderiza o gráfico SVG de linha dinamicamente com animação de desenho
+        function renderizarGraficoHistorico(idContainer) {
+            const wrapper = document.getElementById(idContainer);
+            if (!wrapper || historicoEscola.length === 0) return;
+
+            const largura = 420;
+            const altura = 180;
+            const margem = 30;
+
+            // Encontra min e max para calibrar o gráfico dinamicamente
+            const frequencias = historicoEscola.map(h => h.media);
+            let minF = Math.min(...frequencias, 85) - 1; 
+            let maxF = Math.max(...frequencias, 100) + 0.5;
+
+            const obterX = (idx) => margem + (idx / (historicoEscola.length - 1 || 1)) * (largura - 2 * margem);
+            const obterY = (val) => altura - margem - ((val - minF) / (maxF - minF)) * (altura - 2 * margem);
+
+            // Monta os pontos da linha
+            let dPath = "";
+            let pontosHtml = "";
+            let labelsHtml = "";
+
+            historicoEscola.forEach((dado, i) => {
+                const x = obterX(i);
+                const y = obterY(dado.media);
+                
+                if (i === 0) dPath += `M ${x} ${y}`;
+                else dPath += ` L ${x} ${y}`;
+
+                const corPonto = obterCoresPorValor(dado.media).hex;
+
+                // Desenha as bolinhas nos vértices
+                pontosHtml += `
+                    <circle cx="${x}" cy="${y}" r="6" fill="${corPonto}" stroke="#ffffff" stroke-width="2" 
+                            class="ponto-grafico" style="animation-delay: ${i * 250}ms;" />
+                    <text x="${x}" y="${y - 12}" fill="${corPonto}" font-size="11" font-weight="900" text-anchor="middle" class="ponto-grafico" style="animation-delay: ${i * 250}ms;">${dado.media.toFixed(1)}%</text>
+                `;
+
+                // Nomes das semanas na base
+                labelsHtml += `
+                    <text x="${x}" y="${altura - 5}" fill="#64748b" font-size="10" font-weight="800" text-anchor="middle">${dado.semana}</text>
+                `;
+            });
+
+            wrapper.innerHTML = `
+                <svg viewBox="0 0 ${largura} ${altura}" class="w-full h-full overflow-visible">
+                    <line x1="${margem}" y1="${obterY(95)}" x2="${largura - margem}" y2="${obterY(95)}" stroke="#10b981" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.6"/>
+                    <text x="${largura - margem + 4}" y="${obterY(95) + 3}" fill="#10b981" font-size="9" font-weight="900">META</text>
+                    
+                    <path d="${dPath}" fill="none" stroke="url(#gradientLinha)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" class="svg-path-linha"/>
+                    
+                    <defs>
+                        <linearGradient id="gradientLinha" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#6366f1" />
+                            <stop offset="100%" stop-color="#3b82f6" />
+                        </linearGradient>
+                    </defs>
+                    
+                    ${labelsHtml}
+                    ${pontosHtml}
+                </svg>
+            `;
+        }
+
         function togglePause() {
             isPaused = !isPaused;
             document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
@@ -237,13 +310,12 @@
             
             const currentSlide = slides[indexSlide];
 
-            // AUTO-REFRESH DAS MATRÍCULAS E FREQUÊNCIAS: Atualiza os alunos do Sheets em segundo plano
             if (indexSlide === 0) { carregarDadosEmBack(); }
 
             if (currentSlide.classList.contains('slide-tipo-lista')) {
-                // Atualiza dinamicamente o termômetro fixado do lado esquerdo da Arena Split
-                const splitCardEscola = currentSlide.querySelector('.split-card-escola');
-                if (splitCardEscola) { animarBarraECounter(splitCardEscola.dataset.id, mediaGeralEscolaGlobal, 5000); }
+                // Dispara a renderização do gráfico toda vez que o slide da lista surge na Arena Split
+                const containerGrafico = currentSlide.querySelector('.box-plot-grafico');
+                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
 
                 currentSlide.querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                     const idTarget = el.dataset.id;
@@ -360,11 +432,9 @@
 
         function forçarAberturaSorteio() {
             if (sorteioEmAndamento) return;
-            
             clearInterval(loopInterval);
             cancelAnimationFrame(animBarra);
             timersPagina.forEach(t => clearTimeout(t));
-            
             document.getElementById('barra-tempo').style.width = "0%";
             
             const slides = document.querySelectorAll(".pagina-slide");
@@ -400,7 +470,6 @@
             }());
         }
 
-        // CONTROLADOR DE INTENSIDADE DA FONTE: Impede nomes longos de quebrarem o layout de vidro
         function ajustarFonteNomeSorteado(nome) {
             const display = document.getElementById("nome-sorteado-display");
             if (!display) return;
@@ -419,7 +488,6 @@
             
             const seletor = document.getElementById("seletor-turma-sorteio");
             const turmaAlvo = seletor.value;
-            
             const alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
             const displayNome = document.getElementById("nome-sorteado-display");
             const btn = document.getElementById("btn-trigger-sorteio");
@@ -447,14 +515,12 @@
                 displayNome.innerText = nomeCandidato;
                 ajustarFonteNomeSorteado(nomeCandidato);
                 
-                // DISPARA O SOM: Cliques agudos estilo roleta mecânica
                 ticarSom(600 - (giros * 5), 40);
 
                 if (giros < totalGiros) {
                     if (giros > totalGiros - 15) velocidade += 35;
                     setTimeout(roletar, velocidade);
                 } else {
-                    // Parou no vencedor! Som grave de confirmação
                     ticarSom(880, 250);
                     setTimeout(() => ticarSom(1200, 300), 150);
 
@@ -473,7 +539,6 @@
             roletar();
         }
 
-        // REFRESH EM SEGUNDO PLANO: Sincroniza sem dar F5 na tela
         async function carregarDadosEmBack() {
             try {
                 const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
@@ -486,11 +551,12 @@
                     if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
                 }
                 if (novosAlunos.length > 0) todosAlunos = novosAlunos;
-            } catch(e) { console.log("Erro silencioso ao atualizar alunos."); }
+            } catch(e) { console.log("Erro silencioso ao sincronizar."); }
         }
 
         async function carregarDados() {
             try {
+                // 1. Carrega dados de frequências das turmas
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
                 const txt = await res.text();
                 const linhas = txt.split(/\r?\n/);
@@ -510,21 +576,51 @@
                     }
                 }
 
+                // 2. Carrega lista de alunos para o sorteador
                 const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
                 const txtAlunos = await resAlunos.text();
                 const linhasAlunos = txtAlunos.split(/\r?\n/);
                 todosAlunos = [];
-                
                 for (let j = 1; j < linhasAlunos.length; j++) {
                     if (linhasAlunos[j].trim().length < 3) continue;
                     const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (colsA.length >= 2) {
-                        todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
+                    if (colsA.length >= 2) { todosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
+                }
+
+                // 3. NOVO: Carrega o histórico de médias cronológicas da escola
+                try {
+                    const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
+                    const txtHist = await resHist.text();
+                    const linhasHist = txtHist.split(/\r?\n/);
+                    historicoEscola = [];
+                    // Pula o cabeçalho (i=1), lê as semanas salvas
+                    for(let k = 1; k < linhasHist.length; k++) {
+                        if (linhasHist[k].trim().length < 3) continue;
+                        const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                        if(colsH.length >= 2) {
+                            const semNome = colsH[0];
+                            const medVal = parseFloat(colsH[1].replace(",", "."));
+                            if(!isNaN(medVal)) { historicoEscola.push({ semana: semNome, media: medVal }); }
+                        }
                     }
+                } catch(errH) {
+                    // Fallback (Dados simulados caso a aba ainda não esteja pronta)
+                    historicoEscola = [
+                        { semana: "Sem 15", media: 91.2 },
+                        { semana: "Sem 16", media: 92.8 },
+                        { semana: "Sem 17", media: 94.1 },
+                        { semana: "Esta", media: 0.0 } // Será substituído dinamicamente pela atual
+                    ];
                 }
 
                 if (todasTurmas.length > 0) {
                     mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+                    
+                    // Alimenta o último ponto do histórico com a média viva atualizada do Sheets
+                    if (historicoEscola.length > 0) {
+                        historicoEscola[historicoEscola.length - 1].media = mediaGeralEscolaGlobal;
+                    }
+                    
                     atualizarTextoSemana();
                     gerarSlides();
                 }
@@ -633,7 +729,6 @@
             }
 
             if (top5Geral.length > 0) {
-                // FILTRO DE ELITE PARA O SORTEIO: Destaca no topo apenas as turmas com frequência >= 95%
                 const turmasElite = todasTurmas.filter(t => t.valor >= 95.0).sort((a,b) => b.valor - a.valor);
                 const outrasTurmasLista = todasTurmas.filter(t => t.valor < 95.0).sort((a,b) => b.valor - a.valor);
                 const listagemSeletorGeral = [...turmasElite, ...outrasTurmasLista];
@@ -677,7 +772,7 @@
             iniciarAnimacao();
         }
 
-        // NOVO FORMATO: Monta as turmas usando o "Modo Arena Split" (Termômetro geral fixo na esquerda)
+        // UPGRADE: Monta os slides aplicando o Histórico Gráfico no bloco fixo da esquerda (Split)
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             let localId = idStart;
@@ -688,25 +783,29 @@
                 const temElite = pedaço.some(t => t.valor >= 95);
                 if(temElite) slide.dataset.hasElite = "true";
 
-                idGlobalSplit = localId + 1000; // ID fictício isolado para o termômetro fixado
+                // ID único para a caixa do gráfico dessa página
+                const idGraficoPagina = `grafico-split-box-${localId}`;
 
                 slide.innerHTML = `
                     <div class="flex items-stretch gap-6 w-full max-w-[1800px] h-full mx-auto">
                         
-                        <!-- LADO ESQUERDO: Termômetro Fixo da Escola (40% de largura) -->
-                        <div id="card-${idGlobalSplit}" data-id="${idGlobalSplit}" data-target="${mediaGeralEscolaGlobal}" class="w-[35%] glass-card rounded-[2.5rem] p-8 flex flex-col justify-between border-t-8 border-t-indigo-600 split-card-escola text-center">
+                        <div class="w-[38%] glass-card rounded-[2.5rem] p-6 flex flex-col justify-between border-t-8 border-t-indigo-600 text-center">
                             <div>
-                                <span class="text-indigo-600 font-black text-sm tracking-widest uppercase block mb-1">MÉDIA GERAL DO COLÉGIO</span>
-                                <h2 class="text-slate-400 font-extrabold text-xs uppercase tracking-wider">Impacto em Tempo Real</h2>
+                                <span class="text-indigo-600 font-black text-sm tracking-widest uppercase block mb-0.5">EVOLUÇÃO ANCHIETA</span>
+                                <h2 class="text-slate-400 font-extrabold text-xs uppercase tracking-wider">Histórico de Frequência da Escola</h2>
                             </div>
-                            <div class="text-[5.5rem] font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent leading-none my-4 num-contador-txt">0.0%</div>
-                            <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center">
-                                <div id="barra-${idGlobalSplit}" class="barra-frequencia h-full text-sm bg-indigo-600" style="width: 0%">0.0%</div>
+                            
+                            <div id="${idGraficoPagina}" class="box-plot-grafico w-full h-[190px] my-2 bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center">
+                                <span class="text-slate-400 font-bold text-xs animate-pulse">Carregando gráfico...</span>
+                            </div>
+
+                            <div class="bg-indigo-50/70 border border-indigo-100/50 p-3 rounded-2xl flex justify-between items-center px-6">
+                                <span class="font-extrabold text-slate-500 text-xs uppercase tracking-wide">Média da Semana Atual:</span>
+                                <span class="font-black text-2xl text-indigo-600">${mediaGeralEscolaGlobal.toFixed(1)}%</span>
                             </div>
                         </div>
 
-                        <!-- LADO DIREITO: O Grid Rotativo de 6 Turmas (65% de largura) -->
-                        <div class="w-[65%] flex flex-col justify-between">
+                        <div class="w-[62%] flex flex-col justify-between">
                             <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/10 self-center">${titulo}</div>
                             <div class="grid grid-cols-2 gap-4 w-full h-full">
                                 ${pedaço.map(t => { 
@@ -786,8 +885,8 @@
             document.getElementById("indicador-pagina").innerText = `Pág. 1 de ${slides.length}`;
             
             if (slides[indexSlide].classList.contains('slide-tipo-lista')) {
-                const splitCardEscola = slides[indexSlide].querySelector('.split-card-escola');
-                if (splitCardEscola) { animarBarraECounter(splitCardEscola.dataset.id, mediaGeralEscolaGlobal, 5000); }
+                const containerGrafico = slides[indexSlide].querySelector('.box-plot-grafico');
+                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
 
                 slides[indexSlide].querySelectorAll('.card-turma, .card-bloco-media').forEach(el => {
                     const idTarget = el.dataset.id; const valTarget = parseFloat(el.dataset.target);
