@@ -23,14 +23,14 @@
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         
-        /* Fundo customizado com a imagem das bandeiras */
+        /* Fundo com a imagem do Paraná e Brasil */
         body { 
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; 
             background: url('fundo.jpg') no-repeat center center fixed;
             background-size: cover;
         }
         
-        /* Película protetora para garantir o contraste das letras */
+        /* Camada de desfoque/clareamento para leitura dos dados */
         .overlay-fundo {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.88); z-index: -1;
@@ -40,17 +40,16 @@
         .pagina-slide.active { display: block; }
         @keyframes slideIn { from { opacity: 0; transform: scale(0.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         
-        .glass-card { background: rgba(255, 255, 255, 0.82); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.7); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
+        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
         .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        .coluna-barra-vertical { transition: height 1.5s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
         .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
         
-        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 30px; height: 260px; margin-bottom: 20px; width: 100%; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 240px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
-        .btn-ctrl { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; }
+        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 24px; height: 260px; margin-bottom: 20px; width: 100%; }
+        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 220px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.8); }
+        .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
     </style>
@@ -70,7 +69,7 @@
             <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase">Sincronizando estatísticas...</p>
         </div>
         <div class="text-right flex items-center gap-4">
-            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider">
+            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
                 🎁 Realizar Sorteio
             </button>
             <div class="h-10 w-[1px] bg-slate-300/60"></div>
@@ -89,7 +88,7 @@
             <div class="flex gap-8 items-center text-[11px] font-extrabold">
                 <div class="flex items-center gap-2 bg-rose-500/10 text-rose-300 px-3 py-1 rounded-lg border border-rose-500/20"><span>✋</span> < 90%</div>
                 <div class="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-3 py-1 rounded-lg border border-amber-500/20"><span>👍</span> 90-95%</div>
-                <div class="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-lg border border-emerald-500/20"><span>👏</span> > 95%</div>
+                <div class="flex items-center gap-2 bg-emerald-500/10 text-emerald-300 px-3 py-1 rounded-lg border border-emerald-500/20"><span>👏</span> > 95%</div>
             </div>
             
             <div class="flex gap-4 items-center bg-white/10 px-5 py-1.5 rounded-full border border-white/10">
@@ -110,7 +109,7 @@
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
         const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI/export?format=csv&gid=2003914330";
 
-        // 🌟 CONFIGURAÇÃO MANUAL DOS TRIMESTRES (Mude o valor do 1º quando quiser fixar)
+        // 🌟 CONFIGURAÇÃO MANUAL DOS TRIMESTRES
         let notaFechada1Trimestre = 91.9; 
 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
@@ -215,7 +214,6 @@
                 </svg>`;
         }
 
-        // NOVO: Renderiza o gráfico das notas trimestrais inspiradas no seu desenho!
         function renderizarGraficoTrimestral(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -236,7 +234,7 @@
                 const x = margemX + (i * espacoBarra) + (espacoBarra / 2) - (larguraBarra / 2);
                 if (t.valor === 0) return;
 
-                const hBarra = ((t.valor - 70) / 30) * alturaUtil; // Calibrado entre 70% e 100%
+                const hBarra = ((t.valor - 70) / 30) * alturaUtil;
                 const yText = altura - margemYBase - hBarra - 12;
                 const cor = obterCoresPorValor(t.valor).hex;
 
@@ -251,7 +249,6 @@
             });
 
             const yMeta = altura - margemYBase - (((95 - 70) / 30) * alturaUtil);
-
             wrapper.innerHTML = `
                 <svg viewBox="0 0 ${largura} ${altura}" class="w-full h-full overflow-visible">
                     <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="6 6" stroke-width="2.5" opacity="0.6"/>
@@ -357,6 +354,7 @@
         async function carregarDados() {
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
+                if(!res.ok) throw new Error("Erro Planilha Principal");
                 const txt = await res.text(); const linhas = txt.split(/\r?\n/);
                 todasTurmas = [];
                 for (let i = 1; i < linhas.length; i++) {
@@ -452,7 +450,6 @@
             const metaOuro = 95.0; const faltaParaMeta = Math.max(metaOuro - mediaGeralEscolaGlobal, 0);
             const msgMissao = faltaParaMeta > 0 ? `FALTAM <span class="text-rose-600 font-black">${faltaParaMeta.toFixed(1)}%</span> PARA A META!` : `A META FOI ATINGIDA! 🎉`;
 
-            // Slide 8: O Painel de Histórico Semanal Completo
             idGlobal++; let idEscola = idGlobal;
             const mSlide = document.createElement("div");
             mSlide.className = "pagina-slide w-full h-full p-6 slide-tipo-desafio-full";
@@ -473,7 +470,6 @@
                 </div>`;
             container.appendChild(mSlide);
 
-            // NOVO SLIDE 9: RENDIMENTO TRIMESTRAL (Inspirado no desenho de barras lado a lado!)
             const trimSlide = document.createElement("div");
             trimSlide.className = "pagina-slide w-full h-full p-6 slide-tipo-trimestral";
             trimSlide.innerHTML = `
@@ -539,13 +535,96 @@
             iniciarAnimacao();
         }
 
-        function fecharModoSorteio() {
-            if (sorteioEmAndamento) return;
-            const slides = document.querySelectorAll(".pagina-slide");
-            slides.forEach(s => s.classList.remove("active"));
-            indexSlide = 0; slides[indexSlide].classList.add("active");
-            isPaused = false; document.getElementById('btn-pause').innerText = '⏸️';
-            iniciarAnimacao();
+        function montarPaginas(lista, titulo, col, idStart) {
+            const container = document.getElementById("container-slides");
+            let localId = idStart;
+            for (let i = 0; i < lista.length; i += 6) {
+                const pedaço = lista.slice(i, i + 6);
+                const slide = document.createElement("div");
+                slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-lista";
+                const temElite = pedaço.some(t => t.valor >= 95);
+                if(temElite) slide.dataset.hasElite = "true";
+
+                const idGraficoPagina = `grafico-split-box-${localId}`;
+
+                slide.innerHTML = `
+                    <div class="flex items-stretch gap-6 w-full max-w-[1800px] h-full mx-auto">
+                        <div class="w-[38%] glass-card rounded-[2.5rem] p-6 flex flex-col justify-between border-t-8 border-t-indigo-600 text-center">
+                            <div>
+                                <span class="text-indigo-600 font-black text-sm tracking-widest uppercase block mb-0.5">EVOLUÇÃO ANCHIETA</span>
+                                <h2 class="text-slate-500 font-extrabold text-xs uppercase tracking-wider">Histórico de Frequência da Escola</h2>
+                            </div>
+                            <div id="${idGraficoPagina}" class="box-plot-grafico w-full h-[190px] my-2 bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center">
+                                <span class="text-slate-400 font-bold text-xs animate-pulse">Carregando gráfico...</span>
+                            </div>
+                            <div class="bg-indigo-50/70 border border-indigo-100/50 p-3 rounded-2xl flex justify-between items-center px-6">
+                                <span class="font-extrabold text-slate-500 text-xs uppercase tracking-wide">Média da Semana Atual:</span>
+                                <span class="font-black text-2xl text-indigo-600">${mediaGeralEscolaGlobal.toFixed(1)}%</span>
+                            </div>
+                        </div>
+
+                        <div class="w-[62%] flex flex-col justify-between">
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20 self-center">${titulo}</div>
+                            <div class="grid grid-cols-2 gap-4 w-full h-full">
+                                ${pedaço.map(t => { 
+                                    localId++;
+                                    return `
+                                        <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-4 rounded-[2rem] card-turma glass-card card-animado text-left flex flex-col justify-between border-l-rose-500">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <p class="font-black text-slate-900 text-xl md:text-2xl uppercase tracking-tight truncate max-w-[75%] leading-none">${t.nome}</p>
+                                                <p class="text-lg leading-none filter drop-shadow-sm">${"🏆".repeat(t.trofeus)}</p>
+                                            </div>
+                                            <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center border border-slate-300/10">
+                                                <div id="barra-${localId}" class="barra-frequencia h-full text-lg bg-rose-500" style="width: 0%">0.0%</div>
+                                            </div>
+                                        </div>`; 
+                                }).join("")}
+                            </div>
+                        </div>
+                    </div>`;
+                container.appendChild(slide);
+            }
+            return localId;
+        }
+
+        function montarSlideRankingTurno(listaTurno, titulo, col, idStart) {
+            const container = document.getElementById("container-slides");
+            const ordenadas = [...listaTurno].sort((a, b) => b.valor - a.valor);
+            const top3 = ordenadas.slice(0, 3); const restante = ordenadas.slice(3);
+            if (top3.length < 1) return idStart;
+
+            let localId = idStart; const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-ranking";
+            const nome1 = top3[0] ? top3[0].nome : "-"; const val1 = top3[0] ? top3[0].valor : 0;
+            const nome2 = top3[1] ? top3[1].nome : "-"; const val2 = top3[1] ? top3[1].valor : 0;
+            const nome3 = top3[2] ? top3[2].nome : "-"; const val3 = top3[2] ? top3[2].valor : 0;
+
+            localId++; let idPod1 = localId; localId++; let idPod2 = localId; localId++; let idPod3 = localId;
+
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
+                    <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/20">${titulo}</div>
+                    <div class="podium-container shrink-0">
+                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                    </div>
+                    <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
+                        <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
+                            ${restante.map((t) => {
+                                localId++;
+                                return `
+                                    <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-white/60 px-4 py-1 rounded-xl border border-white shadow-sm card-bloco-media">
+                                        <span class="font-black text-slate-700 text-base uppercase truncate max-w-[65%] tracking-tight">${t.nome}</span>
+                                        <span class="font-black text-xl text-rose-500 shrink-0 num-contador-txt">0.0%</span>
+                                    </div>`;
+                            }).join("")}
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+            return localId;
         }
 
         function iniciarAnimacao() {
@@ -562,10 +641,33 @@
                 const containerGrafico = slides[indexSlide].querySelector('.box-plot-grafico');
                 if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
                 slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
+            } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
+                const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
+                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
+                slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
+                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
+                });
+            } else if (slides[indexSlide].classList.contains('slide-tipo-trimestral')) {
+                renderizarGraficoTrimestral('grafico-trimestral-box');
             }
+
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
-            if (!isPaused) { loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs); atualizarBarraTempoAvançado(); }
+            if (!isPaused) {
+                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
+                atualizarBarraTempoAvançado();
+            }
         }
+
+        function fecharModoSorteio() {
+            if (sorteioEmAndamento) return;
+            const slides = document.querySelectorAll(".pagina-slide");
+            slides.forEach(s => s.classList.remove("active"));
+            indexSlide = 0; slides[indexSlide].classList.add("active");
+            isPaused = false; document.getElementById('btn-pause').innerText = '⏸️';
+            iniciarAnimacao();
+        }
+
+        window.onload = carregarDados;
     </script>
 </body>
 </html>
