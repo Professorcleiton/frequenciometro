@@ -101,7 +101,6 @@
     <script>
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
-        // INTEGRADO: O link oficial da sua aba de histórico gerado automaticamente
         const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=2003914330&single=true&output=csv";
 
         let todasTurmas = [];
@@ -140,7 +139,6 @@
             return { hex: "#e11d48", tailwindTxt: "text-rose-500", tailwindBorder: "border-rose-500", shadow: "rgba(225,29,72,0.25)" };
         }
 
-        // CORRIGIDO: Lógica alinhada estritamente com o início das aulas em 02/02/2026
         function atualizarTextoSemana() {
             const hoje = new Date();
             const inicioAnoLetivo = new Date(2026, 1, 2); // 02 de Fevereiro de 2026
@@ -154,7 +152,8 @@
             const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
             
             const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-            document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
+            // CORRIGIDO: Agora aponta corretamente para as variáveis completas segundaFeira e domingo
+            document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
         }
 
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
@@ -258,6 +257,11 @@
                 loopInterval = setTimeout(() => mudarSlide(1), tRestante);
                 atualizarBarraTempoAvançado();
             }
+        }
+
+        function avanzarBarraManual() {
+            const barra = document.getElementById('barra-tempo');
+            barra.style.width = "0%";
         }
 
         function atualizarBarraTempoAvançado() {
@@ -467,7 +471,7 @@
 
                 if (giros < totalGiros) {
                     if (giros > totalGiros - 15) velocidade += 35;
-                    setTimeout(roletar, velocidad = velocidade);
+                    setTimeout(roletar, velocidade);
                 } else {
                     ticarSom(880, 250); setTimeout(() => ticarSom(1200, 300), 150);
                     dispararConfetesEspeciais(); let cLoop = setInterval(dispararConfetesEspeciais, 800);
@@ -523,7 +527,6 @@
                     if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
                 }
 
-                // Carrega o histórico dinâmico de semanas sincronizado com o link enviado
                 try {
                     const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
                     const txtHist = await resHist.text(); const linhasHist = txtHist.split(/\r?\n/);
