@@ -143,19 +143,32 @@
             return { hex: "#e11d48", tailwindTxt: "text-rose-500", tailwindBorder: "border-rose-500", shadow: "rgba(225,29,72,0.25)" };
         }
 
-        function atualizarTextoSemana() {
-            const hoje = new Date();
-            const dataReferencia = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
-            const inicioAno = new Date(dataReferencia.getFullYear(), 0, 1);
-            const dias = Math.floor((dataReferencia - inicioAno) / (24 * 60 * 60 * 1000));
-            const numSem = Math.ceil((dias + inicioAno.getDay() + 1) / 7);
-            const dSem = dataReferencia.getDay();
-            const diffSeg = dataReferencia.getDate() - (dSem === 0 ? 6 : dSem - 1);
-            const seg = new Date(new Date(dataReferencia).setDate(diffSeg));
-            const dom = new Date(new Date(seg).setDate(seg.getDate() + 6));
-            const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-            document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(seg)} a ${fmt(dom)}`;
-        }
+function atualizarTextoSemana() {
+    const hoje = new Date();
+    
+    // Define a data exata do início da Semana 1 (02 de Fevereiro de 2026)
+    const inicioAnoLetivo = new Date(2026, 1, 2); // Nota: Em JavaScript, o mês 1 representa Fevereiro
+    
+    // Descobre a segunda-feira da semana atual
+    const diaSemanaHoje = hoje.getDay();
+    const diferencaSegunda = hoje.getDate() - (diaSemanaHoje === 0 ? 6 : diaSemanaHoje - 1);
+    const segundaFeira = new Date(hoje.setDate(diferencaSegunda));
+    
+    // Calcula o domingo da mesma semana
+    const domingo = new Date(new Date(segundaFeira).setDate(segundaFeira.getDate() + 6));
+    
+    // Calcula a diferença em milissegundos entre a segunda-feira atual e o início das aulas
+    const diferencaTempo = segundaFeira.getTime() - inicioAnoLetivo.getTime();
+    
+    // Converte a diferença para semanas cheias e soma 1 para bater com a "Semana 1"
+    const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
+    
+    // Formatador de data padrão brasileiro (DD/MM)
+    const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
+    
+    // Atualiza o painel principal com os dados sincronizados do seu calendário
+    document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
+}
 
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
             const cardElement = document.getElementById(`card-${idCard}`);
