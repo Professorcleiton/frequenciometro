@@ -23,14 +23,12 @@
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         
-        /* Fundo definitivo com a imagem das bandeiras */
         body { 
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; 
             background: url('bandeiras.png') no-repeat center center fixed;
             background-size: cover;
         }
         
-        /* Película protetora para garantir o contraste e leitura absoluta das letras */
         .overlay-fundo {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.88); z-index: -1;
@@ -52,6 +50,9 @@
         .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
+        .error-message { background: #fee2e2; border: 2px solid #ef4444; color: #991b1b; padding: 20px; border-radius: 16px; margin: 20px; text-align: center; }
+        .loading-spinner { border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
@@ -66,7 +67,7 @@
         </div>
         <div class="text-center">
             <h1 class="text-3xl font-black bg-gradient-to-r from-blue-900 to-indigo-950 bg-clip-text text-transparent uppercase leading-none tracking-tight">CCM ANCHIETA</h1>
-            <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase">Sincronizando estatísticas...</p>
+            <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase">Carregando dados...</p>
         </div>
         <div class="text-right flex items-center gap-4">
             <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
@@ -80,7 +81,13 @@
         </div>
     </header>
 
-    <main id="container-slides" class="flex-grow p-6 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center"></main>
+    <main id="container-slides" class="flex-grow p-6 w-full max-w-[1850px] mx-auto overflow-hidden z-10 flex items-center justify-center text-center">
+        <div class="text-center">
+            <div class="loading-spinner"></div>
+            <p class="text-slate-600 font-bold text-lg">Carregando dados das planilhas...</p>
+            <p class="text-slate-400 text-sm mt-2">Isso pode levar alguns segundos</p>
+        </div>
+    </main>
 
     <div class="relative shrink-0 mx-6 mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200/30">
         <div id="barra-tempo"></div>
@@ -105,13 +112,26 @@
     </div>
 
     <script>
-        const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
-        const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
+        // CORRIGIDO: Use o formato export do Google Sheets
+        const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/export?format=csv";
+        const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/export?format=csv&gid=6658576";
         const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI/export?format=csv&gid=2003914330";
 
         let notaFechada1Trimestre = 91.9; 
-
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
+
+        function mostrarErro(mensagem) {
+            const container = document.getElementById("container-slides");
+            container.innerHTML = `
+                <div class="error-message">
+                    <h2 class="text-xl font-black mb-2">⚠️ Erro ao carregar dados</h2>
+                    <p class="font-bold">${mensagem}</p>
+                    <p class="text-sm mt-2">Verifique se as planilhas estão publicadas corretamente</p>
+                    <button onclick="location.reload()" class="mt-4 bg-red-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-red-700 transition">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>`;
+        }
 
         function ticarSom(frequenciaHz, duracaoMs) {
             try {
@@ -171,7 +191,6 @@
             window.requestAnimationFrame(executarSubida);
         }
 
-        // CORRIGIDO: Valores agora são impressos por DENTRO das colunas semanais
         function renderizarGraficoHistorico(idContainer, isFull = false) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -191,8 +210,6 @@
                 const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                
-                // AJUSTE: Move o yText para dentro do topo da barra com margem de segurança
                 const yText = altura - margemYBase - hBarra + (isFull ? 22 : 15);
                 const corPonto = obterCoresPorValor(dado.media).hex;
 
@@ -216,7 +233,6 @@
                 </svg>`;
         }
 
-        // CORRIGIDO: Valores agora são impressos por DENTRO dos blocos trimestrais
         function renderizarGraficoTrimestral(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -238,8 +254,6 @@
                 if (t.valor === 0) return;
 
                 const hBarra = ((t.valor - 70) / 30) * alturaUtil;
-                
-                // AJUSTE: Forçando o percentual e o status empilhados harmonicamente DENTRO da barra
                 const yTextPercent = altura - margemYBase - hBarra + 32;
                 const yTextStatus = altura - margemYBase - hBarra + 62;
                 const cor = obterCoresPorValor(t.valor).hex;
@@ -263,7 +277,6 @@
                 </svg>`;
         }
 
-        // CORRIGIDO: O slide de sorteio agora é ignorado e pulado no fluxo cronológico automático
         function mudarSlide(direcao) {
             if (sorteioEmAndamento) return;
             const slides = document.querySelectorAll(".pagina-slide");
@@ -273,7 +286,6 @@
             slides[indexSlide].classList.remove("active");
             indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             
-            // FILTRO DE SEGURANÇA: Se o índice bater no slide do Sorteio, pula para o seguinte instantaneamente
             if (slides[indexSlide].classList.contains('slide-tipo-sorteio')) {
                 indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             }
@@ -286,22 +298,21 @@
 
             if (currentSlide.classList.contains('slide-tipo-lista')) {
                 const containerGrafico = currentSlide.querySelector('.box-plot-grafico');
-                if (containerGrafico) { renderizerGraficoHistorico(containerGrafico.id); }
+                if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
                 currentSlide.querySelectorAll('.card-turma').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
             } 
             else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
-                renderizerGraficoHistorico('grafico-full-desafio', true);
+                renderizarGraficoHistorico('grafico-full-desafio', true);
                 animarBarraECounter(currentSlide.querySelector('.card-bloco-media').dataset.id, mediaGeralEscolaGlobal, 5000);
             }
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
-                renderizerGraficoTrimestral('grafico-trimestral-box');
+                renderizarGraficoTrimestral('grafico-trimestral-box');
             }
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); });
             }
-            // CORRIGIDO: Ativação dos contadores progressivos e efeito cascata do Top 5 Geral
             else if (currentSlide.classList.contains('slide-tipo-top5')) {
                 const lines = currentSlide.querySelectorAll('.linha-top5');
                 lines.forEach((l, idx) => {
@@ -323,7 +334,34 @@
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
             if (!isPaused) {
                 clearTimeout(loopInterval); cancelAnimationFrame(animBarra);
-                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs); atualizarBarraTempoAvançado();
+                loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs); 
+                atualizarBarraTempoAvançado();
+            }
+        }
+
+        function atualizarBarraTempoAvançado() {
+            cancelAnimationFrame(animBarra);
+            function animar() {
+                const decorrido = Date.now() - tInicioSlide;
+                const progresso = Math.min((decorrido / tRestante) * 100, 100);
+                document.getElementById('barra-tempo').style.width = progresso + '%';
+                if (progresso < 100 && !isPaused) animBarra = requestAnimationFrame(animar);
+            }
+            animar();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
+            if (isPaused) {
+                clearTimeout(loopInterval);
+                cancelAnimationFrame(animBarra);
+                const decorrido = Date.now() - tInicioSlide;
+                tRestante = Math.max(tempoSlideMs - decorrido, 0);
+            } else {
+                tInicioSlide = Date.now();
+                loopInterval = setTimeout(() => mudarSlide(1), tRestante);
+                atualizarBarraTempoAvançado();
             }
         }
 
@@ -362,11 +400,46 @@
             }());
         }
 
-        function ocluirSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
+        async function iniciarSorteioVirtual() {
+            if (sorteioEmAndamento) return;
+            sorteioEmAndamento = true;
+            const display = document.getElementById("nome-sorteado-display");
+            const btnSorteio = document.getElementById("btn-trigger-sorteio");
+            const seletor = document.getElementById("seletor-turma-sorteio");
+            btnSorteio.disabled = true;
+            
+            const turmaAlvo = seletor.value;
+            const alunosDaTurma = todosAlunos.filter(a => a.turma.trim().toUpperCase() === turmaAlvo.trim().toUpperCase());
+            
+            if (alunosDaTurma.length === 0) {
+                display.innerText = "SEM ALUNOS";
+                sorteioEmAndamento = false;
+                btnSorteio.disabled = false;
+                return;
+            }
+
+            let iterations = 0;
+            const maxIterations = 25;
+            let interval = setInterval(() => {
+                const randomAluno = alunosDaTurma[Math.floor(Math.random() * alunosDaTurma.length)];
+                display.innerText = randomAluno.nome;
+                ticarSom(800 + Math.random() * 400, 80);
+                iterations++;
+                if (iterations >= maxIterations) {
+                    clearInterval(interval);
+                    const vencedorFinal = alunosDaTurma[Math.floor(Math.random() * alunosDaTurma.length)];
+                    display.innerText = vencedorFinal.nome;
+                    ticarSom(1200, 300);
+                    confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+                    sorteioEmAndamento = false;
+                    btnSorteio.disabled = false;
+                }
+            }, 100);
+        }
 
         async function carregarDadosEmBack() {
             try {
-                const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
+                const resAlunos = await fetch(LINK_ALUNOS);
                 const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
                 let novosAlunos = [];
                 for (let j = 1; j < linhasAlunos.length; j++) {
@@ -375,60 +448,99 @@
                     if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
                 }
                 if (novosAlunos.length > 0) todosAlunos = novosAlunos;
-            } catch(e) { }
+            } catch(e) { console.warn("Erro ao carregar alunos:", e); }
         }
 
         async function carregarDados() {
             try {
-                const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
-                if(!res.ok) throw new Error("Erro Planilha Principal");
-                const txt = await res.text(); const linhas = txt.split(/\r?\n/);
+                console.log("Iniciando carregamento dos dados...");
+                
+                // Carregar dados principais
+                const res = await fetch(LINK_PLANILHA);
+                if(!res.ok) throw new Error(`Erro ao carregar planilha principal: ${res.status}`);
+                
+                const txt = await res.text();
+                console.log("Dados recebidos:", txt.substring(0, 200) + "...");
+                
+                const linhas = txt.split(/\r?\n/);
+                console.log(`Total de linhas: ${linhas.length}`);
+                
                 todasTurmas = [];
+                // CORRIGIDO: Agora usando 'linhas' em vez de 'lines'
                 for (let i = 1; i < linhas.length; i++) {
                     if (linhas[i].trim().length < 4) continue;
-                    const cols = lines[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    console.log(`Linha ${i}:`, cols);
+                    
                     if (cols.length >= 2) {
-                        const nome = cols[0]; const freq = parseFloat(cols[1].replace(",", "."));
+                        const nome = cols[0]; 
+                        const freq = parseFloat(cols[1].replace(",", "."));
                         const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
                         const trof = parseInt(cols[3]) || 0;
-                        if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof });
+                        
+                        if (!isNaN(freq) && nome.length > 0) {
+                            todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof });
+                            console.log(`Turma adicionada: ${nome} - ${freq}% - ${turno}`);
+                        }
                     }
                 }
+                
+                console.log(`Total de turmas carregadas: ${todasTurmas.length}`);
+                
+                if (todasTurmas.length === 0) {
+                    throw new Error("Nenhuma turma encontrada na planilha");
+                }
+                
+                // Carregar alunos
                 try {
-                    const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
-                    const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
+                    const resAlunos = await fetch(LINK_ALUNOS);
+                    const txtAlunos = await resAlunos.text(); 
+                    const linhasAlunos = txtAlunos.split(/\r?\n/);
                     todosAlunos = [];
                     for (let j = 1; j < linhasAlunos.length; j++) {
                         if (linhasAlunos[j].trim().length < 3) continue;
                         const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                         if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
                     }
-                } catch(eA) { }
+                    console.log(`Total de alunos carregados: ${todosAlunos.length}`);
+                } catch(eA) { 
+                    console.warn("Erro ao carregar alunos:", eA);
+                }
 
+                // Carregar histórico
                 try {
-                    const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
-                    const txtHist = await resHist.text(); const linhasHist = txtHist.split(/\r?\n/);
+                    const resHist = await fetch(LINK_HISTORICO);
+                    const txtHist = await resHist.text(); 
+                    const linhasHist = txtHist.split(/\r?\n/);
                     historicoEscola = [];
                     for(let k = 1; k < linhasHist.length; k++) {
                         if (linhasHist[k].trim().length < 3) continue;
                         const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                         if(colsH.length >= 2) {
-                            let semNome = colsH[0]; if(semNome.toLowerCase() !== "esta") { semNome = "S" + semNome; }
+                            let semNome = colsH[0]; 
+                            if(semNome.toLowerCase() !== "esta") { semNome = "S" + semNome; }
                             const medVal = parseFloat(colsH[1].replace(",", "."));
                             if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
                         }
                     }
                     if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
-                } catch(errH) { }
+                    console.log(`Histórico carregado: ${historicoEscola.length} semanas`);
+                } catch(errH) { 
+                    console.warn("Erro ao carregar histórico:", errH);
+                }
 
                 if (todasTurmas.length > 0) {
                     mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
                     if (historicoEscola.length > 0 && historicoEscola[historicoEscola.length - 1].semana.toLowerCase() === "esta") {
                         historicoEscola[historicoEscola.length - 1].media = mediaGeralEscolaGlobal;
                     }
-                    atualizarTextoSemana(); gerarSlides();
+                    atualizarTextoSemana(); 
+                    gerarSlides();
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error("Erro detalhado:", err);
+                mostrarErro(err.message);
+            }
         }
 
         function gerarSlides() {
@@ -437,6 +549,8 @@
             const manha = todasTurmas.filter(t => t.bloco.includes("man"));
             const tarde = todasTurmas.filter(t => t.bloco.includes("tard"));
             let idGlobal = 0;
+
+            console.log(`Gerando slides: ${manha.length} turmas manhã, ${tarde.length} turmas tarde`);
 
             if (manha.length > 0) {
                 idGlobal = montarPaginas(manha, "TURNO MANHÃ", "bg-blue-600/90", idGlobal);
@@ -670,7 +784,7 @@
                 slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
             } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
                 const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
-                if (containerGraficoFull) { renderizerGraficoHistorico('grafico-full-desafio', true); }
+                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
                 slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
                 });
@@ -694,7 +808,7 @@
             }
         }
 
-        // DISPARO CRUCIAL DA PARTIDA
+        // Iniciar o carregamento quando a página carregar
         window.onload = carregarDados;
     </script>
 </body>
