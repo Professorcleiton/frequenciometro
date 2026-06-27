@@ -41,6 +41,11 @@
         .btn-ctrl { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.8); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
+        /* ... (estilos permanecem iguais para manter o design Glassmorphism) ... */
+        .svg-path-linha { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: desenharLinha 3.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes desenharLinha { to { stroke-dashoffset: 0; } }
+        .ponto-grafico { animation: brotarPonto 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; transform-origin: center; }
+        @keyframes brotarPonto { to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
@@ -196,24 +201,19 @@
         }
 
         // NOVO MOTOR: Gráfico de Barras Elegante e à prova de quebras
-        function renderizarGraficoHistorico(idContainer) {
+function renderizarGraficoHistorico(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
             
+            // LIMPEZA TOTAL antes de desenhar para evitar duplicados
+            wrapper.innerHTML = ""; 
+
             if (historicoEscola.length === 0) {
-                wrapper.innerHTML = `
-                    <div class="flex flex-col items-center justify-center p-4">
-                        <span class="text-3xl mb-2 filter grayscale opacity-50">📊</span>
-                        <span class="text-slate-500 font-bold text-sm text-center">Gráfico Indisponível</span>
-                    </div>`;
+                wrapper.innerHTML = '<span class="text-slate-400 font-bold text-xs">Sem histórico.</span>';
                 return;
             }
 
-            const largura = 440; 
-            const altura = 200; 
-            const margemX = 30;
-            const margemYBase = 30;
-
+            const largura = 440; const altura = 180; const margemX = 30; const margemYBase = 30;
             const frequencias = historicoEscola.map(h => h.media);
             let minF = Math.floor(Math.min(...frequencias, 85)) - 2; 
             let maxF = 100;
@@ -221,26 +221,23 @@
             const alturaUtil = altura - margemYBase - 20; 
             const larguraUtil = largura - 2 * margemX;
             const espacoPorBarra = larguraUtil / historicoEscola.length;
-            const larguraBarra = Math.min(espacoPorBarra * 0.65, 32); 
+            const larguraBarra = Math.min(espacoPorBarra * 0.6, 28); 
 
-            let barrasHtml = ""; 
-            let labelsHtml = "";
+            let barrasHtml = ""; let labelsHtml = "";
 
             historicoEscola.forEach((dado, i) => {
                 const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                const yText = altura - margemYBase - hBarra - 6;
-                
                 const corPonto = obterCoresPorValor(dado.media).hex;
 
                 barrasHtml += `
-                    <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
+                    <g class="grupo-barra" style="animation-delay: ${i * 100}ms;">
                         <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="11" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
                     </g>
                 `;
-                labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - 10}" fill="#64748b" font-size="10" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
+                // Rótulo abreviado para não sujar o gráfico
+                labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - 10}" fill="#64748b" font-size="9" font-weight="800" text-anchor="middle">${dado.semana.replace('Sem ', 'S')}</text>`;
             });
 
             const yMeta = altura - margemYBase - (((95 - minF) / (maxF - minF)) * alturaUtil);
@@ -248,17 +245,53 @@
             wrapper.innerHTML = `
                 <svg viewBox="0 0 ${largura} ${altura}" class="w-full h-full overflow-visible">
                     <style>
-                        .grupo-barra { opacity: 0; animation: fadeUpBar 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-                        @keyframes fadeUpBar {
-                            from { opacity: 0; transform: translateY(15px); }
-                            to { opacity: 1; transform: translateY(0); }
-                        }
+                        .grupo-barra { opacity: 0; animation: fadeUpBar 0.5s ease-out forwards; }
+                        @keyframes fadeUpBar { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
                     </style>
-                    <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="5 5" stroke-width="2" opacity="0.5"/>
-                    <text x="${largura - margemX + 5}" y="${yMeta + 3}" fill="#10b981" font-size="9" font-weight="900">META</text>
+                    <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.6"/>
                     ${labelsHtml}
                     ${barrasHtml}
                 </svg>`;
+        }
+
+        // Função de montagem universal (usada por todos os slides)
+        function montarPaginas(lista, titulo, col, idStart) {
+            const container = document.getElementById("container-slides");
+            let localId = idStart;
+            for (let i = 0; i < lista.length; i += 6) {
+                const pedaço = lista.slice(i, i + 6);
+                const slide = document.createElement("div");
+                slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-lista";
+                const idGrafico = `grafico-id-${localId}`;
+
+                slide.innerHTML = `
+                    <div class="flex items-stretch gap-6 w-full max-w-[1800px] h-full mx-auto">
+                        <div class="w-[38%] glass-card rounded-[2.5rem] p-6 flex flex-col justify-between border-t-8 border-t-indigo-600 text-center">
+                            <h2 class="text-slate-500 font-extrabold text-xs uppercase tracking-wider">Histórico de Frequência</h2>
+                            <div id="${idGrafico}" class="box-plot-grafico w-full h-[190px] my-2 p-2 rounded-2xl flex items-center justify-center"></div>
+                        </div>
+                        <div class="w-[62%] flex flex-col justify-between">
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider self-center">${titulo}</div>
+                            <div class="grid grid-cols-2 gap-4 w-full h-full">
+                                ${pedaço.map(t => { 
+                                    localId++;
+                                    return `
+                                        <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="p-4 rounded-[2rem] card-turma glass-card card-animado text-left flex flex-col justify-between border-l-rose-500">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <p class="font-black text-slate-900 text-xl uppercase truncate max-w-[75%] leading-none">${t.nome}</p>
+                                                <p class="text-lg">${"🏆".repeat(t.trofeus)}</p>
+                                            </div>
+                                            <div class="w-full bg-slate-200/50 rounded-xl h-10 overflow-hidden relative shadow-inner flex items-center border border-slate-300/10">
+                                                <div id="barra-${localId}" class="barra-frequencia h-full text-lg bg-rose-500" style="width: 0%">0.0%</div>
+                                            </div>
+                                        </div>`; 
+                                }).join("")}
+                            </div>
+                        </div>
+                    </div>`;
+                container.appendChild(slide);
+            }
+            return localId;
         }
 
         function togglePause() {
