@@ -169,107 +169,143 @@
             window.requestAnimationFrame(executarSubida);
         }
 
-        async function carregarDados() {
-            try {
-                console.log("🚀 Carregando dados...");
-                console.log("📡 Link:", LINK_PLANILHA);
+     async function carregarDados() {
+    try {
+        console.log("🚀 Carregando dados...");
+        console.log("📡 Link:", LINK_PLANILHA);
+        
+        const res = await fetch(LINK_PLANILHA);
+        console.log("📡 Status:", res.status);
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const txt = await res.text();
+        console.log("📄 Dados recebidos:", txt.substring(0, 200));
+        
+        const linhas = txt.split(/\r?\n/);
+        console.log(`📊 Linhas: ${linhas.length}`);
+        
+        todasTurmas = [];
+        for (let i = 1; i < linhas.length; i++) {
+            if (linhas[i].trim().length < 4) continue;
+            
+            // Processar linha CSV corretamente (respeitando aspas)
+            const linha = linhas[i];
+            const cols = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let char of linha) {
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if ((char === ',' || char === ';') && !inQuotes) {
+                    cols.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            cols.push(current.trim());
+            
+            // Limpar aspas dos valores
+            const colsLimpos = cols.map(c => c.replace(/^"|"$/g, '').trim());
+            
+            console.log(`Linha ${i}:`, colsLimpos);
+            
+            if (colsLimpos.length >= 2) {
+                const nome = colsLimpos[0];
+                // CORRIGIDO: Substituir vírgula por ponto para números decimais
+                const freq = parseFloat(colsLimpos[1].replace(",", "."));
+                const turnoRaw = colsLimpos[2] ? colsLimpos[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
                 
-                const res = await fetch(LINK_PLANILHA);
-                console.log("📡 Status:", res.status);
-                
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                
-                const txt = await res.text();
-                console.log("📄 Dados recebidos:", txt.substring(0, 200));
-                
-                const linhas = txt.split(/\r?\n/);
-                console.log(`📊 Linhas: ${linhas.length}`);
-                
-                todasTurmas = [];
-                for (let i = 1; i < linhas.length; i++) {
-                    if (linhas[i].trim().length < 4) continue;
-                    
-                    const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                    console.log(`Linha ${i}:`, cols);
-                    
-                    if (cols.length >= 2) {
-                        const nome = cols[0]; 
-                        const freq = parseFloat(cols[1].replace(",", "."));
-                        const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
-                        const trof = parseInt(cols[3]) || 0;
-                        
-                        if (!isNaN(freq) && nome.length > 0) {
-                            todasTurmas.push({ 
-                                nome: nome, 
-                                valor: freq, 
-                                bloco: turno.includes("man") ? "manha" : "tarde", 
-                                trofeus: trof 
-                            });
-                            console.log(`✅ ${nome}: ${freq}%`);
-                        }
-                    }
+                // CORRIGIDO: Melhor detecção de turno
+                let turno = "tarde";
+                if (turnoRaw.includes("manha") || turnoRaw.includes("manhã")) {
+                    turno = "manha";
+                } else if (turnoRaw.includes("tarde")) {
+                    turno = "tarde";
                 }
                 
-                console.log(`🎯 Total turmas: ${todasTurmas.length}`);
+                const trof = parseInt(colsLimpos[3]) || 0;
                 
-                if (todasTurmas.length === 0) {
-                    throw new Error("Nenhuma turma encontrada na planilha");
+                if (!isNaN(freq) && nome.length > 0) {
+                    todasTurmas.push({ 
+                        nome: nome, 
+                        valor: freq, 
+                        bloco: turno, 
+                        trofeus: trof 
+                    });
+                    console.log(`✅ ${nome}: ${freq}% - ${turno}`);
                 }
-                
-                // Tentar carregar histórico (opcional)
-                try {
-                    const resHist = await fetch(LINK_HISTORICO);
-                    if (resHist.ok) {
-                        const txtHist = await resHist.text();
-                        const linhasHist = txtHist.split(/\r?\n/);
-                        historicoEscola = [];
-                        for(let k = 1; k < linhasHist.length; k++) {
-                            if (linhasHist[k].trim().length < 3) continue;
-                            const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                            if(colsH.length >= 2) {
-                                let semNome = colsH[0];
-                                const medVal = parseFloat(colsH[1].replace(",", "."));
-                                if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
-                            }
-                        }
-                        console.log(`📈 Histórico: ${historicoEscola.length} semanas`);
-                    }
-                } catch(e) {}
-                
-                // Tentar carregar alunos (opcional)
-                try {
-                    const resAlunos = await fetch(LINK_ALUNOS);
-                    if (resAlunos.ok) {
-                        const txtAlunos = await resAlunos.text();
-                        const linhasAlunos = txtAlunos.split(/\r?\n/);
-                        todosAlunos = [];
-                        for (let j = 1; j < linhasAlunos.length; j++) {
-                            if (linhasAlunos[j].trim().length < 3) continue;
-                            const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                            if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
-                        }
-                        console.log(`👥 Alunos: ${todosAlunos.length}`);
-                    }
-                } catch(e) {}
-                
-                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-                console.log(`📊 Média geral: ${mediaGeralEscolaGlobal.toFixed(2)}%`);
-                
-                atualizarTextoSemana(); 
-                gerarSlides();
-                
-            } catch (err) {
-                console.error("❌ ERRO:", err);
-                document.getElementById("container-slides").innerHTML = `
-                    <div style="background: #fee2e2; padding: 30px; border-radius: 16px; text-align: center;">
-                        <h2 style="color: #991b1b; font-size: 24px; margin-bottom: 10px;">⚠️ Erro ao carregar</h2>
-                        <p style="color: #991b1b;">${err.message}</p>
-                        <button onclick="location.reload()" style="margin-top: 15px; background: #dc2626; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                            🔄 Tentar novamente
-                        </button>
-                    </div>`;
             }
         }
+        
+        console.log(`🎯 Total turmas: ${todasTurmas.length}`);
+        console.log(`📋 Manhã: ${todasTurmas.filter(t => t.bloco === "manha").length}`);
+        console.log(`📋 Tarde: ${todasTurmas.filter(t => t.bloco === "tarde").length}`);
+        
+        if (todasTurmas.length === 0) {
+            throw new Error("Nenhuma turma encontrada na planilha");
+        }
+        
+        // Tentar carregar histórico (se falhar, criar dados vazios)
+        try {
+            const resHist = await fetch(LINK_HISTORICO);
+            if (resHist.ok) {
+                const txtHist = await resHist.text();
+                const linhasHist = txtHist.split(/\r?\n/);
+                historicoEscola = [];
+                for(let k = 1; k < linhasHist.length; k++) {
+                    if (linhasHist[k].trim().length < 3) continue;
+                    const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    if(colsH.length >= 2) {
+                        let semNome = colsH[0];
+                        const medVal = parseFloat(colsH[1].replace(",", "."));
+                        if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
+                    }
+                }
+                console.log(`📈 Histórico: ${historicoEscola.length} semanas`);
+            }
+        } catch(e) {
+            console.log("⚠️ Histórico não disponível, continuando sem ele");
+        }
+        
+        // Tentar carregar alunos (se falhar, criar array vazio)
+        try {
+            const resAlunos = await fetch(LINK_ALUNOS);
+            if (resAlunos.ok) {
+                const txtAlunos = await resAlunos.text();
+                const linhasAlunos = txtAlunos.split(/\r?\n/);
+                todosAlunos = [];
+                for (let j = 1; j < linhasAlunos.length; j++) {
+                    if (linhasAlunos[j].trim().length < 3) continue;
+                    const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
+                }
+                console.log(`👥 Alunos: ${todosAlunos.length}`);
+            }
+        } catch(e) {
+            console.log("⚠️ Lista de alunos não disponível");
+        }
+        
+        mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+        console.log(`📊 Média geral: ${mediaGeralEscolaGlobal.toFixed(2)}%`);
+        
+        atualizarTextoSemana(); 
+        gerarSlides();
+        
+    } catch (err) {
+        console.error("❌ ERRO:", err);
+        document.getElementById("container-slides").innerHTML = `
+            <div style="background: #fee2e2; padding: 30px; border-radius: 16px; text-align: center;">
+                <h2 style="color: #991b1b; font-size: 24px; margin-bottom: 10px;">⚠️ Erro ao carregar</h2>
+                <p style="color: #991b1b;">${err.message}</p>
+                <button onclick="location.reload()" style="margin-top: 15px; background: #dc2626; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    🔄 Tentar novamente
+                </button>
+            </div>`;
+    }
+}
 
         function gerarSlides() {
             const container = document.getElementById("container-slides");
