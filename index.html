@@ -41,11 +41,6 @@
         .btn-ctrl { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.8); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
         ::-webkit-scrollbar { display: none; }
-
-        .svg-path-linha { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: desenharLinha 3.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        @keyframes desenharLinha { to { stroke-dashoffset: 0; } }
-        .ponto-grafico { animation: brotarPonto 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; transform-origin: center; }
-        @keyframes brotarPonto { to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
@@ -99,11 +94,8 @@
     </div>
 
     <script>
-        // LINKS OFICIAIS ATUALIZADOS PARA O FORMATO DE EXPORTAÇÃO SEGURO
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
-        
-        // Link blindado para forçar a entrega em CSV a partir do ID real do documento que você forneceu
         const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI/export?format=csv&gid=2003914330";
 
         let todasTurmas = [];
@@ -129,7 +121,7 @@
                 gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duracaoMs/1000);
                 osc.connect(gain); gain.connect(ctx.destination);
                 osc.start(); osc.stop(ctx.currentTime + duracaoMs/1000);
-            } catch(e) { }
+            } catch(e) {}
         }
 
         function obterCoresPorValor(valor) {
@@ -192,7 +184,7 @@
                     if (txtContador) {
                         txtContador.innerText = valorAtual.toFixed(1) + "%";
                         if(cardElement.classList.contains('podium-item')) {
-                            txtContador.className = `text-4xl font-black mt-2 block w-full num-contador-txt ${coresDinamicas.tailwindTxt}`;
+                            txtContador.className = `text-5xl font-black mt-3 block w-full text-center num-contador-txt ${coresDinamicas.tailwindTxt}`;
                         } else {
                             txtContador.className = `text-5xl font-black num-contador-txt ${coresDinamicas.tailwindTxt}`;
                         }
@@ -203,49 +195,69 @@
             window.requestAnimationFrame(executarSubida);
         }
 
+        // NOVO MOTOR: Gráfico de Barras Elegante e à prova de quebras
         function renderizarGraficoHistorico(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
             
-            // Tratamento de erro visível caso o Sheets bloqueie a leitura
             if (historicoEscola.length === 0) {
-                wrapper.innerHTML = '<span class="text-rose-500 font-bold text-xs text-center px-4">Conecte o link público no Sheets para exibir o gráfico.</span>';
+                wrapper.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-4">
+                        <span class="text-3xl mb-2 filter grayscale opacity-50">📊</span>
+                        <span class="text-slate-500 font-bold text-sm text-center">Gráfico Indisponível</span>
+                    </div>`;
                 return;
             }
 
-            const largura = 420; const altura = 180; const margem = 30;
+            const largura = 440; 
+            const altura = 200; 
+            const margemX = 30;
+            const margemYBase = 30;
+
             const frequencias = historicoEscola.map(h => h.media);
-            let minF = Math.min(...frequencias, 85) - 1; 
-            let maxF = Math.max(...frequencias, 100) + 0.5;
+            let minF = Math.floor(Math.min(...frequencias, 85)) - 2; 
+            let maxF = 100;
 
-            const obterX = (idx) => margem + (idx / (historicoEscola.length - 1 || 1)) * (largura - 2 * margem);
-            const obterY = (val) => altura - margem - ((val - minF) / (maxF - minF)) * (altura - 2 * margem);
+            const alturaUtil = altura - margemYBase - 20; 
+            const larguraUtil = largura - 2 * margemX;
+            const espacoPorBarra = larguraUtil / historicoEscola.length;
+            const larguraBarra = Math.min(espacoPorBarra * 0.65, 32); 
 
-            let dPath = ""; let pontosHtml = ""; let labelsHtml = "";
+            let barrasHtml = ""; 
+            let labelsHtml = "";
 
             historicoEscola.forEach((dado, i) => {
-                const x = obterX(i); const y = obterY(dado.media);
-                if (i === 0) dPath += `M ${x} ${y}`; else dPath += ` L ${x} ${y}`;
+                const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
+                const val = Math.min(Math.max(dado.media, minF), maxF); 
+                const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
+                const yText = altura - margemYBase - hBarra - 6;
+                
                 const corPonto = obterCoresPorValor(dado.media).hex;
 
-                pontosHtml += `
-                    <circle cx="${x}" cy="${y}" r="5" fill="${corPonto}" stroke="#ffffff" stroke-width="2" class="ponto-grafico" style="animation-delay: ${i * 150}ms;" />
-                    <text x="${x}" y="${y - 12}" fill="${corPonto}" font-size="11" font-weight="900" text-anchor="middle" class="ponto-grafico" style="animation-delay: ${i * 150}ms;">${dado.media.toFixed(1)}</text>
+                barrasHtml += `
+                    <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
+                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
+                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="11" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
+                    </g>
                 `;
-                labelsHtml += `<text x="${x}" y="${altura - 5}" fill="#64748b" font-size="11" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
+                labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - 10}" fill="#64748b" font-size="10" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
             });
+
+            const yMeta = altura - margemYBase - (((95 - minF) / (maxF - minF)) * alturaUtil);
 
             wrapper.innerHTML = `
                 <svg viewBox="0 0 ${largura} ${altura}" class="w-full h-full overflow-visible">
-                    <line x1="${margem}" y1="${obterY(95)}" x2="${largura - margem}" y2="${obterY(95)}" stroke="#10b981" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.6"/>
-                    <text x="${largura - margem + 8}" y="${obterY(95) + 3}" fill="#10b981" font-size="9" font-weight="900">META</text>
-                    <path d="${dPath}" fill="none" stroke="url(#gradientLinha)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" class="svg-path-linha"/>
-                    <defs>
-                        <linearGradient id="gradientLinha" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stop-color="#6366f1" /><stop offset="100%" stop-color="#3b82f6" />
-                        </linearGradient>
-                    </defs>
-                    ${labelsHtml}${pontosHtml}
+                    <style>
+                        .grupo-barra { opacity: 0; animation: fadeUpBar 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                        @keyframes fadeUpBar {
+                            from { opacity: 0; transform: translateY(15px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                    </style>
+                    <line x1="${margemX}" y1="${yMeta}" x2="${largura - margemX}" y2="${yMeta}" stroke="#10b981" stroke-dasharray="5 5" stroke-width="2" opacity="0.5"/>
+                    <text x="${largura - margemX + 5}" y="${yMeta + 3}" fill="#10b981" font-size="9" font-weight="900">META</text>
+                    ${labelsHtml}
+                    ${barrasHtml}
                 </svg>`;
         }
 
@@ -474,7 +486,7 @@
         async function carregarDados() {
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
-                if(!res.ok) throw new Error("Erro acesso Planilha Principal");
+                if(!res.ok) throw new Error("Erro Planilha Principal");
                 const txt = await res.text(); const linhas = txt.split(/\r?\n/);
                 todasTurmas = [];
                 
@@ -498,14 +510,13 @@
                         const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                         if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
                     }
-                } catch(eA) { console.log("Erro ao carregar Alunos"); }
+                } catch(eA) { }
 
-                // PARSE ROBUSTO DO HISTÓRICO COM FILTRO DE 10 SEMANAS
                 try {
                     const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
-                    if(!resHist.ok) throw new Error("Acesso negado Histórico");
+                    if(!resHist.ok) throw new Error("Acesso Histórico Falhou");
                     const txtHist = await resHist.text(); 
-                    if(txtHist.includes("<html")) throw new Error("Google devolveu HTML no Histórico");
+                    if(txtHist.includes("<html")) throw new Error("HTML no Histórico");
                     
                     const linhasHist = txtHist.split(/\r?\n/);
                     historicoEscola = [];
@@ -519,14 +530,9 @@
                             if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
                         }
                     }
-                    
-                    // Inteligência: Cortar o gráfico para exibir apenas as ÚLTIMAS 10 semanas (Evita engarrafamento visual)
-                    if (historicoEscola.length > 10) {
-                        historicoEscola = historicoEscola.slice(-10);
-                    }
+                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
                 } catch(errH) {
-                    console.log("Falha no Histórico:", errH.message);
-                    historicoEscola = []; // Fica vazio e exibe a mensagem amigável no box vermelho pedindo o link
+                    historicoEscola = []; 
                 }
 
                 if (todasTurmas.length > 0) {
@@ -634,10 +640,7 @@
             }
 
             if (top5Geral.length > 0) {
-                const turmasElite = todasTurmas.filter(t => t.valor >= 95.0).sort((a,b) => b.valor - a.valor);
-                const outrasTurmasLista = todasTurmas.filter(t => t.valor < 95.0).sort((a,b) => b.valor - a.valor);
-                const listagemSeletorGeral = [...turmasElite, ...outrasTurmasLista];
-
+                const turmaVencedoraGeral = top5Geral[0].nome; 
                 const sSlide = document.createElement("div");
                 sSlide.className = "pagina-slide w-full h-full slide-tipo-sorteio";
                 sSlide.innerHTML = `
@@ -649,22 +652,18 @@
                             <div class="flex flex-col items-center gap-1.5 mb-4 w-full max-w-sm">
                                 <label for="seletor-turma-sorteio" class="text-slate-400 font-extrabold uppercase tracking-widest text-xs">Selecione a Turma Concorrente:</label>
                                 <select id="seletor-turma-sorteio" onchange="document.getElementById('nome-sorteado-display').innerText='???'" class="w-full p-3 bg-purple-50/60 border border-purple-200/50 text-purple-900 font-black text-lg rounded-xl outline-none focus:border-purple-400 text-center cursor-pointer shadow-inner">
-                                    ${listagemSeletorGeral.map(t => {
-                                        const tag = t.valor >= 95.0 ? "🌟 [ELITE] " : "⚠️ [REGULAR] ";
-                                        return `<option value="${t.nome}">${tag} ${t.nome} (${t.valor.toFixed(1)}%)</option>`;
-                                    }).join('')}
+                                    ${todasTurmas.map(t => `<option value="${t.nome}" ${t.nome === turmaVencedoraGeral ? 'selected' : ''}>${t.nome} (${t.valor.toFixed(1)}%)</option>`).join('')}
                                 </select>
                             </div>
                             <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]">???</div>
                             <div class="flex items-center gap-4 mt-2">
-                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-[0.97] transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
+                                <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
                                 <button id="btn-fechar-sorteio" onclick="fecharModoSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
                             </div>
                         </div>
                     </div>`;
                 container.appendChild(sSlide);
             }
-
             iniciarAnimacao();
         }
 
@@ -740,11 +739,11 @@
                     <div class="podium-container shrink-0">
                         ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item bg-slate-100/70 backdrop-blur-md border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] pod-prata opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                         ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item bg-amber-50/70 backdrop-blur-md border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 pod-ouro opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-orange-100/70 backdrop-blur-md border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item bg-orange-50/70 backdrop-blur-md border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
                         <h4 class="text-slate-400 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-200/60 pb-1">Demais Classificações:</h4>
-                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-left">
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
                             ${restante.map((t) => {
                                 localId++;
                                 return `
