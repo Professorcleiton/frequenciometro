@@ -267,7 +267,7 @@
                 </svg>`;
         }
 
-        function mudarSlide(direcao) {
+function mudarSlide(direcao) {
             if (sorteioEmAndamento) return;
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length <= 1) return;
@@ -276,7 +276,7 @@
             slides[indexSlide].classList.remove("active");
             indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             
-            // FILTRO ANTI-TRAVAMENTO: Pula o sorteio no loop cronometrado automático
+            // FILTRO DE SEGURANÇA: Pula o sorteio no loop cronometrado automático
             if (slides[indexSlide].classList.contains('slide-tipo-sorteio')) {
                 indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             }
@@ -304,7 +304,6 @@
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); });
             }
-            // CORRIGIDO: Ativação em cascata e contadores do Top 5 Geral
             else if (currentSlide.classList.contains('slide-tipo-top5')) {
                 const lines = currentSlide.querySelectorAll('.linha-top5');
                 lines.forEach((l, idx) => {
@@ -326,12 +325,39 @@
                     }, idx * 250);
                 });
             }
+            // CORREÇÃO CRUCIAL: Ativação e renderização correta do Pódio
             else if (currentSlide.classList.contains('slide-tipo-ranking')) {
                 const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
-                if (pod3) setTimeout(() => { pod3.style.animation = "subirPodio 0.6s forwards"; animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000); }, 1000);
-                if (pod2) setTimeout(() => { pod2.style.animation = "subirPodio 0.6s forwards"; animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000); }, 3200);
-                if (pod1) setTimeout(() => { pod1.style.animation = "subirPodio 0.6s forwards"; animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000); }, 5400);
-                setTimeout(dispararConfetesEspeciais, 7500);
+                const demaisClass = currentSlide.querySelector('.demais-class-box');
+
+                if (pod1) { pod1.style.animation = "none"; pod1.classList.remove("opacity-100"); }
+                if (pod2) { pod2.style.animation = "none"; pod2.classList.remove("opacity-100"); }
+                if (pod3) { pod3.style.animation = "none"; pod3.classList.remove("opacity-100"); }
+                if (demaisClass) demaisClass.style.opacity = "0";
+
+                if (pod3) setTimeout(() => { 
+                    pod3.classList.add("opacity-100");
+                    pod3.style.animation = "subirPodio 0.6s forwards"; 
+                    animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000); 
+                }, 1000);
+                
+                if (pod2) setTimeout(() => { 
+                    pod2.classList.add("opacity-100");
+                    pod2.style.animation = "subirPodio 0.6s forwards"; 
+                    animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000); 
+                }, 2500);
+                
+                if (pod1) setTimeout(() => { 
+                    pod1.classList.add("opacity-100");
+                    pod1.style.animation = "subirPodio 0.6s forwards"; 
+                    animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000); 
+                    if (demaisClass) {
+                        demaisClass.style.transition = "opacity 0.6s ease"; 
+                        demaisClass.style.opacity = "1";
+                        demaisClass.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 2000); });
+                    }
+                }, 4000);
+                setTimeout(dispararConfetesEspeciais, 5500);
             }
 
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
