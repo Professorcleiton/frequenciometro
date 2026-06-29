@@ -120,6 +120,18 @@
             } catch(e) {}
         }
 
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('btn-pause');
+            if (isPaused) {
+                btn.innerText = '▶️'; clearTimeout(loopInterval); cancelAnimationFrame(animBarra);
+                tRestante -= (Date.now() - tInicioSlide);
+            } else {
+                btn.innerText = '⏸️'; tInicioSlide = Date.now();
+                loopInterval = setTimeout(() => mudarSlide(1), tRestante); atualizarBarraTempoAvançado();
+            }
+        }
+
         function obterCoresPorValor(valor) {
             if (valor >= 95) return { hex: "#10b981", tailwindTxt: "text-emerald-500", shadow: "rgba(16,185,129,0.25)" };
             if (valor >= 90) return { hex: "#f59e0b", tailwindTxt: "text-amber-500", shadow: "rgba(245,158,11,0.25)" };
@@ -178,7 +190,6 @@
             window.requestAnimationFrame(executarSubida);
         }
 
-        // CORRIGIDO: Valores agora flutuam EXATAMENTE em cima das colunas (Segurança total contra cortes)
         function renderizarGraficoHistorico(idContainer, isFull = false) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -199,7 +210,6 @@
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
                 
-                // ALTERAÇÃO CRUCIAL: O texto flutua EM CIMA (-8px) da coluna com a cor real do preenchimento
                 const yText = altura - margemYBase - hBarra - 8;
                 const coresDinamicas = obterCoresPorValor(dado.media);
 
@@ -224,7 +234,6 @@
                 </svg>`;
         }
 
-        // CORRIGIDO: Valores agora flutuam de forma segura em cima das colunas trimestrais
         function renderizarGraficoTrimestral(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -246,8 +255,6 @@
                 if (t.valor === 0) return;
 
                 const hBarra = ((t.valor - 70) / 30) * alturaUtil;
-                
-                // ALTERAÇÃO: O percentual flutua em cima da coluna e o status fica fixado dentro do bloco
                 const yTextPercent = altura - margemYBase - hBarra - 12;
                 const yTextStatus = altura - margemYBase - hBarra + 30;
                 const coresDinamicas = obterCoresPorValor(t.valor);
@@ -304,7 +311,6 @@
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
                 renderizarGraficoTrimestral('grafico-trimestral-box');
             }
-            // CORRIGIDO: Ativação da Coroa de Vencedor na Disputa de Turnos
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 const coroaM = currentSlide.querySelector('.coroa-m');
                 const coroaT = currentSlide.querySelector('.coroa-t');
@@ -341,7 +347,6 @@
                     }, idx * 250);
                 });
             }
-            // CORRIGIDO: Ativação, posicionamento e cálculo dos blocos do Ranking (Pódio)
             else if (currentSlide.classList.contains('slide-tipo-ranking')) {
                 const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
                 const demaisClass = currentSlide.querySelector('.demais-class-box');
@@ -438,6 +443,13 @@
             roletar();
         }
 
+        function ajustarFonteNomeSorteado(nome) {
+            const el = document.getElementById("nome-sorteado-display");
+            if(nome.length > 24) { el.className = "font-black text-4xl text-indigo-950 tracking-tight drop-shadow-sm uppercase px-4 py-2 bg-slate-100 rounded-2xl block border border-slate-200/50"; }
+            else if(nome.length > 16) { el.className = "font-black text-5xl text-indigo-950 tracking-tight drop-shadow-sm uppercase px-4 py-2 bg-slate-100 rounded-2xl block border border-slate-200/50"; }
+            else { el.className = "font-black text-6xl text-indigo-950 tracking-tight drop-shadow-sm uppercase px-4 py-2 bg-slate-100 rounded-2xl block border border-slate-200/50"; }
+        }
+
         function ocluiSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
         function montarPaginas(lista, titulo, col, idStart) {
@@ -492,7 +504,6 @@
             return localId;
         }
 
-        // CORRIGIDO: Atributo id="card-..." injetado corretamente na string HTML do Pódio
         function montarSlideRankingTurno(listaTurno, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             const ordenadas = [...listaTurno].sort((a, b) => b.valor - a.valor);
@@ -531,6 +542,218 @@
                 </div>`;
             container.appendChild(slide);
             return localId;
+        }
+
+        function montarSlideDisputaTurnos(medM, medT, idStart) {
+            const container = document.getElementById("container-slides");
+            let localId = idStart; localId++; let idM = localId; localId++; let idT = localId;
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-4 slide-tipo-disputa";
+            
+            const vM = medM >= medT; const vT = medT > medM;
+
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
+                    <div class="bg-gradient-to-r from-purple-800 to-indigo-900 text-white py-2.5 px-16 rounded-2xl font-black text-xl mb-8 shadow-lg uppercase tracking-wider border border-white/10">Disputa de Turnos</div>
+                    <div class="grid grid-cols-2 gap-10 w-full flex-grow max-h-[340px]">
+                        <div id="card-${idM}" data-id="${idM}" data-target="${medM}" class="glass-card rounded-[2.5rem] p-6 relative flex flex-col justify-between shadow-xl text-center border-b-8 border-b-blue-600">
+                            <span class="absolute -top-7 left-1/2 -translate-x-1/2 text-5xl filter drop-shadow transition-all duration-500 opacity-0 coroa-m" data-vencedor="${vM}">👑</span>
+                            <div>
+                                <h3 class="font-black text-2xl text-blue-900 uppercase tracking-tight">Turno Manhã</h3>
+                                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mt-0.5">Média Consolidada</p>
+                            </div>
+                            <span class="text-5xl font-black my-4 text-center block num-contador-txt">0.0%</span>
+                            <div class="w-full bg-slate-200/60 rounded-xl h-6 overflow-hidden shadow-inner"><div id="barra-${idM}" class="h-full bg-blue-600 transition-all duration-[4500ms]" style="width:0%"></div></div>
+                        </div>
+                        <div id="card-${idT}" data-id="${idT}" data-target="${medT}" class="glass-card rounded-[2.5rem] p-6 relative flex flex-col justify-between shadow-xl text-center border-b-8 border-b-orange-500">
+                            <span class="absolute -top-7 left-1/2 -translate-x-1/2 text-5xl filter drop-shadow transition-all duration-500 opacity-0 coroa-t" data-vencedor="${vT}">👑</span>
+                            <div>
+                                <h3 class="font-black text-2xl text-orange-600 uppercase tracking-tight">Turno Tarde</h3>
+                                <p class="text-slate-400 font-bold text-xs uppercase tracking-widest mt-0.5">Média Consolidada</p>
+                            </div>
+                            <span class="text-5xl font-black my-4 text-center block num-contador-txt">0.0%</span>
+                            <div class="w-full bg-slate-200/60 rounded-xl h-6 overflow-hidden shadow-inner"><div id="barra-${idT}" class="h-full bg-orange-500 transition-all duration-[4500ms]" style="width:0%"></div></div>
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+            return localId;
+        }
+
+        function montarSlideTop5Geral(listaGeral, idStart) {
+            const container = document.getElementById("container-slides");
+            const top5 = [...listaGeral].sort((a,b) => b.valor - a.valor).slice(0, 5);
+            let localId = idStart;
+            
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-top5";
+            
+            const medalhas = ["🥇","🥈","🥉","✨","✨"];
+            const pódiosEstilos = [
+                "bg-gradient-to-r from-amber-500/15 to-amber-600/5 border-amber-400/60 shadow-amber-500/5",
+                "bg-gradient-to-r from-slate-400/15 to-slate-500/5 border-slate-300/60 shadow-slate-400/5",
+                "bg-gradient-to-r from-orange-500/15 to-orange-600/5 border-orange-400/60 shadow-orange-500/5",
+                "bg-white/60 border-slate-200/80 shadow-sm",
+                "bg-white/60 border-slate-200/80 shadow-sm"
+            ];
+
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
+                    <div class="bg-gradient-to-r from-amber-500 to-yellow-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">TOP 5 Geral da Escola</div>
+                    <div class="flex flex-col gap-2.5 w-full flex-grow max-h-[350px] overflow-y-auto pr-1">
+                        ${top5.map((t, idx) => {
+                            localId++;
+                            return `
+                                <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center ${pódiosEstilos[idx]} px-6 py-2.5 rounded-2xl border transition-all duration-700 shadow-md opacity-0 translate-y-4" style="transition-delay: ${idx * 150}ms;">
+                                    <div class="flex items-center gap-4 max-w-[70%]">
+                                        <span class="text-3xl filter drop-shadow-sm">${medalhas[idx]}</span>
+                                        <span class="font-black text-slate-800 text-xl uppercase truncate tracking-tight">${t.nome}</span>
+                                        <span class="text-[10px] font-black px-2.5 py-0.5 rounded-md text-white shadow-sm uppercase border border-white/10 ${t.bloco === 'manha' ? 'bg-blue-600':'bg-orange-500'}">${t.bloco}</span>
+                                    </div>
+                                    <span class="font-black text-3xl num-contador-txt">0.0%</span>
+                                </div>`;
+                        }).join("")}
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+            return localId;
+        }
+
+        function montarSlideDesafioColetivo(idStart) {
+            const container = document.getElementById("container-slides");
+            let localId = idStart; localId++;
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-desafio-full";
+            
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-2 px-14 rounded-2xl font-black text-xl mb-3 shadow-md uppercase tracking-wider border border-white/10">Desafio Coletivo Anchieta</div>
+                    <div class="grid grid-cols-3 gap-6 w-full flex-grow max-h-[340px]">
+                        <div class="col-span-2 glass-card rounded-[2.5rem] p-5 flex flex-col justify-between border-t-8 border-t-emerald-600 text-center">
+                            <div>
+                                <span class="text-emerald-600 font-black text-xs tracking-widest uppercase block mb-0.5">META COLETIVA: 95%</span>
+                                <h2 class="text-slate-500 font-extrabold text-[11px] uppercase tracking-wider">Histórico de Engajamento da Escola</h2>
+                            </div>
+                            <div id="grafico-full-desafio" class="w-full h-[180px] bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center"></div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Evolução registrada por semana de aula</div>
+                        </div>
+                        <div id="card-${localId}" data-id="${localId}" class="glass-card rounded-[2.5rem] p-5 flex flex-col justify-between border-b-8 border-b-emerald-600 text-center card-bloco-media">
+                            <div>
+                                <span class="text-4xl block mb-1">🎯</span>
+                                <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight">Média Geral</h3>
+                                <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-0.5">Toda a Instituição</p>
+                            </div>
+                            <span class="text-5xl font-black my-2 text-center block num-contador-txt text-emerald-500">0.0%</span>
+                            <div class="w-full bg-slate-200/60 rounded-xl h-7 overflow-hidden relative shadow-inner flex items-center">
+                                <div id="barra-${localId}" class="barra-frequencia h-full text-sm bg-emerald-500" style="width:0%">0.0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+            return localId;
+        }
+
+        function montarSlideTrimestral(idStart) {
+            const container = document.getElementById("container-slides");
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-trimestral";
+            
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
+                    <div class="bg-gradient-to-r from-blue-900 to-indigo-950 text-white py-2 px-14 rounded-2xl font-black text-xl mb-3 shadow-md uppercase tracking-wider border border-white/10">Frequência Anual por Trimestre</div>
+                    <div class="w-full glass-card rounded-[2.5rem] p-5 shadow-xl flex-grow max-h-[320px] flex items-center justify-center">
+                        <div id="grafico-trimestral-box" class="w-full h-full min-h-[250px]"></div>
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+            return idStart;
+        }
+
+        function montarSlideSorteio() {
+            const container = document.getElementById("container-slides");
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-sorteio";
+            
+            const turmasDisponiveis = [...new Set(todasTurmas.map(t => t.nome))].sort();
+
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">Sorteio de Brindes • Frequência Ouro</div>
+                    <div class="w-full glass-card rounded-[2.5rem] p-6 shadow-2xl flex flex-col justify-between items-center flex-grow max-h-[320px] border border-indigo-200">
+                        <div class="w-full flex gap-4 items-center justify-center bg-slate-50 p-3 rounded-2xl border border-slate-200/60 shadow-inner">
+                            <label class="font-black text-slate-700 text-sm uppercase tracking-wide shrink-0">Selecione a Turma Premiada:</label>
+                            <select id="seletor-turma-sorteio" class="bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 font-extrabold text-slate-800 uppercase text-sm focus:outline-none focus:border-indigo-500 shadow-sm">
+                                ${turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join("")}
+                            </select>
+                        </div>
+                        <div class="my-3 py-4 w-full text-center flex items-center justify-center min-h-[100px]">
+                            <span id="nome-sorteado-display" class="font-black text-6xl text-indigo-950 tracking-tight drop-shadow-sm uppercase px-6 py-3 bg-slate-100 rounded-2xl block border border-slate-200/50">???</span>
+                        </div>
+                        <div class="flex gap-4">
+                            <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-[1.03] active:scale-[0.98] transition-all text-white font-black text-sm px-10 py-3 rounded-xl shadow-lg shadow-emerald-500/20 uppercase tracking-wider">🎰 Iniciar Sorteio</button>
+                            <button id="btn-fechar-sorteio" onclick="ocluiSorteio()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wide transition-all">Voltar ao Painel</button>
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+        }
+
+        function gerarSlides() {
+            const container = document.getElementById("container-slides");
+            container.innerHTML = "";
+            let currentGlobalId = 0;
+
+            const manha = todasTurmas.filter(t => t.bloco === "manha").sort((a,b) => b.valor - a.valor);
+            const tarde = todasTurmas.filter(t => t.bloco === "tarde").sort((a,b) => b.valor - a.valor);
+
+            if (manha.length > 0) {
+                currentGlobalId = montarPaginas(manha, "Turno da Manhã", "bg-gradient-to-r from-blue-700 to-indigo-800", currentGlobalId);
+                currentGlobalId = montarSlideRankingTurno(manha, "Ranking Semanal • Manhã", "bg-gradient-to-r from-blue-800 to-sky-700", currentGlobalId);
+            }
+            if (tarde.length > 0) {
+                currentGlobalId = montarPaginas(tarde, "Turno da Tarde", "bg-gradient-to-r from-orange-500 to-amber-600", currentGlobalId);
+                currentGlobalId = montarSlideRankingTurno(tarde, "Ranking Semanal • Tarde", "bg-gradient-to-r from-orange-600 to-yellow-600", currentGlobalId);
+            }
+
+            const mediaManha = manha.length > 0 ? manha.reduce((acc, t) => acc + t.valor, 0) / manha.length : 0;
+            const mediaTarde = tarde.length > 0 ? tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length : 0;
+            if (manha.length > 0 && tarde.length > 0) {
+                currentGlobalId = montarSlideDisputaTurnos(mediaManha, mediaTarde, currentGlobalId);
+            }
+
+            currentGlobalId = montarSlideTop5Geral(todasTurmas, currentGlobalId);
+            currentGlobalId = montarSlideDesafioColetivo(currentGlobalId);
+            currentGlobalId = montarSlideTrimestral(currentGlobalId);
+            
+            montacardsEspeciais();
+            montarSlideSorteio();
+            iniciarAnimacao();
+        }
+
+        function montacardsEspeciais() {
+            const container = document.getElementById("container-slides");
+            const filtradas = todasTurmas.filter(t => t.valor >= 95).sort((a, b) => b.valor - a.valor);
+            if (filtradas.length === 0) return;
+
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-elite";
+            
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
+                    <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10 animate-pulse">⭐ Galeria de Elite • Frequência Ouro ⭐</div>
+                    <div class="w-full glass-card rounded-[2.5rem] p-5 shadow-2xl flex-grow max-h-[320px] overflow-y-auto grid grid-cols-3 gap-4 border-2 border-amber-300">
+                        ${filtradas.map(t => `
+                            <div class="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-amber-400/80 p-4 rounded-3xl flex flex-col justify-center items-center text-center shadow-md relative overflow-hidden group">
+                                <span class="text-4xl mb-1 filter drop-shadow">🏆</span>
+                                <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight truncate w-full px-2">${t.nome}</h3>
+                                <span class="font-black text-3xl text-amber-600 mt-1">${t.valor.toFixed(1)}%</span>
+                                <span class="text-[9px] font-black tracking-widest text-amber-700 bg-amber-200/60 px-3 py-0.5 rounded-full uppercase mt-2 border border-amber-300/40">${t.bloco}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>`;
+            container.appendChild(slide);
         }
 
         async function carregarDadosEmBack() {
