@@ -23,14 +23,12 @@
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         
-        /* Fundo definitivo com a imagem das bandeiras */
         body { 
             margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; 
             background: url('bandeiras.png') no-repeat center center fixed;
             background-size: cover;
         }
         
-        /* Película protetora para garantir o contraste e leitura absoluta das letras */
         .overlay-fundo {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.88); z-index: -1;
@@ -43,14 +41,11 @@
         .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
         .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
-        .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
-        
         .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 30px; height: 260px; margin-bottom: 20px; width: 100%; }
         .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 240px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
         .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
+        #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -107,10 +102,11 @@
     <script>
         const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
         const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
-        const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/1PiaejhJaR2-zDCHiq5ffu46DolWi5Dv6MMIN-p8TOqI/export?format=csv&gid=2003914330";
+        
+        // 🌟 ATUALIZADO: Usando o seu novo link GID público e direto!
+        const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=994844027&single=true&output=csv";
 
         let notaFechada1Trimestre = 91.9; 
-
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
 
         function ticarSom(frequenciaHz, duracaoMs) {
@@ -136,6 +132,16 @@
             const diferencaTempo = segundaFeira.getTime() - inicioAnoLetivo.getTime(); const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
             const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
             document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
+        }
+
+        function atualizarBarraTempoAvançado() {
+            const currentSlide = document.querySelector(".pagina-slide.active");
+            if (isPaused || sorteioEmAndamento || (currentSlide && currentSlide.classList.contains('slide-tipo-sorteio'))) return;
+            const barra = document.getElementById('barra-tempo');
+            const decorrido = Date.now() - tInicioSlide;
+            const pct = Math.min((decorrido / tRestante) * 100, 100);
+            barra.style.width = (100 - pct) + "%";
+            if (decorrido < tRestante) { animBarra = requestAnimationFrame(atualizarBarraTempoAvançado); }
         }
 
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
@@ -171,7 +177,6 @@
             window.requestAnimationFrame(executarSubida);
         }
 
-        // CORRIGIDO: Valores agora são impressos por DENTRO das colunas semanais
         function renderizarGraficoHistorico(idContainer, isFull = false) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -192,8 +197,8 @@
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
                 
-                // AJUSTE: Move o yText para dentro do topo da barra com margem de segurança
-                const yText = altura - margemYBase - hBarra + (isFull ? 22 : 15);
+                // NOTA POR DENTRO DA BARRA
+                const yText = altura - margemYBase - hBarra + (isFull ? 24 : 16);
                 const corPonto = obterCoresPorValor(dado.media).hex;
 
                 barrasHtml += `
@@ -216,7 +221,6 @@
                 </svg>`;
         }
 
-        // CORRIGIDO: Valores agora são impressos por DENTRO dos blocos trimestrais
         function renderizarGraficoTrimestral(idContainer) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -239,9 +243,9 @@
 
                 const hBarra = ((t.valor - 70) / 30) * alturaUtil;
                 
-                // AJUSTE: Forçando o percentual e o status empilhados harmonicamente DENTRO da barra
-                const yTextPercent = altura - margemYBase - hBarra + 32;
-                const yTextStatus = altura - margemYBase - hBarra + 62;
+                // VALORES POR DENTRO DO BLOCO TRIMESTRAL
+                const yTextPercent = altura - margemYBase - hBarra + 34;
+                const yTextStatus = altura - margemYBase - hBarra + 64;
                 const cor = obterCoresPorValor(t.valor).hex;
 
                 barHtml += `
@@ -263,7 +267,6 @@
                 </svg>`;
         }
 
-        // CORRIGIDO: O slide de sorteio agora é ignorado e pulado no fluxo cronológico automático
         function mudarSlide(direcao) {
             if (sorteioEmAndamento) return;
             const slides = document.querySelectorAll(".pagina-slide");
@@ -273,7 +276,7 @@
             slides[indexSlide].classList.remove("active");
             indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             
-            // FILTRO DE SEGURANÇA: Se o índice bater no slide do Sorteio, pula para o seguinte instantaneamente
+            // FILTRO ANTI-TRAVAMENTO: Pula o sorteio no loop cronometrado automático
             if (slides[indexSlide].classList.contains('slide-tipo-sorteio')) {
                 indexSlide = (indexSlide + direcao + slides.length) % slides.length;
             }
@@ -301,14 +304,25 @@
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); });
             }
-            // CORRIGIDO: Ativação dos contadores progressivos e efeito cascata do Top 5 Geral
+            // CORRIGIDO: Ativação em cascata e contadores do Top 5 Geral
             else if (currentSlide.classList.contains('slide-tipo-top5')) {
                 const lines = currentSlide.querySelectorAll('.linha-top5');
                 lines.forEach((l, idx) => {
                     setTimeout(() => {
                         l.style.opacity = "1";
                         l.style.transform = "translateY(0)";
-                        animarBarraECounter(l.dataset.id, parseFloat(l.dataset.target), 2500);
+                        const spanTxt = l.querySelector('.num-contador-txt');
+                        if (spanTxt) {
+                            let valFinal = parseFloat(l.dataset.target);
+                            let valAtual = 0;
+                            function subir() {
+                                valAtual += valFinal / 40;
+                                if(valAtual >= valFinal) { valAtual = valFinal; } else { requestAnimationFrame(subir); }
+                                spanTxt.innerText = valAtual.toFixed(1) + "%";
+                                spanTxt.className = `font-black text-3xl num-contador-txt ${obterCoresPorValor(valFinal).tailwindTxt}`;
+                            }
+                            subir();
+                        }
                     }, idx * 250);
                 });
             }
@@ -324,6 +338,19 @@
             if (!isPaused) {
                 clearTimeout(loopInterval); cancelAnimationFrame(animBarra);
                 loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs); atualizarBarraTempoAvançado();
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
+            if (isPaused) {
+                clearInterval(loopInterval); cancelAnimationFrame(animBarra);
+                tRestante = tRestante - (Date.now() - tInicioSlide);
+            } else {
+                tInicioSlide = Date.now();
+                loopInterval = setTimeout(() => mudarSlide(1), tRestante);
+                atualizarBarraTempoAvançado();
             }
         }
 
@@ -362,7 +389,33 @@
             }());
         }
 
-        function ocluirSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
+        function iniciarSorteioVirtual() {
+            if (sorteioEmAndamento) return;
+            const seletor = document.getElementById("seletor-turma-sorteio"); const turmaAlvo = seletor.value;
+            const alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
+            const displayNome = document.getElementById("nome-sorteado-display");
+            const btn = document.getElementById("btn-trigger-sorteio"); const btnFechar = document.getElementById("btn-fechar-sorteio");
+            if (alunosFiltrados.length === 0) { displayNome.innerText = "Sem alunos na turma!"; return; }
+
+            sorteioEmAndamento = true; btn.style.display = "none"; btnFechar.style.display = "none"; seletor.disabled = true; 
+            let giros = 0; let velocidade = 50; let totalGiros = 50; 
+
+            function roletar() {
+                giros++; const indiceAleatorio = Math.floor(Math.random() * alunosFiltrados.length);
+                const nomeCandidato = alunosFiltrados[indiceAleatorio].nome;
+                displayNome.innerText = nomeCandidato; ajustarFonteNomeSorteado(nomeCandidato);
+                ticarSom(600 - (giros * 5), 40);
+                if (giros < totalGiros) { if (giros > totalGiros - 15) velocidade += 35; setTimeout(roletar, velocidade); } 
+                else {
+                    ticarSom(880, 250); setTimeout(() => ticarSom(1200, 300), 150); dispararConfetesEspeciais();
+                    let cLoop = setInterval(dispararConfetesEspeciais, 800);
+                    setTimeout(() => { clearInterval(cLoop); sorteioEmAndamento = false; seletor.disabled = false; btn.style.display = "inline-block"; btn.innerText = "🎰 REFAZER SORTEIO"; btnFechar.style.display = "inline-block"; }, 6000);
+                }
+            }
+            roletar();
+        }
+
+        function ocluiSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
         async function carregarDadosEmBack() {
             try {
@@ -378,22 +431,17 @@
             } catch(e) { }
         }
 
-async function carregarDados() {
+        async function carregarDados() {
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
                 if(!res.ok) throw new Error("Erro Planilha Principal");
-                const txt = await res.text(); 
-                // CORREÇÃO: Variável nomeada corretamente como 'linhas'
-                const linhas = txt.split(/\r?\n/); 
+                const txt = await res.text(); const linhas = txt.split(/\r?\n/);
                 todasTurmas = [];
-                
                 for (let i = 1; i < linhas.length; i++) {
                     if (linhas[i].trim().length < 4) continue;
-                    // CORREÇÃO: Referenciando 'linhas' (com 'a')
                     const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols.length >= 2) {
-                        const nome = cols[0]; 
-                        const freq = parseFloat(cols[1].replace(",", "."));
+                        const nome = cols[0]; const freq = parseFloat(cols[1].replace(",", "."));
                         const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
                         const trof = parseInt(cols[3]) || 0;
                         if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof });
@@ -556,7 +604,7 @@ async function carregarDados() {
                             <div id="nome-sorteado-display" class="text-5xl md:text-6xl font-black bg-gradient-to-b from-slate-800 to-slate-950 bg-clip-text text-transparent uppercase tracking-tight my-4 h-20 flex items-center justify-center min-w-[300px]">???</div>
                             <div class="flex items-center gap-4 mt-2">
                                 <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-yellow-400 to-amber-500 text-blue-950 font-black text-xl px-12 py-4 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-[0.97] transition-all uppercase border-b-4 border-amber-700">🎰 INICIAR SORTEIO</button>
-                                <button id="btn-fechar-sorteio" onclick="ocluiSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
+                                <button id="btn-fechar-sorteio" onclick="fecharModoSorteio()" class="bg-slate-800 text-white font-black text-lg px-8 py-4 rounded-xl shadow-lg hover:bg-slate-900 transition-all uppercase border-b-4 border-slate-950">▶️ Voltar ao Painel</button>
                             </div>
                         </div>
                     </div>`;
@@ -564,8 +612,6 @@ async function carregarDados() {
             }
             iniciarAnimacao();
         }
-
-        function ocluiSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
@@ -642,7 +688,7 @@ async function carregarDados() {
                         ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] pod-bronze opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
-                        <h4 class="text-slate-400 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-200/60 pb-1">Demais Classificações:</h4>
+                        <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
                         <div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-left">
                             ${restante.map((t) => {
                                 localId++;
@@ -673,23 +719,6 @@ async function carregarDados() {
                 const containerGrafico = slides[indexSlide].querySelector('.box-plot-grafico');
                 if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
                 slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
-            } else if (slides[indexSlide].classList.contains('slide-tipo-desafio-full')) {
-                const containerGraficoFull = slides[indexSlide].querySelector('#grafico-full-desafio');
-                if (containerGraficoFull) { renderizarGraficoHistorico('grafico-full-desafio', true); }
-                slides[indexSlide].querySelectorAll('.card-bloco-media').forEach(el => {
-                    animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000);
-                });
-            } else if (slides[indexSlide].classList.contains('slide-tipo-trimestral')) {
-                renderizarGraficoTrimestral('grafico-trimestral-box');
-            } else if (slides[indexSlide].classList.contains('slide-tipo-top5')) {
-                const lines = slides[indexSlide].querySelectorAll('.linha-top5');
-                lines.forEach((l, idx) => {
-                    setTimeout(() => {
-                        l.style.opacity = "1";
-                        l.style.transform = "translateY(0)";
-                        animarBarraECounter(l.dataset.id, parseFloat(l.dataset.target), 2500);
-                    }, idx * 250);
-                });
             }
 
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
@@ -699,7 +728,6 @@ async function carregarDados() {
             }
         }
 
-        // DISPARO CRUCIAL DA PARTIDA
         window.onload = carregarDados;
     </script>
 </body>
