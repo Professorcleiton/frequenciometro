@@ -13,26 +13,14 @@
     
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] }
-                }
-            }
+            theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] } } }
         }
     </script>
     <style>
         .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
         
-        body { 
-            margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; 
-            background: url('bandeiras.png') no-repeat center center fixed;
-            background-size: cover;
-        }
-        
-        .overlay-fundo {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.88); z-index: -1;
-        }
+        body { margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; background: url('bandeiras.png') no-repeat center center fixed; background-size: cover; }
+        .overlay-fundo { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.88); z-index: -1; }
         
         .pagina-slide { display: none; animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .pagina-slide.active { display: block; }
@@ -64,15 +52,15 @@
         </div>
         <div class="text-center">
             <h1 class="text-3xl font-black bg-gradient-to-r from-blue-900 to-indigo-950 bg-clip-text text-transparent uppercase leading-none tracking-tight">CCM ANCHIETA</h1>
-            <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase">Sincronizando estatísticas...</p>
+            <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase transition-colors duration-300">Iniciando sistema e buscando dados...</p>
         </div>
         <div class="text-right flex items-center gap-4">
-            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
+            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
                 🎁 Realizar Sorteio
             </button>
             <div class="h-10 w-[1px] bg-slate-300/60"></div>
             <div class="text-left">
-                <p id="indicador-pagina" class="text-blue-900 font-black text-xs uppercase bg-blue-100/90 backdrop-blur-sm px-4 py-1 rounded-full mb-0.5 tracking-wider border border-blue-200/50">Carregando...</p>
+                <p id="indicador-pagina" class="text-blue-900 font-black text-xs uppercase bg-blue-100/90 backdrop-blur-sm px-4 py-1 rounded-full mb-0.5 tracking-wider border border-blue-200/50">Aguarde...</p>
                 <p class="text-slate-500 font-bold text-[9px] uppercase tracking-widest pl-2">Cruzeiro do Oeste - PR</p>
             </div>
         </div>
@@ -88,13 +76,11 @@
                 <div class="flex items-center gap-2 bg-amber-500/10 text-amber-300 px-3 py-1 rounded-lg border border-amber-500/20"><span>👍</span> 90-95%</div>
                 <div class="flex items-center gap-2 bg-emerald-500/10 text-emerald-300 px-3 py-1 rounded-lg border border-emerald-500/20"><span>👏</span> > 95%</div>
             </div>
-            
             <div class="flex gap-4 items-center bg-white/10 px-5 py-1.5 rounded-full border border-white/10">
                 <div class="btn-ctrl" onclick="mudarSlide(-1)">⬅️</div>
                 <div id="btn-pause" class="btn-ctrl" onclick="togglePause()">⏸️</div>
                 <div class="btn-ctrl" onclick="mudarSlide(1)">➡️</div>
             </div>
-            
             <div class="flex items-center gap-4 font-black tracking-widest text-[10px] text-slate-300">
                 <span>FREQUENCIÔMETRO DIGITAL</span>
                 <img src="criancas.png" alt="Estudantes" class="h-8 object-contain opacity-90 filter drop-shadow">
@@ -109,6 +95,12 @@
 
         let notaFechada1Trimestre = 91.9; 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
+
+        function exibirErroTerminal(mensagem) {
+            const painel = document.getElementById("info-semana-detalhada");
+            painel.innerText = "ERRO: " + mensagem;
+            painel.classList.replace("text-indigo-600", "text-rose-600");
+        }
 
         function ticarSom(frequenciaHz, duracaoMs) {
             try {
@@ -132,8 +124,18 @@
             const segundaFeira = new Date(new Date(hoje).setDate(diferencaSegunda)); const domingo = new Date(new Date(segundaFeira).setDate(segundaFeira.getDate() + 6));
             const diferencaTempo = segundaFeira.getTime() - inicioAnoLetivo.getTime(); const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
             const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-            const infoSemana = document.getElementById("info-semana-detalhada");
-            if (infoSemana) infoSemana.innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
+            document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
+            document.getElementById("info-semana-detalhada").classList.replace("text-rose-600", "text-indigo-600");
+        }
+
+        function atualizarBarraTempoAvançado() {
+            const currentSlide = document.querySelector(".pagina-slide.active");
+            if (isPaused || sorteioEmAndamento || (currentSlide && currentSlide.classList.contains('slide-tipo-sorteio'))) return;
+            const barra = document.getElementById('barra-tempo');
+            const decorrido = Date.now() - tInicioSlide;
+            const pct = Math.min((decorrido / tRestante) * 100, 100);
+            barra.style.width = (100 - pct) + "%";
+            if (decorrido < tRestante) { animBarra = requestAnimationFrame(atualizarBarraTempoAvançado); }
         }
 
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
@@ -154,7 +156,7 @@
                 const coresDinamicas = obterCoresPorValor(valorAtual);
 
                 if (barraElement) {
-                    barraElement.innerText = valorAtual.toFixed(1) + "%"; // ATUALIZA O TEXTO DENTRO DA BARRA
+                    barraElement.innerText = valorAtual.toFixed(1) + "%";
                     barraElement.style.width = Math.min(valorAtual, 100) + "%";
                     barraElement.style.backgroundColor = coresDinamicas.hex;
                 }
@@ -191,13 +193,13 @@
                 const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                const corPonto = obterCoresPorValor(dado.media).hex;
                 const yText = altura - margemYBase - hBarra - 8;
+                const corD = obterCoresPorValor(dado.media);
 
                 barrasHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
-                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="${isFull ? '14' : '10'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
+                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corD.hex}" rx="4" opacity="0.95" />
+                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corD.hex}" font-size="${isFull ? '14' : '10'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
                     </g>`;
                 labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - (isFull ? 15 : 10)}" fill="#64748b" font-size="${isFull ? '13' : '10'}" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
             });
@@ -227,7 +229,7 @@
             ];
 
             const largura = 900; const altura = 380; const margemX = 60; const margemYBase = 50;
-            const alturaUtil = altura - margemYBase - 30; const larguraUtil = largura - 2 * margemX;
+            const alturaUtil = altura - margemYBase - 40; const larguraUtil = largura - 2 * margemX;
             const espacoBarra = larguraUtil / 3; const larguraBarra = 120;
 
             let barHtml = "", labelHtml = "";
@@ -238,7 +240,7 @@
                 const hBarra = ((t.valor - 70) / 30) * alturaUtil;
                 const cor = obterCoresPorValor(t.valor).hex;
                 const yTextPercent = altura - margemYBase - hBarra - 12;
-                const yTextStatus = altura - margemYBase - hBarra + 35;
+                const yTextStatus = altura - margemYBase - hBarra + 30;
 
                 barHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 150}ms;">
@@ -274,10 +276,9 @@
             
             slides[indexSlide].classList.add("active");
             const indicador = document.getElementById("indicador-pagina");
-            if (indicador) indicador.innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
+            if(indicador) indicador.innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
             
             const currentSlide = slides[indexSlide];
-            if (indexSlide === 0) { carregarDadosEmBack(); }
 
             if (currentSlide.classList.contains('slide-tipo-lista')) {
                 const containerGrafico = currentSlide.querySelector('.box-plot-grafico');
@@ -288,8 +289,8 @@
             } 
             else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
                 renderizarGraficoHistorico('grafico-full-desafio', true);
-                const blocoMedia = currentSlide.querySelector('.card-bloco-media');
-                if (blocoMedia) animarBarraECounter(blocoMedia.dataset.id, mediaGeralEscolaGlobal, 5000);
+                const alvoMedia = currentSlide.querySelector('.card-bloco-media');
+                if(alvoMedia) animarBarraECounter(alvoMedia.dataset.id, mediaGeralEscolaGlobal, 5000);
             }
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
                 renderizarGraficoTrimestral('grafico-trimestral-box');
@@ -297,60 +298,68 @@
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 const coroaM = currentSlide.querySelector('.coroa-m');
                 const coroaT = currentSlide.querySelector('.coroa-t');
-                if (coroaM) coroaM.style.opacity = "0"; if (coroaT) coroaT.style.opacity = "0";
+                if (coroaM) { coroaM.style.transition = "none"; coroaM.style.opacity = "0"; coroaM.classList.remove("scale-110"); }
+                if (coroaT) { coroaT.style.transition = "none"; coroaT.style.opacity = "0"; coroaT.classList.remove("scale-110"); }
 
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { 
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); 
                 });
 
                 setTimeout(() => {
-                    if (coroaM && coroaM.dataset.vencedor === "true") coroaM.style.opacity = "1";
-                    if (coroaT && coroaT.dataset.vencedor === "true") coroaT.style.opacity = "1";
+                    if (coroaM && coroaM.dataset.vencedor === "true") { coroaM.style.transition = "all 0.5s ease"; coroaM.style.opacity = "1"; coroaM.classList.add("scale-110"); }
+                    if (coroaT && coroaT.dataset.vencedor === "true") { coroaT.style.transition = "all 0.5s ease"; coroaT.style.opacity = "1"; coroaT.classList.add("scale-110"); }
                 }, 4600);
+            }
+            else if (currentSlide.classList.contains('slide-tipo-top5')) {
+                const lines = currentSlide.querySelectorAll('.linha-top5');
+                lines.forEach(l => {
+                    l.style.transition = "none"; l.style.opacity = "0"; l.style.transform = "translateY(20px)";
+                });
+
+                lines.forEach((l, idx) => {
+                    setTimeout(() => {
+                        l.style.transition = "all 0.7s cubic-bezier(0.16, 1, 0.3, 1)";
+                        l.style.opacity = "1"; l.style.transform = "translateY(0)";
+                        const spanTxt = l.querySelector('.num-contador-txt');
+                        if (spanTxt) {
+                            let valFinal = parseFloat(l.dataset.target); let valAtual = 0;
+                            function subir() {
+                                valAtual += valFinal / 40;
+                                if(valAtual >= valFinal) { valAtual = valFinal; } else { requestAnimationFrame(subir); }
+                                spanTxt.innerText = valAtual.toFixed(1) + "%";
+                                spanTxt.style.color = obterCoresPorValor(valFinal).hex;
+                            }
+                            subir();
+                        }
+                    }, idx * 250 + 100);
+                });
             }
             else if (currentSlide.classList.contains('slide-tipo-ranking')) {
                 const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
                 const demaisClass = currentSlide.querySelector('.demais-class-box');
 
-                if (pod1) pod1.style.opacity = "0"; if (pod2) pod2.style.opacity = "0"; if (pod3) pod3.style.opacity = "0";
-                if (demaisClass) demaisClass.style.opacity = "0";
+                if (pod1) { pod1.style.animation = "none"; pod1.style.opacity = "0"; }
+                if (pod2) { pod2.style.animation = "none"; pod2.style.opacity = "0"; }
+                if (pod3) { pod3.style.animation = "none"; pod3.style.opacity = "0"; }
+                if (demaisClass) { demaisClass.style.transition = "none"; demaisClass.style.opacity = "0"; }
 
                 if (pod3) setTimeout(() => { 
-                    pod3.style.opacity = "1"; pod3.style.animation = "subirPodio 0.6s forwards"; 
+                    pod3.style.opacity = "1"; pod3.style.animation = "subirPodio 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"; 
                     animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000); 
                 }, 800);
                 if (pod2) setTimeout(() => { 
-                    pod2.style.opacity = "1"; pod2.style.animation = "subirPodio 0.6s forwards"; 
+                    pod2.style.opacity = "1"; pod2.style.animation = "subirPodio 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"; 
                     animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000); 
                 }, 2200);
                 if (pod1) setTimeout(() => { 
-                    pod1.style.opacity = "1"; pod1.style.animation = "subirPodio 0.6s forwards"; 
+                    pod1.style.opacity = "1"; pod1.style.animation = "subirPodio 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"; 
                     animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000); 
                     if (demaisClass) {
                         demaisClass.style.transition = "opacity 0.6s ease"; demaisClass.style.opacity = "1";
                         demaisClass.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 2000); });
                     }
                 }, 3600);
-                setTimeout(dispararConfetesEspeciais, 5500);
-            }
-            else if (currentSlide.classList.contains('slide-tipo-top5')) {
-                const lines = currentSlide.querySelectorAll('.linha-top5');
-                lines.forEach((l, idx) => {
-                    l.style.opacity = "0"; l.style.transform = "translateY(20px)";
-                    setTimeout(() => {
-                        l.style.opacity = "1"; l.style.transform = "translateY(0)";
-                        const spanTxt = l.querySelector('.num-contador-txt');
-                        if (spanTxt) {
-                            let valFinal = parseFloat(l.dataset.target); let valAt = 0;
-                            function subir() { 
-                                valAt += valFinal/40; if(valAt >= valFinal){valAt=valFinal} else {requestAnimationFrame(subir)}
-                                spanTxt.innerText = valAt.toFixed(1) + "%";
-                                spanTxt.style.color = obterCoresPorValor(valFinal).hex;
-                            }
-                            subir();
-                        }
-                    }, idx * 250);
-                });
+                setTimeout(dispararConfetesEspeciais, 5200);
             }
 
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
@@ -378,8 +387,10 @@
             clearInterval(loopInterval); cancelAnimationFrame(animBarra);
             timersPagina.forEach(t => clearTimeout(t));
             document.getElementById('barra-tempo').style.width = "0%";
+            
             const slides = document.querySelectorAll(".pagina-slide");
             slides.forEach(s => s.classList.remove("active"));
+            
             const slideSorteio = document.querySelector(".slide-tipo-sorteio");
             if(slideSorteio) {
                 slideSorteio.classList.add("active");
@@ -470,7 +481,7 @@
                         </div>
 
                         <div class="w-[62%] flex flex-col justify-between">
-                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20 self-center">${titulo}</div>
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/10 self-center">${titulo}</div>
                             <div class="grid grid-cols-2 gap-4 w-full h-full">
                                 ${pedaço.map(t => { 
                                     localId++;
@@ -511,9 +522,9 @@
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
                     <div class="podium-container shrink-0">
-                        <div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black num-contador-txt">0.0%</span></div>
-                        <div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black num-contador-txt">0.0%</span></div>
-                        <div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item pod-prata glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item pod-ouro glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item pod-bronze glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black num-contador-txt">0.0%</span></div>
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
                         <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
@@ -587,7 +598,7 @@
                                     <div class="flex items-center gap-4 max-w-[70%]">
                                         <span class="text-3xl filter drop-shadow-sm">${medalhas[idx]}</span>
                                         <span class="font-black text-slate-800 text-xl uppercase truncate tracking-tight">${t.nome}</span>
-                                        <span class="text-[10px] font-black px-2.5 py-0.5 rounded-md text-white shadow-sm uppercase border border-white/10 ${t.bloco === 'manha' ? 'bg-blue-600':'bg-orange-500'}">${t.bloco}</span>
+                                        <span class="text-[10px] font-black px-2.5 py-0.5 rounded-md text-white shadow-sm uppercase border border-white/10 ${t.bloco.includes('man') ? 'bg-blue-600':'bg-orange-500'}">${t.bloco}</span>
                                     </div>
                                     <span class="font-black text-3xl num-contador-txt">0.0%</span>
                                 </div>`;
@@ -620,7 +631,7 @@
                                 <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight">Média Geral</h3>
                                 <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-0.5">Toda a Instituição</p>
                             </div>
-                            <span class="text-5xl font-black my-2 text-center block num-contador-txt">0.0%</span>
+                            <span class="text-5xl font-black my-2 text-center block num-contador-txt text-emerald-500">0.0%</span>
                             <div class="w-full bg-slate-200/60 rounded-xl h-7 overflow-hidden relative shadow-inner flex items-center">
                                 <div id="barra-${localId}" class="barra-frequencia h-full text-sm bg-emerald-500" style="width:0%">0.0%</div>
                             </div>
@@ -673,72 +684,111 @@
             container.appendChild(slide);
         }
 
+        function gerarSlides() {
+            const container = document.getElementById("container-slides");
+            container.innerHTML = "";
+            let currentGlobalId = 0;
+
+            const manha = todasTurmas.filter(t => t.bloco.includes("man")).sort((a,b) => b.valor - a.valor);
+            const tarde = todasTurmas.filter(t => t.bloco.includes("tard")).sort((a,b) => b.valor - a.valor);
+
+            if (manha.length > 0) {
+                currentGlobalId = montarPaginas(manha, "Turno da Manhã", "bg-gradient-to-r from-blue-700 to-indigo-800", currentGlobalId);
+                currentGlobalId = montarSlideRankingTurno(manha, "Ranking Semanal • Manhã", "bg-gradient-to-r from-blue-800 to-sky-700", currentGlobalId);
+            }
+            if (tarde.length > 0) {
+                currentGlobalId = montarPaginas(tarde, "Turno da Tarde", "bg-gradient-to-r from-orange-500 to-amber-600", currentGlobalId);
+                currentGlobalId = montarSlideRankingTurno(tarde, "Ranking Semanal • Tarde", "bg-gradient-to-r from-orange-600 to-yellow-600", currentGlobalId);
+            }
+
+            const mediaManha = manha.length > 0 ? manha.reduce((acc, t) => acc + t.valor, 0) / manha.length : 0;
+            const mediaTarde = tarde.length > 0 ? tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length : 0;
+            if (manha.length > 0 && tarde.length > 0) {
+                currentGlobalId = montarSlideDisputaTurnos(mediaManha, mediaTarde, currentGlobalId);
+            }
+
+            currentGlobalId = montarSlideTop5Geral(todasTurmas, currentGlobalId);
+            currentGlobalId = montarSlideDesafioColetivo(currentGlobalId);
+            currentGlobalId = montarSlideTrimestral(currentGlobalId);
+            
+            montarSlideSorteio();
+            iniciarAnimacao();
+        }
+
         async function carregarDados() {
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
-                const txt = await res.text(); const linhas = txt.split(/\r?\n/);
+                if(!res.ok) throw new Error("Planilha Principal falhou");
+                const txt = await res.text();
+                
+                const delimitador = txt.includes(';') ? ';' : ',';
+                const linhas = txt.split(/\r?\n/);
                 todasTurmas = [];
+                
                 for (let i = 1; i < linhas.length; i++) {
-                    if (linhas[i].trim().length < 4) continue;
-                    const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (linhas[i].trim().length < 3) continue;
+                    const cols = linhas[i].split(new RegExp(`\\s*${delimitador}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols.length >= 2) {
-                        const nome = cols[0]; const freq = parseFloat(cols[1].replace(",", "."));
+                        const nome = cols[0]; 
+                        let strNum = cols[1].replace(/[^0-9,-]/g, '').replace(',', '.');
+                        const freq = parseFloat(strNum);
                         const turno = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                         const trof = parseInt(cols[3]) || 0;
                         if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno.includes("man") ? "manha":"tarde", trofeus: trof });
                     }
                 }
+
+                if (todasTurmas.length === 0) throw new Error("Nenhuma turma foi encontrada. Verifique as colunas.");
+
                 try {
                     const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
-                    const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
+                    const txtAlunos = await resAlunos.text();
+                    const dAlunos = txtAlunos.includes(';') ? ';' : ',';
+                    const linhasAlunos = txtAlunos.split(/\r?\n/);
                     todosAlunos = [];
                     for (let j = 1; j < linhasAlunos.length; j++) {
-                        const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                        const colsA = linhasAlunos[j].split(new RegExp(`\\s*${dAlunos}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
                         if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
                     }
-                } catch(eA) { }
+                } catch(eA) { console.warn("Planilha de Alunos pulada."); }
 
                 try {
                     const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
-                    const txtHist = await resHist.text(); const linhasHist = txtHist.split(/\r?\n/);
+                    const txtHist = await resHist.text();
+                    const dHist = txtHist.includes(';') ? ';' : ',';
+                    const linhasHist = txtHist.split(/\r?\n/);
                     historicoEscola = [];
                     for(let k = 1; k < linhasHist.length; k++) {
-                        const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                        const colsH = linhasHist[k].split(new RegExp(`\\s*${dHist}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
                         if(colsH.length >= 2) {
                             let semNome = colsH[0]; if(semNome.toLowerCase() !== "esta") { semNome = "S" + semNome; }
-                            const medVal = parseFloat(colsH[1].replace(",", "."));
+                            let strH = colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.');
+                            const medVal = parseFloat(strH);
                             if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
                         }
                     }
-                } catch(errH) { }
+                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
+                } catch(errH) { console.warn("Histórico pulado."); }
 
-                if (todasTurmas.length > 0) {
-                    mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-                    if (historicoEscola.length > 0 && historicoEscola[historicoEscola.length - 1].semana.toLowerCase() === "esta") {
-                        historicoEscola[historicoEscola.length - 1].media = mediaGeralEscolaGlobal;
-                    }
-                    atualizarTextoSemana(); gerarSlides();
+                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+                if (historicoEscola.length > 0 && historicoEscola[historicoEscola.length - 1].semana.toLowerCase() === "esta") {
+                    historicoEscola[historicoEscola.length - 1].media = mediaGeralEscolaGlobal;
                 }
-            } catch (err) { console.error(err); }
-        }
+                
+                atualizarTextoSemana(); 
+                gerarSlides();
 
-        async function carregarDadosEmBack() {
-            try {
-                const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
-                const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
-                let novosAlunos = [];
-                for (let j = 1; j < linhasAlunos.length; j++) {
-                    const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
-                }
-                if (novosAlunos.length > 0) todosAlunos = novosAlunos;
-            } catch(e) { }
+            } catch (err) { 
+                exibirErroTerminal(err.message);
+                console.error(err); 
+            }
         }
 
         function iniciarAnimacao() {
             if (loopInterval) clearTimeout(loopInterval);
             cancelAnimationFrame(animBarra);
             timersPagina.forEach(t => clearTimeout(t)); timersPagina = [];
+            
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length === 0) return;
             indexSlide = 0; slides[indexSlide].classList.add('active');
@@ -758,7 +808,7 @@
             }
         }
 
-        window.onload = carregarDados;
+        window.addEventListener('DOMContentLoaded', carregarDados);
     </script>
 </body>
 </html>
