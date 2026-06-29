@@ -132,22 +132,15 @@
             const segundaFeira = new Date(new Date(hoje).setDate(diferencaSegunda)); const domingo = new Date(new Date(segundaFeira).setDate(segundaFeira.getDate() + 6));
             const diferencaTempo = segundaFeira.getTime() - inicioAnoLetivo.getTime(); const numSem = Math.floor(diferencaTempo / (7 * 24 * 60 * 60 * 1000)) + 1;
             const fmt = (d) => d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'});
-            document.getElementById("info-semana-detalhada").innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
-        }
-
-        function atualizarBarraTempoAvançado() {
-            const currentSlide = document.querySelector(".pagina-slide.active");
-            if (isPaused || sorteioEmAndamento || (currentSlide && currentSlide.classList.contains('slide-tipo-sorteio'))) return;
-            const barra = document.getElementById('barra-tempo');
-            const decorrido = Date.now() - tInicioSlide;
-            const pct = Math.min((decorrido / tRestante) * 100, 100);
-            barra.style.width = (100 - pct) + "%";
-            if (decorrido < tRestante) { animBarra = requestAnimationFrame(atualizarBarraTempoAvançado); }
+            const infoSemana = document.getElementById("info-semana-detalhada");
+            if (infoSemana) infoSemana.innerText = `Estatísticas da Semana ${numSem} • ${fmt(segundaFeira)} a ${fmt(domingo)}`;
         }
 
         function animarBarraECounter(idCard, valorFinal, tempoCustomizado) {
             const cardElement = document.getElementById(`card-${idCard}`);
             const barraElement = document.getElementById(`barra-${idCard}`);
+            if (!cardElement && !barraElement) return;
+
             let valorAtual = 0; let tempoTotalEstimado = tempoCustomizado || 4500; let tempoInicio = null;
 
             function executarSubida(timestamp) {
@@ -161,15 +154,17 @@
                 const coresDinamicas = obterCoresPorValor(valorAtual);
 
                 if (barraElement) {
+                    barraElement.innerText = valorAtual.toFixed(1) + "%"; // ATUALIZA O TEXTO DENTRO DA BARRA
                     barraElement.style.width = Math.min(valorAtual, 100) + "%";
                     barraElement.style.backgroundColor = coresDinamicas.hex;
                 }
+                
                 if (cardElement) {
                     if (cardElement.classList.contains('card-turma')) cardElement.style.borderColor = coresDinamicas.hex;
                     const txtContador = cardElement.querySelector('.num-contador-txt');
                     if (txtContador) {
                         txtContador.innerText = valorAtual.toFixed(1) + "%";
-                        txtContador.className = `text-5xl font-black text-center num-contador-txt ${coresDinamicas.tailwindTxt}`;
+                        txtContador.style.color = coresDinamicas.hex;
                     }
                 }
                 if (tNorm < 1 && valorAtual < valorFinal) { window.requestAnimationFrame(executarSubida); }
@@ -196,15 +191,13 @@
                 const x = margemX + (i * espacoPorBarra) + (espacoPorBarra / 2) - (larguraBarra / 2);
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
-                
-                // Texto flutuante acima da barra
+                const corPonto = obterCoresPorValor(dado.media).hex;
                 const yText = altura - margemYBase - hBarra - 8;
-                const coresDinamicas = obterCoresPorValor(dado.media);
 
                 barrasHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
-                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${coresDinamicas.hex}" rx="5" opacity="0.95" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${coresDinamicas.hex}" font-size="${isFull ? '14' : '11'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
+                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${corPonto}" rx="4" opacity="0.9" />
+                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${corPonto}" font-size="${isFull ? '14' : '10'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
                     </g>`;
                 labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - (isFull ? 15 : 10)}" fill="#64748b" font-size="${isFull ? '13' : '10'}" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
             });
@@ -234,7 +227,7 @@
             ];
 
             const largura = 900; const altura = 380; const margemX = 60; const margemYBase = 50;
-            const alturaUtil = altura - margemYBase - 40; const larguraUtil = largura - 2 * margemX;
+            const alturaUtil = altura - margemYBase - 30; const larguraUtil = largura - 2 * margemX;
             const espacoBarra = larguraUtil / 3; const larguraBarra = 120;
 
             let barHtml = "", labelHtml = "";
@@ -243,14 +236,14 @@
                 if (t.valor === 0) return;
 
                 const hBarra = ((t.valor - 70) / 30) * alturaUtil;
+                const cor = obterCoresPorValor(t.valor).hex;
                 const yTextPercent = altura - margemYBase - hBarra - 12;
-                const yTextStatus = altura - margemYBase - hBarra + 30;
-                const coresDinamicas = obterCoresPorValor(t.valor);
+                const yTextStatus = altura - margemYBase - hBarra + 35;
 
                 barHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 150}ms;">
-                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${coresDinamicas.hex}" rx="12" />
-                        <text x="${x + larguraBarra/2}" y="${yTextPercent}" fill="${coresDinamicas.hex}" font-size="24" font-weight="900" text-anchor="middle">${t.valor.toFixed(1)}%</text>
+                        <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${cor}" rx="12" />
+                        <text x="${x + larguraBarra/2}" y="${yTextPercent}" fill="${cor}" font-size="24" font-weight="900" text-anchor="middle">${t.valor.toFixed(1)}%</text>
                         <text x="${x + larguraBarra/2}" y="${yTextStatus}" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" opacity="0.85">${t.status.toUpperCase()}</text>
                     </g>`;
                 
@@ -280,7 +273,8 @@
             }
             
             slides[indexSlide].classList.add("active");
-            document.getElementById("indicador-pagina").innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
+            const indicador = document.getElementById("indicador-pagina");
+            if (indicador) indicador.innerText = `Pág. ${indexSlide + 1} de ${slides.length}`;
             
             const currentSlide = slides[indexSlide];
             if (indexSlide === 0) { carregarDadosEmBack(); }
@@ -294,7 +288,8 @@
             } 
             else if (currentSlide.classList.contains('slide-tipo-desafio-full')) {
                 renderizarGraficoHistorico('grafico-full-desafio', true);
-                animarBarraECounter(currentSlide.querySelector('.card-bloco-media').dataset.id, mediaGeralEscolaGlobal, 5000);
+                const blocoMedia = currentSlide.querySelector('.card-bloco-media');
+                if (blocoMedia) animarBarraECounter(blocoMedia.dataset.id, mediaGeralEscolaGlobal, 5000);
             }
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
                 renderizarGraficoTrimestral('grafico-trimestral-box');
@@ -302,76 +297,60 @@
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 const coroaM = currentSlide.querySelector('.coroa-m');
                 const coroaT = currentSlide.querySelector('.coroa-t');
-                if (coroaM) { coroaM.style.transition = "none"; coroaM.style.opacity = "0"; coroaM.classList.remove("scale-110"); }
-                if (coroaT) { coroaT.style.transition = "none"; coroaT.style.opacity = "0"; coroaT.classList.remove("scale-110"); }
+                if (coroaM) coroaM.style.opacity = "0"; if (coroaT) coroaT.style.opacity = "0";
 
                 currentSlide.querySelectorAll('.card-bloco-media').forEach(el => { 
                     animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 4500); 
                 });
 
                 setTimeout(() => {
-                    if (coroaM && coroaM.dataset.vencedor === "true") { coroaM.style.transition = "all 0.5s ease"; coroaM.style.opacity = "1"; coroaM.classList.add("scale-110"); }
-                    if (coroaT && coroaT.dataset.vencedor === "true") { coroaT.style.transition = "all 0.5s ease"; coroaT.style.opacity = "1"; coroaT.classList.add("scale-110"); }
+                    if (coroaM && coroaM.dataset.vencedor === "true") coroaM.style.opacity = "1";
+                    if (coroaT && coroaT.dataset.vencedor === "true") coroaT.style.opacity = "1";
                 }, 4600);
-            }
-            else if (currentSlide.classList.contains('slide-tipo-top5')) {
-                const lines = currentSlide.querySelectorAll('.linha-top5');
-                lines.forEach(l => {
-                    l.style.transition = "none";
-                    l.style.opacity = "0";
-                    l.style.transform = "translateY(20px)";
-                });
-
-                lines.forEach((l, idx) => {
-                    setTimeout(() => {
-                        l.style.transition = "all 0.7s cubic-bezier(0.16, 1, 0.3, 1)";
-                        l.style.opacity = "1";
-                        l.style.transform = "translateY(0)";
-                        const spanTxt = l.querySelector('.num-contador-txt');
-                        if (spanTxt) {
-                            let valFinal = parseFloat(l.dataset.target);
-                            let valAtual = 0;
-                            function subir() {
-                                valAtual += valFinal / 40;
-                                if(valAtual >= valFinal) { valAtual = valFinal; } else { requestAnimationFrame(subir); }
-                                spanTxt.innerText = valAtual.toFixed(1) + "%";
-                                spanTxt.className = `font-black text-3xl num-contador-txt ${obterCoresPorValor(valFinal).tailwindTxt}`;
-                            }
-                            subir();
-                        }
-                    }, idx * 250 + 100);
-                });
             }
             else if (currentSlide.classList.contains('slide-tipo-ranking')) {
                 const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
                 const demaisClass = currentSlide.querySelector('.demais-class-box');
 
-                if (pod1) { pod1.style.animation = "none"; pod1.style.opacity = "0"; }
-                if (pod2) { pod2.style.animation = "none"; pod2.style.opacity = "0"; }
-                if (pod3) { pod3.style.animation = "none"; pod3.style.opacity = "0"; }
-                if (demaisClass) { demaisClass.style.transition = "none"; demaisClass.style.opacity = "0"; }
+                if (pod1) pod1.style.opacity = "0"; if (pod2) pod2.style.opacity = "0"; if (pod3) pod3.style.opacity = "0";
+                if (demaisClass) demaisClass.style.opacity = "0";
 
                 if (pod3) setTimeout(() => { 
-                    pod3.style.opacity = "1";
-                    pod3.style.animation = "subirPodio 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"; 
+                    pod3.style.opacity = "1"; pod3.style.animation = "subirPodio 0.6s forwards"; 
                     animarBarraECounter(pod3.dataset.id, parseFloat(pod3.dataset.target), 2000); 
                 }, 800);
                 if (pod2) setTimeout(() => { 
-                    pod2.style.opacity = "1";
-                    pod2.style.animation = "subirPodio 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"; 
+                    pod2.style.opacity = "1"; pod2.style.animation = "subirPodio 0.6s forwards"; 
                     animarBarraECounter(pod2.dataset.id, parseFloat(pod2.dataset.target), 2000); 
                 }, 2200);
                 if (pod1) setTimeout(() => { 
-                    pod1.style.opacity = "1";
-                    pod1.style.animation = "subirPodio 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards"; 
+                    pod1.style.opacity = "1"; pod1.style.animation = "subirPodio 0.6s forwards"; 
                     animarBarraECounter(pod1.dataset.id, parseFloat(pod1.dataset.target), 2000); 
                     if (demaisClass) {
-                        demaisClass.style.transition = "opacity 0.6s ease"; 
-                        demaisClass.style.opacity = "1";
+                        demaisClass.style.transition = "opacity 0.6s ease"; demaisClass.style.opacity = "1";
                         demaisClass.querySelectorAll('.card-bloco-media').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 2000); });
                     }
                 }, 3600);
-                setTimeout(dispararConfetesEspeciais, 5200);
+                setTimeout(dispararConfetesEspeciais, 5500);
+            }
+            else if (currentSlide.classList.contains('slide-tipo-top5')) {
+                const lines = currentSlide.querySelectorAll('.linha-top5');
+                lines.forEach((l, idx) => {
+                    l.style.opacity = "0"; l.style.transform = "translateY(20px)";
+                    setTimeout(() => {
+                        l.style.opacity = "1"; l.style.transform = "translateY(0)";
+                        const spanTxt = l.querySelector('.num-contador-txt');
+                        if (spanTxt) {
+                            let valFinal = parseFloat(l.dataset.target); let valAt = 0;
+                            function subir() { 
+                                valAt += valFinal/40; if(valAt >= valFinal){valAt=valFinal} else {requestAnimationFrame(subir)}
+                                spanTxt.innerText = valAt.toFixed(1) + "%";
+                                spanTxt.style.color = obterCoresPorValor(valFinal).hex;
+                            }
+                            subir();
+                        }
+                    }, idx * 250);
+                });
             }
 
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
@@ -386,7 +365,7 @@
             document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
             if (isPaused) {
                 clearInterval(loopInterval); cancelAnimationFrame(animBarra);
-                tRestante = tRestante - (Date.now() - tInicioSlide);
+                tRestante -= (Date.now() - tInicioSlide);
             } else {
                 tInicioSlide = Date.now();
                 loopInterval = setTimeout(() => mudarSlide(1), tRestante);
@@ -399,10 +378,8 @@
             clearInterval(loopInterval); cancelAnimationFrame(animBarra);
             timersPagina.forEach(t => clearTimeout(t));
             document.getElementById('barra-tempo').style.width = "0%";
-            
             const slides = document.querySelectorAll(".pagina-slide");
             slides.forEach(s => s.classList.remove("active"));
-            
             const slideSorteio = document.querySelector(".slide-tipo-sorteio");
             if(slideSorteio) {
                 slideSorteio.classList.add("active");
@@ -493,7 +470,7 @@
                         </div>
 
                         <div class="w-[62%] flex flex-col justify-between">
-                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/10 self-center">${titulo}</div>
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20 self-center">${titulo}</div>
                             <div class="grid grid-cols-2 gap-4 w-full h-full">
                                 ${pedaço.map(t => { 
                                     localId++;
@@ -534,9 +511,9 @@
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
                     <div class="podium-container shrink-0">
-                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item pod-prata glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item pod-ouro glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item pod-bronze glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        <div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black num-contador-txt">0.0%</span></div>
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
                         <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
@@ -546,7 +523,7 @@
                                 return `
                                     <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="flex justify-between items-center bg-white/60 px-4 py-1.5 rounded-xl border border-white shadow-sm card-bloco-media">
                                         <span class="font-black text-slate-700 text-base uppercase truncate max-w-[65%] tracking-tight">${t.nome}</span>
-                                        <span class="font-black text-xl text-rose-500 shrink-0 num-contador-txt">0.0%</span>
+                                        <span class="font-black text-xl num-contador-txt">0.0%</span>
                                     </div>`;
                             }).join("")}
                         </div>
@@ -596,19 +573,9 @@
             const container = document.getElementById("container-slides");
             const top5 = [...listaGeral].sort((a,b) => b.valor - a.valor).slice(0, 5);
             let localId = idStart;
-            
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-4 slide-tipo-top5";
-            
             const medalhas = ["🥇","🥈","🥉","✨","✨"];
-            const pódiosEstilos = [
-                "bg-gradient-to-r from-amber-500/15 to-amber-600/5 border-amber-400/60 shadow-amber-500/5",
-                "bg-gradient-to-r from-slate-400/15 to-slate-500/5 border-slate-300/60 shadow-slate-400/5",
-                "bg-gradient-to-r from-orange-500/15 to-orange-600/5 border-orange-400/60 shadow-orange-500/5",
-                "bg-white/60 border-slate-200/80 shadow-sm",
-                "bg-white/60 border-slate-200/80 shadow-sm"
-            ];
-
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
                     <div class="bg-gradient-to-r from-amber-500 to-yellow-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">TOP 5 Geral da Escola</div>
@@ -616,11 +583,11 @@
                         ${top5.map((t, idx) => {
                             localId++;
                             return `
-                                <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center ${pódiosEstilos[idx]} px-6 py-2.5 rounded-2xl border transition-all duration-700 shadow-md opacity-0 translate-y-4" style="transition-delay: ${idx * 150}ms;">
+                                <div id="card-${localId}" data-id="${localId}" data-target="${t.valor}" class="linha-top5 flex justify-between items-center bg-white/60 px-6 py-2.5 rounded-2xl border border-slate-200 shadow-md opacity-0 translate-y-4">
                                     <div class="flex items-center gap-4 max-w-[70%]">
                                         <span class="text-3xl filter drop-shadow-sm">${medalhas[idx]}</span>
                                         <span class="font-black text-slate-800 text-xl uppercase truncate tracking-tight">${t.nome}</span>
-                                        <span class="text-[10px] font-black px-2.5 py-0.5 rounded-md text-white shadow-sm uppercase border border-white/10 ${t.bloco.includes('man') ? 'bg-blue-600':'bg-orange-500'}">${t.bloco}</span>
+                                        <span class="text-[10px] font-black px-2.5 py-0.5 rounded-md text-white shadow-sm uppercase border border-white/10 ${t.bloco === 'manha' ? 'bg-blue-600':'bg-orange-500'}">${t.bloco}</span>
                                     </div>
                                     <span class="font-black text-3xl num-contador-txt">0.0%</span>
                                 </div>`;
@@ -636,7 +603,6 @@
             let localId = idStart; localId++;
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-desafio-full";
-            
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-2 px-14 rounded-2xl font-black text-xl mb-3 shadow-md uppercase tracking-wider border border-white/10">Desafio Coletivo Anchieta</div>
@@ -647,7 +613,6 @@
                                 <h2 class="text-slate-500 font-extrabold text-[11px] uppercase tracking-wider">Histórico de Engajamento da Escola</h2>
                             </div>
                             <div id="grafico-full-desafio" class="w-full h-[180px] bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center"></div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Evolução registrada por semana de aula</div>
                         </div>
                         <div id="card-${localId}" data-id="${localId}" class="glass-card rounded-[2.5rem] p-5 flex flex-col justify-between border-b-8 border-b-emerald-600 text-center card-bloco-media">
                             <div>
@@ -655,7 +620,7 @@
                                 <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight">Média Geral</h3>
                                 <p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-0.5">Toda a Instituição</p>
                             </div>
-                            <span class="text-5xl font-black my-2 text-center block num-contador-txt text-emerald-500">0.0%</span>
+                            <span class="text-5xl font-black my-2 text-center block num-contador-txt">0.0%</span>
                             <div class="w-full bg-slate-200/60 rounded-xl h-7 overflow-hidden relative shadow-inner flex items-center">
                                 <div id="barra-${localId}" class="barra-frequencia h-full text-sm bg-emerald-500" style="width:0%">0.0%</div>
                             </div>
@@ -666,81 +631,51 @@
             return localId;
         }
 
-        function montacardsEspeciais() {
+        function montarSlideTrimestral(idStart) {
             const container = document.getElementById("container-slides");
-            const filtradas = todasTurmas.filter(t => t.valor >= 95).sort((a, b) => b.valor - a.valor);
-            if (filtradas.length === 0) return;
-
             const slide = document.createElement("div");
-            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-elite";
-            
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-trimestral";
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
-                    <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10 animate-pulse">⭐ Galeria de Elite • Frequência Ouro ⭐</div>
-                    <div class="w-full glass-card rounded-[2.5rem] p-5 shadow-2xl flex-grow max-h-[320px] overflow-y-auto grid grid-cols-3 gap-4 border-2 border-amber-300">
-                        ${filtradas.map(t => `
-                            <div class="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-amber-400/80 p-4 rounded-3xl flex flex-col justify-center items-center text-center shadow-md relative overflow-hidden group">
-                                <span class="text-4xl mb-1 filter drop-shadow">🏆</span>
-                                <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight truncate w-full px-2">${t.nome}</h3>
-                                <span class="font-black text-3xl text-amber-600 mt-1">${t.valor.toFixed(1)}%</span>
-                                <span class="text-[9px] font-black tracking-widest text-amber-700 bg-amber-200/60 px-3 py-0.5 rounded-full uppercase mt-2 border border-amber-300/40">${t.bloco}</span>
-                            </div>
-                        `).join("")}
+                    <div class="bg-gradient-to-r from-blue-900 to-indigo-950 text-white py-2 px-14 rounded-2xl font-black text-xl mb-3 shadow-md uppercase tracking-wider border border-white/10">Frequência Anual por Trimestre</div>
+                    <div class="w-full glass-card rounded-[2.5rem] p-5 shadow-xl flex-grow max-h-[320px] flex items-center justify-center">
+                        <div id="grafico-trimestral-box" class="w-full h-full min-h-[250px]"></div>
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+            return idStart;
+        }
+
+        function montarSlideSorteio() {
+            const container = document.getElementById("container-slides");
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-sorteio";
+            const turmasDisponiveis = [...new Set(todasTurmas.map(t => t.nome))].sort();
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">Sorteio de Brindes • Frequência Ouro</div>
+                    <div class="w-full glass-card rounded-[2.5rem] p-6 shadow-2xl flex flex-col justify-between items-center flex-grow max-h-[320px] border border-indigo-200">
+                        <div class="w-full flex gap-4 items-center justify-center bg-slate-50 p-3 rounded-2xl border border-slate-200/60 shadow-inner">
+                            <label class="font-black text-slate-700 text-sm uppercase tracking-wide shrink-0">Selecione a Turma Premiada:</label>
+                            <select id="seletor-turma-sorteio" class="bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 font-extrabold text-slate-800 uppercase text-sm focus:outline-none focus:border-indigo-500 shadow-sm">
+                                ${turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join("")}
+                            </select>
+                        </div>
+                        <div class="my-3 py-4 w-full text-center flex items-center justify-center min-h-[100px]">
+                            <span id="nome-sorteado-display" class="font-black text-6xl text-indigo-950 tracking-tight drop-shadow-sm uppercase px-6 py-3 bg-slate-100 rounded-2xl block border border-slate-200/50">???</span>
+                        </div>
+                        <div class="flex gap-4">
+                            <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-[1.03] active:scale-[0.98] transition-all text-white font-black text-sm px-10 py-3 rounded-xl shadow-lg shadow-emerald-500/20 uppercase tracking-wider">🎰 Iniciar Sorteio</button>
+                            <button id="btn-fechar-sorteio" onclick="ocluiSorteio()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wide transition-all">Voltar ao Painel</button>
+                        </div>
                     </div>
                 </div>`;
             container.appendChild(slide);
         }
 
-        function gerarSlides() {
-            const container = document.getElementById("container-slides");
-            container.innerHTML = "";
-            let currentGlobalId = 0;
-
-            const manha = todasTurmas.filter(t => t.bloco.includes("man")).sort((a,b) => b.valor - a.valor);
-            const tarde = todasTurmas.filter(t => t.bloco.includes("tard")).sort((a,b) => b.valor - a.valor);
-
-            if (manha.length > 0) {
-                currentGlobalId = montarPaginas(manha, "Turno da Manhã", "bg-gradient-to-r from-blue-700 to-indigo-800", currentGlobalId);
-                currentGlobalId = montarSlideRankingTurno(manha, "Ranking Semanal • Manhã", "bg-gradient-to-r from-blue-800 to-sky-700", currentGlobalId);
-            }
-            if (tarde.length > 0) {
-                currentGlobalId = montarPaginas(tarde, "Turno da Tarde", "bg-gradient-to-r from-orange-500 to-amber-600", currentGlobalId);
-                currentGlobalId = montarSlideRankingTurno(tarde, "Ranking Semanal • Tarde", "bg-gradient-to-r from-orange-600 to-yellow-600", currentGlobalId);
-            }
-
-            const mediaManha = manha.length > 0 ? manha.reduce((acc, t) => acc + t.valor, 0) / manha.length : 0;
-            const mediaTarde = tarde.length > 0 ? tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length : 0;
-            if (manha.length > 0 && tarde.length > 0) {
-                currentGlobalId = montarSlideDisputaTurnos(mediaManha, mediaTarde, currentGlobalId);
-            }
-
-            currentGlobalId = montarSlideTop5Geral(todasTurmas, currentGlobalId);
-            currentGlobalId = montarSlideDesafioColetivo(currentGlobalId);
-            currentGlobalId = montarSlideTrimestral(currentGlobalId);
-            
-            montacardsEspeciais();
-            montarSlideSorteio();
-            iniciarAnimacao();
-        }
-
-        async function carregarDadosEmBack() {
-            try {
-                const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
-                const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
-                let novosAlunos = [];
-                for (let j = 1; j < linhasAlunos.length; j++) {
-                    if (linhasAlunos[j].trim().length < 3) continue;
-                    const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
-                }
-                if (novosAlunos.length > 0) todosAlunos = novosAlunos;
-            } catch(e) { }
-        }
-
         async function carregarDados() {
             try {
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
-                if(!res.ok) throw new Error("Erro Planilha Principal");
                 const txt = await res.text(); const linhas = txt.split(/\r?\n/);
                 todasTurmas = [];
                 for (let i = 1; i < linhas.length; i++) {
@@ -748,9 +683,9 @@
                     const cols = linhas[i].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                     if (cols.length >= 2) {
                         const nome = cols[0]; const freq = parseFloat(cols[1].replace(",", "."));
-                        const turno = cols[2] ? cols[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "tarde";
+                        const turno = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                         const trof = parseInt(cols[3]) || 0;
-                        if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno, trofeus: trof });
+                        if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno.includes("man") ? "manha":"tarde", trofeus: trof });
                     }
                 }
                 try {
@@ -758,7 +693,6 @@
                     const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
                     todosAlunos = [];
                     for (let j = 1; j < linhasAlunos.length; j++) {
-                        if (linhasAlunos[j].trim().length < 3) continue;
                         const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                         if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
                     }
@@ -769,7 +703,6 @@
                     const txtHist = await resHist.text(); const linhasHist = txtHist.split(/\r?\n/);
                     historicoEscola = [];
                     for(let k = 1; k < linhasHist.length; k++) {
-                        if (linhasHist[k].trim().length < 3) continue;
                         const colsH = linhasHist[k].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
                         if(colsH.length >= 2) {
                             let semNome = colsH[0]; if(semNome.toLowerCase() !== "esta") { semNome = "S" + semNome; }
@@ -777,7 +710,6 @@
                             if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
                         }
                     }
-                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
                 } catch(errH) { }
 
                 if (todasTurmas.length > 0) {
@@ -790,22 +722,35 @@
             } catch (err) { console.error(err); }
         }
 
+        async function carregarDadosEmBack() {
+            try {
+                const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
+                const txtAlunos = await resAlunos.text(); const linhasAlunos = txtAlunos.split(/\r?\n/);
+                let novosAlunos = [];
+                for (let j = 1; j < linhasAlunos.length; j++) {
+                    const colsA = linhasAlunos[j].split(/[,;]/).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (colsA.length >= 2) { novosAlunos.push({ nome: colsA[0], turma: colsA[1] }); }
+                }
+                if (novosAlunos.length > 0) todosAlunos = novosAlunos;
+            } catch(e) { }
+        }
+
         function iniciarAnimacao() {
             if (loopInterval) clearTimeout(loopInterval);
             cancelAnimationFrame(animBarra);
             timersPagina.forEach(t => clearTimeout(t)); timersPagina = [];
-
             const slides = document.querySelectorAll(".pagina-slide");
             if (slides.length === 0) return;
             indexSlide = 0; slides[indexSlide].classList.add('active');
-            document.getElementById("indicador-pagina").innerText = `Pág. 1 de ${slides.length}`;
+            const indicador = document.getElementById("indicador-pagina");
+            if (indicador) indicador.innerText = `Pág. 1 de ${slides.length}`;
             
-            if (slides[indexSlide].classList.contains('slide-tipo-lista')) {
-                const containerGrafico = slides[indexSlide].querySelector('.box-plot-grafico');
+            const current = slides[0];
+            if (current.classList.contains('slide-tipo-lista')) {
+                const containerGrafico = current.querySelector('.box-plot-grafico');
                 if (containerGrafico) { renderizarGraficoHistorico(containerGrafico.id); }
-                slides[indexSlide].querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
+                current.querySelectorAll('.card-turma').forEach(el => { animarBarraECounter(el.dataset.id, parseFloat(el.dataset.target), 5000); });
             }
-
             tRestante = tempoSlideMs; tInicioSlide = Date.now();
             if (!isPaused) {
                 loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs);
