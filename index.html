@@ -41,14 +41,11 @@
         .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
         .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
-        .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
-        
         .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 30px; height: 260px; margin-bottom: 20px; width: 100%; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 240px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
+        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 240px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.5); transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease; }
         .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
+        #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -120,18 +117,6 @@
             } catch(e) {}
         }
 
-        function togglePause() {
-            isPaused = !isPaused;
-            const btn = document.getElementById('btn-pause');
-            if (isPaused) {
-                btn.innerText = '▶️'; clearTimeout(loopInterval); cancelAnimationFrame(animBarra);
-                tRestante -= (Date.now() - tInicioSlide);
-            } else {
-                btn.innerText = '⏸️'; tInicioSlide = Date.now();
-                loopInterval = setTimeout(() => mudarSlide(1), tRestante); atualizarBarraTempoAvançado();
-            }
-        }
-
         function obterCoresPorValor(valor) {
             if (valor >= 95) return { hex: "#10b981", tailwindTxt: "text-emerald-500", shadow: "rgba(16,185,129,0.25)" };
             if (valor >= 90) return { hex: "#f59e0b", tailwindTxt: "text-amber-500", shadow: "rgba(245,158,11,0.25)" };
@@ -173,7 +158,6 @@
                 const coresDinamicas = obterCoresPorValor(valorAtual);
 
                 if (barraElement) {
-                    barraElement.innerText = valorAtual.toFixed(1) + "%";
                     barraElement.style.width = Math.min(valorAtual, 100) + "%";
                     barraElement.style.backgroundColor = coresDinamicas.hex;
                 }
@@ -210,13 +194,14 @@
                 const val = Math.min(Math.max(dado.media, minF), maxF); 
                 const hBarra = ((val - minF) / (maxF - minF)) * alturaUtil;
                 
+                // CORREÇÃO: O número agora flutua em cima (evitando qualquer corte) com a cor real da nota
                 const yText = altura - margemYBase - hBarra - 8;
                 const coresDinamicas = obterCoresPorValor(dado.media);
 
                 barrasHtml += `
                     <g class="grupo-barra" style="animation-delay: ${i * 120}ms;">
                         <rect x="${x}" y="${altura - margemYBase - hBarra}" width="${larguraBarra}" height="${hBarra}" fill="${coresDinamicas.hex}" rx="5" opacity="0.95" />
-                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${coresDinamicas.hex}" font-size="${isFull ? '14' : '11'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
+                        <text x="${x + larguraBarra/2}" y="${yText}" fill="${coresDinamicas.hex}" font-size="${isFull ? '14' : '10'}" font-weight="900" text-anchor="middle">${dado.media.toFixed(1)}%</text>
                     </g>`;
                 labelsHtml += `<text x="${x + larguraBarra/2}" y="${altura - (isFull ? 15 : 10)}" fill="#64748b" font-size="${isFull ? '13' : '10'}" font-weight="800" text-anchor="middle">${dado.semana}</text>`;
             });
@@ -311,6 +296,7 @@
             else if (currentSlide.classList.contains('slide-tipo-trimestral')) {
                 renderizarGraficoTrimestral('grafico-trimestral-box');
             }
+            // CORRIGIDO: Ativação da Coroa e das porcentagens na disputa de turnos
             else if (currentSlide.classList.contains('slide-tipo-disputa')) {
                 const coroaM = currentSlide.querySelector('.coroa-m');
                 const coroaT = currentSlide.querySelector('.coroa-t');
@@ -322,9 +308,9 @@
                 });
 
                 setTimeout(() => {
-                    if (coroaM && coroaM.dataset.vencedor === "true") { coroaM.style.opacity = "1"; coroaM.classList.add("scale-110"); }
-                    if (coroaT && coroaT.dataset.vencedor === "true") { coroaT.style.opacity = "1"; coroaT.classList.add("scale-110"); }
-                }, 4600);
+                    if (coroaM && coroaM.dataset.vencedor === "true") { coroaM.style.opacity = "1"; }
+                    if (coroaT && coroaT.dataset.vencedor === "true") { coroaT.style.opacity = "1"; }
+                }, 1000);
             }
             else if (currentSlide.classList.contains('slide-tipo-top5')) {
                 const lines = currentSlide.querySelectorAll('.linha-top5');
@@ -347,6 +333,7 @@
                     }, idx * 250);
                 });
             }
+            // CORRIGIDO: Ativação das barras e contadores progressivos dentro do pódio
             else if (currentSlide.classList.contains('slide-tipo-ranking')) {
                 const pod1 = currentSlide.querySelector('.pod-ouro'), pod2 = currentSlide.querySelector('.pod-prata'), pod3 = currentSlide.querySelector('.pod-bronze');
                 const demaisClass = currentSlide.querySelector('.demais-class-box');
@@ -379,6 +366,19 @@
             if (!isPaused) {
                 clearTimeout(loopInterval); cancelAnimationFrame(animBarra);
                 loopInterval = setTimeout(() => mudarSlide(1), tempoSlideMs); atualizarBarraTempoAvançado();
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('btn-pause').innerText = isPaused ? '▶️' : '⏸️';
+            if (isPaused) {
+                clearInterval(loopInterval); cancelAnimationFrame(animBarra);
+                tRestante = tRestante - (Date.now() - tInicioSlide);
+            } else {
+                tInicioSlide = Date.now();
+                loopInterval = setTimeout(() => mudarSlide(1), tRestante);
+                atualizarBarraTempoAvançado();
             }
         }
 
@@ -481,7 +481,7 @@
                         </div>
 
                         <div class="w-[62%] flex flex-col justify-between">
-                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/10 self-center">${titulo}</div>
+                            <div class="${col} text-white py-2 px-12 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wider border border-white/20 self-center">${titulo}</div>
                             <div class="grid grid-cols-2 gap-4 w-full h-full">
                                 ${pedaço.map(t => { 
                                     localId++;
@@ -522,9 +522,9 @@
                 <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
                     <div class="${col} text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase w-fit tracking-wide border border-white/10">${titulo}</div>
                     <div class="podium-container shrink-0">
-                        ${top3[1] ? `<div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item pod-prata glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[0] ? `<div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item pod-ouro glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
-                        ${top3[2] ? `<div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item pod-bronze glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>` : ''}
+                        <div id="card-${idPod2}" data-id="${idPod2}" data-target="${val2}" class="podium-item pod-prata glass-card border-b-[6px] border-slate-400 shadow-xl order-1 h-[85%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥈</span><p class="text-slate-800 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome2}</p><span class="text-4xl font-black text-rose-500 mt-2 block w-full num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod1}" data-id="${idPod1}" data-target="${val1}" class="podium-item pod-ouro glass-card border-b-[6px] border-amber-400 shadow-2xl order-2 h-[100%] scale-105 opacity-0"><span class="text-5xl mb-1 filter drop-shadow-sm">🥇</span><p class="text-blue-950 font-black text-xl uppercase truncate w-full px-2 tracking-tight">${nome1}</p><span class="text-5xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>
+                        <div id="card-${idPod3}" data-id="${idPod3}" data-target="${val3}" class="podium-item pod-bronze glass-card border-b-[6px] border-orange-400 shadow-xl order-3 h-[70%] opacity-0"><span class="text-4xl mb-1 filter drop-shadow-sm">🥉</span><p class="text-amber-900 font-black text-lg uppercase truncate w-full px-2 tracking-tight">${nome3}</p><span class="text-4xl font-black text-rose-600 mt-2 block w-full num-contador-txt">0.0%</span></div>
                     </div>
                     <div class="w-full glass-card rounded-2xl p-4 shadow-xl overflow-hidden flex-grow max-h-[200px] overflow-y-auto mb-2 demais-class-box opacity-0">
                         <h4 class="text-slate-500 font-black text-[11px] uppercase tracking-widest text-left mb-1 border-b border-slate-300/60 pb-1">Demais Classificações:</h4>
@@ -544,9 +544,10 @@
             return localId;
         }
 
+        // CORRIGIDO: IDs fixados de forma estrita para evitar o congelamento em 0.0%
         function montarSlideDisputaTurnos(medM, medT, idStart) {
             const container = document.getElementById("container-slides");
-            let localId = idStart; localId++; let idM = localId; localId++; let idT = localId;
+            let localId = idStart; localId++; let idM = localId; localId++; let idT = idGlobal = localId;
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-4 slide-tipo-disputa";
             
@@ -556,7 +557,7 @@
                 <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
                     <div class="bg-gradient-to-r from-purple-800 to-indigo-900 text-white py-2.5 px-16 rounded-2xl font-black text-xl mb-8 shadow-lg uppercase tracking-wider border border-white/10">Disputa de Turnos</div>
                     <div class="grid grid-cols-2 gap-10 w-full flex-grow max-h-[340px]">
-                        <div id="card-${idM}" data-id="${idM}" data-target="${medM}" class="glass-card rounded-[2.5rem] p-6 relative flex flex-col justify-between shadow-xl text-center border-b-8 border-b-blue-600">
+                        <div id="card-${idM}" class="glass-card rounded-[2.5rem] p-6 relative flex flex-col justify-between shadow-xl text-center border-b-8 border-b-blue-600">
                             <span class="absolute -top-7 left-1/2 -translate-x-1/2 text-5xl filter drop-shadow transition-all duration-500 opacity-0 coroa-m" data-vencedor="${vM}">👑</span>
                             <div>
                                 <h3 class="font-black text-2xl text-blue-900 uppercase tracking-tight">Turno Manhã</h3>
@@ -565,7 +566,7 @@
                             <span class="text-5xl font-black my-4 text-center block num-contador-txt">0.0%</span>
                             <div class="w-full bg-slate-200/60 rounded-xl h-6 overflow-hidden shadow-inner"><div id="barra-${idM}" class="h-full bg-blue-600 transition-all duration-[4500ms]" style="width:0%"></div></div>
                         </div>
-                        <div id="card-${idT}" data-id="${idT}" data-target="${medT}" class="glass-card rounded-[2.5rem] p-6 relative flex flex-col justify-between shadow-xl text-center border-b-8 border-b-orange-500">
+                        <div id="card-${idT}" class="glass-card rounded-[2.5rem] p-6 relative flex flex-col justify-between shadow-xl text-center border-b-8 border-b-orange-500">
                             <span class="absolute -top-7 left-1/2 -translate-x-1/2 text-5xl filter drop-shadow transition-all duration-500 opacity-0 coroa-t" data-vencedor="${vT}">👑</span>
                             <div>
                                 <h3 class="font-black text-2xl text-orange-600 uppercase tracking-tight">Turno Tarde</h3>
@@ -586,7 +587,7 @@
             let localId = idStart;
             
             const slide = document.createElement("div");
-            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-top5";
+            slide.className = "pagina-slide w-full h-full pt-4 slide-tipo-top5";
             
             const medalhas = ["🥇","🥈","🥉","✨","✨"];
             const pódiosEstilos = [
@@ -634,8 +635,7 @@
                                 <span class="text-emerald-600 font-black text-xs tracking-widest uppercase block mb-0.5">META COLETIVA: 95%</span>
                                 <h2 class="text-slate-500 font-extrabold text-[11px] uppercase tracking-wider">Histórico de Engajamento da Escola</h2>
                             </div>
-                            <div id="grafico-full-desafio" class="w-full h-[180px] bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center"></div>
-                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Evolução registrada por semana de aula</div>
+                            <div id="grafico-full-desafio" class="w-full h-[180px] my-2 bg-white/40 border border-slate-200/50 p-2 rounded-2xl shadow-inner flex items-center justify-center"></div>
                         </div>
                         <div id="card-${localId}" data-id="${localId}" class="glass-card rounded-[2.5rem] p-5 flex flex-col justify-between border-b-8 border-b-emerald-600 text-center card-bloco-media">
                             <div>
@@ -699,6 +699,31 @@
             container.appendChild(slide);
         }
 
+        function montacardsEspeciais() {
+            const container = document.getElementById("container-slides");
+            const filtradas = todasTurmas.filter(t => t.valor >= 95).sort((a, b) => b.valor - a.valor);
+            if (filtradas.length === 0) return;
+
+            const slide = document.createElement("div");
+            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-elite";
+            
+            slide.innerHTML = `
+                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
+                    <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10 animate-pulse">⭐ Galeria de Elite • Frequência Ouro ⭐</div>
+                    <div class="w-full glass-card rounded-[2.5rem] p-5 shadow-2xl flex-grow max-h-[320px] overflow-y-auto grid grid-cols-3 gap-4 border-2 border-amber-300">
+                        ${filtradas.map(t => `
+                            <div class="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-amber-400/80 p-4 rounded-3xl flex flex-col justify-center items-center text-center shadow-md relative overflow-hidden group">
+                                <span class="text-4xl mb-1 filter drop-shadow">🏆</span>
+                                <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight truncate w-full px-2">${t.nome}</h3>
+                                <span class="font-black text-3xl text-amber-600 mt-1">${t.valor.toFixed(1)}%</span>
+                                <span class="text-[9px] font-black tracking-widest text-amber-700 bg-amber-200/60 px-3 py-0.5 rounded-full uppercase mt-2 border border-amber-300/40">${t.bloco}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>`;
+            container.appendChild(slide);
+        }
+
         function gerarSlides() {
             const container = document.getElementById("container-slides");
             container.innerHTML = "";
@@ -729,31 +754,6 @@
             montacardsEspeciais();
             montarSlideSorteio();
             iniciarAnimacao();
-        }
-
-        function montacardsEspeciais() {
-            const container = document.getElementById("container-slides");
-            const filtradas = todasTurmas.filter(t => t.valor >= 95).sort((a, b) => b.valor - a.valor);
-            if (filtradas.length === 0) return;
-
-            const slide = document.createElement("div");
-            slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-elite";
-            
-            slide.innerHTML = `
-                <div class="flex flex-col h-full items-center justify-start max-w-5xl mx-auto">
-                    <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10 animate-pulse">⭐ Galeria de Elite • Frequência Ouro ⭐</div>
-                    <div class="w-full glass-card rounded-[2.5rem] p-5 shadow-2xl flex-grow max-h-[320px] overflow-y-auto grid grid-cols-3 gap-4 border-2 border-amber-300">
-                        ${filtradas.map(t => `
-                            <div class="bg-gradient-to-b from-amber-500/10 to-yellow-500/5 border-2 border-amber-400/80 p-4 rounded-3xl flex flex-col justify-center items-center text-center shadow-md relative overflow-hidden group">
-                                <span class="text-4xl mb-1 filter drop-shadow">🏆</span>
-                                <h3 class="font-black text-xl text-slate-800 uppercase tracking-tight truncate w-full px-2">${t.nome}</h3>
-                                <span class="font-black text-3xl text-amber-600 mt-1">${t.valor.toFixed(1)}%</span>
-                                <span class="text-[9px] font-black tracking-widest text-amber-700 bg-amber-200/60 px-3 py-0.5 rounded-full uppercase mt-2 border border-amber-300/40">${t.bloco}</span>
-                            </div>
-                        `).join("")}
-                    </div>
-                </div>`;
-            container.appendChild(slide);
         }
 
         async function carregarDadosEmBack() {
