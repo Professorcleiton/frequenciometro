@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="style.css">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
@@ -17,32 +19,111 @@
         }
     </script>
     <style>
-        .barra-frequencia { transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; width: 0%; }
+        .barra-frequencia { 
+            transition: width 1.5s cubic-bezier(0.1, 1, 0.1, 1); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: 900; 
+            width: 0%; 
+        }
         
-        body { margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden; position: relative; background: url('bandeiras.png') no-repeat center center fixed; background-size: cover; }
-        .overlay-fundo { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.88); z-index: -1; }
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.8); 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); 
+        }
+        .card-turma { 
+            border-left-width: 12px; 
+            min-height: 135px; 
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+        }
         
-        .pagina-slide { display: none; animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .pagina-slide.active { display: block; }
-        @keyframes slideIn { from { opacity: 0; transform: scale(0.98) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        @keyframes subirPodio { 
+            from { opacity: 0; transform: translateY(100px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .animar-podio-bloco { 
+            animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+            opacity: 0; 
+        }
         
-        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
-        .card-turma { border-left-width: 12px; min-height: 135px; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        #barra-tempo { 
+            height: 4px; 
+            background: linear-gradient(90deg, #3b82f6, #6366f1); 
+            width: 0%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            transition: width 9000ms linear; 
+        }
         
-        @keyframes subirPodio { from { opacity: 0; transform: translateY(100px); } to { opacity: 1; transform: translateY(0); } }
-        .animar-podio-bloco { animation: subirPodio 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        #barra-tempo { height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; position: absolute; top: 0; left: 0; transition: width 9000ms linear; }
-        
-        .podium-container { display: flex; align-items: flex-end; justify-content: center; gap: 30px; height: 260px; margin-bottom: 20px; width: 100%; }
-        .podium-item { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 240px; border-radius: 24px 24px 12px 24px; padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.5); }
-        .btn-ctrl { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); color: #1e3a8a; border-radius: 50%; width: 42px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); transition: all 0.3s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .btn-ctrl:hover { background: #1e3a8a; color: white; transform: scale(1.1); }
+        .podium-container { 
+            display: flex; 
+            align-items: flex-end; 
+            justify-content: center; 
+            gap: 30px; 
+            height: 260px; 
+            margin-bottom: 20px; 
+            width: 100%; 
+        }
+        .podium-item { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: flex-end; 
+            width: 240px; 
+            border-radius: 24px 24px 12px 24px; 
+            padding: 20px 15px; 
+            text-align: center; 
+            border: 1px solid rgba(255,255,255,0.5); 
+        }
+        .btn-ctrl { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(4px); 
+            color: #1e3a8a; 
+            border-radius: 50%; 
+            width: 42px; 
+            height: 32px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            border: 1px solid rgba(255,255,255,0.9); 
+            transition: all 0.3s; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+        }
+        .btn-ctrl:hover { 
+            background: #1e3a8a; 
+            color: white; 
+            transform: scale(1.1); 
+        }
         ::-webkit-scrollbar { display: none; }
+
+        /* Animações para o sorteio */
+        @keyframes pulse-sorteio {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .sorteio-animando {
+            animation: pulse-sorteio 0.3s ease-in-out infinite;
+        }
+        @keyframes brilho-vencedor {
+            0% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.8); }
+            100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+        }
+        .vencedor-animacao {
+            animation: brilho-vencedor 1s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
 
-    <div class="overlay-fundo"></div>
+    <!-- Camada de textura de fundo -->
+    <div class="fundo-textura"></div>
 
     <header class="bg-white/80 backdrop-blur-md px-10 py-3 shadow-sm border-b border-slate-200/50 flex justify-between items-center shrink-0 z-10 mx-6 mt-4 rounded-2xl">
         <div class="flex items-center gap-5">
@@ -95,6 +176,10 @@
 
         let notaFechada1Trimestre = 91.9; 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
+        
+        // Variáveis para controle de sorteio sem repetição
+        let ultimoSorteado = null;
+        let historicoSorteios = [];
 
         function exibirErroTerminal(mensagem) {
             const painel = document.getElementById("info-semana-detalhada");
@@ -396,6 +481,7 @@
                 slideSorteio.classList.add("active");
                 document.getElementById("indicador-pagina").innerText = `MODO SORTEIO`;
                 document.getElementById("nome-sorteado-display").innerText = "???";
+                atualizarDisplayHistorico();
             }
         }
 
@@ -417,27 +503,152 @@
             }());
         }
 
+        // Função para embaralhar array (algoritmo Fisher-Yates)
+        function embaralharArray(array) {
+            const novoArray = [...array];
+            for (let i = novoArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [novoArray[i], novoArray[j]] = [novoArray[j], novoArray[i]];
+            }
+            return novoArray;
+        }
+
+        // Função para atualizar o display do histórico de sorteios
+        function atualizarDisplayHistorico() {
+            const display = document.getElementById("historico-sorteios-display");
+            if (!display) return;
+            
+            if (historicoSorteios.length === 0) {
+                display.innerHTML = '<span class="text-slate-400 text-sm">Nenhum sorteio realizado ainda</span>';
+                return;
+            }
+            
+            const ultimos = historicoSorteios.slice(-3).reverse(); // Últimos 3 sorteios
+            display.innerHTML = ultimos.map((s, idx) => 
+                `<div class="flex justify-between items-center py-1.5 ${idx > 0 ? 'border-t border-slate-200/60' : ''}">
+                    <span class="font-bold text-slate-700 text-sm">🏆 ${s.nome}</span>
+                    <span class="text-slate-400 text-xs font-semibold">${s.turma} • ${s.horario}</span>
+                </div>`
+            ).join('');
+        }
+
         function iniciarSorteioVirtual() {
             if (sorteioEmAndamento) return;
-            const seletor = document.getElementById("seletor-turma-sorteio"); const turmaAlvo = seletor.value;
+            const seletor = document.getElementById("seletor-turma-sorteio"); 
+            const turmaAlvo = seletor.value;
             const alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
             const displayNome = document.getElementById("nome-sorteado-display");
-            const btn = document.getElementById("btn-trigger-sorteio"); const btnFechar = document.getElementById("btn-fechar-sorteio");
-            if (alunosFiltrados.length === 0) { displayNome.innerText = "Sem alunos na turma!"; return; }
+            const btn = document.getElementById("btn-trigger-sorteio"); 
+            const btnFechar = document.getElementById("btn-fechar-sorteio");
+            
+            if (alunosFiltrados.length === 0) { 
+                displayNome.innerText = "Sem alunos na turma!"; 
+                return; 
+            }
 
-            sorteioEmAndamento = true; btn.style.display = "none"; btnFechar.style.display = "none"; seletor.disabled = true; 
-            let giros = 0; let velocidade = 50; let totalGiros = 50; 
+            // Se só tem 1 aluno, não faz sentido sortear
+            if (alunosFiltrados.length === 1) {
+                displayNome.innerText = alunosFiltrados[0].nome;
+                ajustarFonteNomeSorteado(alunosFiltrados[0].nome);
+                return;
+            }
+
+            sorteioEmAndamento = true; 
+            btn.style.display = "none"; 
+            btnFechar.style.display = "none"; 
+            seletor.disabled = true; 
+            
+            // Criar lista embaralhada para o efeito visual
+            let listaEmbaralhada = embaralharArray([...alunosFiltrados]);
+            
+            // Garantir que o último sorteado não apareça no final (se possível)
+            if (ultimoSorteado && listaEmbaralhada.length > 1) {
+                // Remove o último sorteado da lista final se houver outros alunos
+                listaEmbaralhada = listaEmbaralhada.filter(a => a.nome !== ultimoSorteado);
+                if (listaEmbaralhada.length === 0) {
+                    // Se todos foram sorteados, reinicia o histórico
+                    listaEmbaralhada = embaralharArray([...alunosFiltrados]);
+                    historicoSorteios = [];
+                }
+            }
+            
+            // Seleciona o vencedor da lista sem repetição
+            const alunoSorteado = listaEmbaralhada[Math.floor(Math.random() * listaEmbaralhada.length)];
+            
+            let giros = 0; 
+            let velocidade = 70; // Começa um pouco mais lento
+            let totalGiros = 30; // Reduzido para 30 giros (mais rápido)
+            let nomeAtual = "";
+            
+            // Adiciona classe de animação ao display
+            displayNome.classList.add('sorteio-animando');
 
             function roletar() {
-                giros++; const indiceAleatorio = Math.floor(Math.random() * alunosFiltrados.length);
-                const nomeCandidato = alunosFiltrados[indiceAleatorio].nome;
-                displayNome.innerText = nomeCandidato; ajustarFonteNomeSorteado(nomeCandidato);
-                ticarSom(600 - (giros * 5), 40);
-                if (giros < totalGiros) { if (giros > totalGiros - 15) velocidade += 35; setTimeout(roletar, velocidade); } 
+                giros++;
+                
+                // Mostra nomes aleatórios durante os primeiros 70% dos giros
+                if (giros < totalGiros * 0.7) {
+                    // Pega um nome aleatório da lista original para o efeito visual
+                    const indiceAleatorio = Math.floor(Math.random() * alunosFiltrados.length);
+                    nomeAtual = alunosFiltrados[indiceAleatorio].nome;
+                } 
+                // Nos últimos 30%, mostra nomes da lista embaralhada em sequência
                 else {
-                    ticarSom(880, 250); setTimeout(() => ticarSom(1200, 300), 150); dispararConfetesEspeciais();
+                    const indiceSequencial = (giros - Math.floor(totalGiros * 0.7)) % listaEmbaralhada.length;
+                    nomeAtual = listaEmbaralhada[indiceSequencial].nome;
+                }
+                
+                displayNome.innerText = nomeAtual; 
+                ajustarFonteNomeSorteado(nomeAtual);
+                
+                // Som mais suave no início, mais intenso no final
+                const frequenciaSom = 400 + (giros * 8);
+                ticarSom(Math.min(frequenciaSom, 900), 30);
+                
+                if (giros < totalGiros) { 
+                    // Acelera gradualmente até o final
+                    if (giros > totalGiros * 0.6) velocidade += 12;
+                    setTimeout(roletar, velocidade); 
+                } else {
+                    // GARANTE que o aluno sorteado é o escolhido
+                    displayNome.innerText = alunoSorteado.nome;
+                    ajustarFonteNomeSorteado(alunoSorteado.nome);
+                    
+                    // Remove classe de animação e adiciona classe de vencedor
+                    displayNome.classList.remove('sorteio-animando');
+                    displayNome.classList.add('vencedor-animacao');
+                    
+                    // Atualiza o histórico de sorteios
+                    ultimoSorteado = alunoSorteado.nome;
+                    historicoSorteios.push({
+                        nome: alunoSorteado.nome,
+                        turma: turmaAlvo,
+                        horario: new Date().toLocaleTimeString('pt-BR')
+                    });
+                    
+                    // Feedback sonoro de vitória
+                    ticarSom(880, 250); 
+                    setTimeout(() => ticarSom(1200, 300), 150); 
+                    dispararConfetesEspeciais();
+                    
                     let cLoop = setInterval(dispararConfetesEspeciais, 800);
-                    setTimeout(() => { clearInterval(cLoop); sorteioEmAndamento = false; seletor.disabled = false; btn.style.display = "inline-block"; btn.innerText = "🎰 REFAZER SORTEIO"; btnFechar.style.display = "inline-block"; }, 6000);
+                    setTimeout(() => { 
+                        clearInterval(cLoop); 
+                        sorteioEmAndamento = false; 
+                        seletor.disabled = false; 
+                        btn.style.display = "inline-block"; 
+                        btn.innerText = "🎰 REFAZER SORTEIO"; 
+                        btnFechar.style.display = "inline-block";
+                        
+                        // Remove classe de vencedor após um tempo
+                        displayNome.classList.remove('vencedor-animacao');
+                        
+                        // Atualiza o histórico na tela
+                        atualizarDisplayHistorico();
+                        
+                        // Log do histórico (opcional)
+                        console.log("Histórico de sorteios:", historicoSorteios);
+                    }, 6000);
                 }
             }
             roletar();
@@ -665,16 +876,25 @@
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
                     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">Sorteio de Brindes • Frequência Ouro</div>
-                    <div class="w-full glass-card rounded-[2.5rem] p-6 shadow-2xl flex flex-col justify-between items-center flex-grow max-h-[320px] border border-indigo-200">
+                    <div class="w-full glass-card rounded-[2.5rem] p-6 shadow-2xl flex flex-col justify-between items-center flex-grow max-h-[380px] border border-indigo-200">
                         <div class="w-full flex gap-4 items-center justify-center bg-slate-50 p-3 rounded-2xl border border-slate-200/60 shadow-inner">
                             <label class="font-black text-slate-700 text-sm uppercase tracking-wide shrink-0">Selecione a Turma Premiada:</label>
                             <select id="seletor-turma-sorteio" class="bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 font-extrabold text-slate-800 uppercase text-sm focus:outline-none focus:border-indigo-500 shadow-sm">
                                 ${turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join("")}
                             </select>
                         </div>
-                        <div class="my-3 py-4 w-full text-center flex items-center justify-center min-h-[100px]">
+                        
+                        <div class="my-3 py-2 w-full text-center flex items-center justify-center min-h-[90px]">
                             <span id="nome-sorteado-display" class="font-black text-6xl text-indigo-950 tracking-tight drop-shadow-sm uppercase px-6 py-3 bg-slate-100 rounded-2xl block border border-slate-200/50">???</span>
                         </div>
+                        
+                        <div class="w-full max-w-md mb-3">
+                            <h4 class="text-slate-600 font-black text-xs uppercase tracking-widest mb-1.5 text-left">Últimos Sorteados:</h4>
+                            <div id="historico-sorteios-display" class="bg-slate-50 rounded-xl p-2.5 border border-slate-200/60 text-left">
+                                <span class="text-slate-400 text-sm">Nenhum sorteio realizado ainda</span>
+                            </div>
+                        </div>
+                        
                         <div class="flex gap-4">
                             <button id="btn-trigger-sorteio" onclick="iniciarSorteioVirtual()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:scale-[1.03] active:scale-[0.98] transition-all text-white font-black text-sm px-10 py-3 rounded-xl shadow-lg shadow-emerald-500/20 uppercase tracking-wider">🎰 Iniciar Sorteio</button>
                             <button id="btn-fechar-sorteio" onclick="ocluiSorteio()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs px-6 py-3 rounded-xl uppercase tracking-wide transition-all">Voltar ao Painel</button>
