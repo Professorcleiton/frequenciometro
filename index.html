@@ -194,6 +194,9 @@
                 <button onclick="limparTodosSorteados()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-sm px-4 py-2 rounded-xl transition-all">
                     🗑️ Limpar Todos
                 </button>
+                <button onclick="recarregarListaAlunos()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold text-sm px-4 py-2 rounded-xl transition-all">
+                    🔄 Atualizar Lista
+                </button>
                 <button onclick="fecharModalSorteados()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-2 rounded-xl transition-all">
                     Concluir
                 </button>
@@ -211,12 +214,15 @@
             <h1 class="text-3xl font-black bg-gradient-to-r from-blue-900 to-indigo-950 bg-clip-text text-transparent uppercase leading-none tracking-tight">CCM ANCHIETA</h1>
             <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase transition-colors duration-300">Iniciando sistema e buscando dados...</p>
         </div>
-        <div class="text-right flex items-center gap-4">
-            <button onclick="abrirModalSorteados()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-amber-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
-                📋 Gerenciar Sorteados
+        <div class="text-right flex items-center gap-3">
+            <button onclick="forcarAtualizacaoCompleta()" class="bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
+                🔄 Atualizar
             </button>
-            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
-                🎁 Realizar Sorteio
+            <button onclick="abrirModalSorteados()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-amber-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
+                📋 Sorteados
+            </button>
+            <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
+                🎁 Sorteio
             </button>
             <div class="h-10 w-[1px] bg-slate-300/60"></div>
             <div class="text-left">
@@ -257,7 +263,7 @@
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
         
         // Variáveis para controle de sorteio
-        let alunosJaSorteados = new Set(); // Usando Set para armazenar nomes dos sorteados
+        let alunosJaSorteados = new Set();
         let historicoSorteios = [];
 
         // Função para carregar sorteados do localStorage
@@ -280,6 +286,87 @@
                 localStorage.setItem('alunosSorteados', JSON.stringify(listaParaSalvar));
             } catch(e) {
                 console.warn("Não foi possível salvar sorteados no storage:", e);
+            }
+        }
+
+        // Função para recarregar apenas a lista de alunos
+        async function recarregarListaAlunos() {
+            try {
+                const resposta = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
+                if (!resposta.ok) throw new Error("Falha ao carregar lista de alunos");
+                
+                const texto = await resposta.text();
+                const delimitador = texto.includes(';') ? ';' : ',';
+                const linhas = texto.split(/\r?\n/);
+                
+                const novaListaAlunos = [];
+                for (let j = 1; j < linhas.length; j++) {
+                    const colunas = linhas[j].split(new RegExp(`\\s*${delimitador}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (colunas.length >= 2 && colunas[0] && colunas[1]) {
+                        novaListaAlunos.push({ 
+                            nome: colunas[0].trim(), 
+                            turma: colunas[1].trim() 
+                        });
+                    }
+                }
+                
+                if (novaListaAlunos.length > 0) {
+                    todosAlunos = novaListaAlunos;
+                    console.log(`✅ Lista de alunos atualizada: ${todosAlunos.length} alunos carregados`);
+                    
+                    // Atualiza o modal se estiver aberto
+                    if (document.getElementById('modal-sorteados').classList.contains('active')) {
+                        atualizarListaAlunosModal();
+                    }
+                    
+                    // Atualiza o seletor de turmas no slide de sorteio
+                    atualizarSeletorTurmasSorteio();
+                    
+                    alert(`✅ Lista atualizada com sucesso!\n${todosAlunos.length} alunos carregados.`);
+                    return true;
+                } else {
+                    throw new Error("Nenhum aluno encontrado na planilha");
+                }
+            } catch (erro) {
+                console.error("❌ Erro ao recarregar alunos:", erro);
+                alert("❌ Erro ao atualizar lista de alunos. Verifique o console para mais detalhes.");
+                return false;
+            }
+        }
+
+        // Função para atualizar o seletor de turmas no slide de sorteio
+        function atualizarSeletorTurmasSorteio() {
+            const seletor = document.getElementById("seletor-turma-sorteio");
+            if (!seletor) return;
+            
+            const turmasDisponiveis = [...new Set(todosAlunos.map(a => a.turma))].sort();
+            const turmaAtual = seletor.value;
+            
+            seletor.innerHTML = turmasDisponiveis.map(t => 
+                `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`
+            ).join('');
+        }
+
+        // Função para forçar atualização de todos os dados
+        async function forcarAtualizacaoCompleta() {
+            const botao = event.target;
+            const textoOriginal = botao.innerText;
+            
+            botao.innerText = "⏳ Atualizando...";
+            botao.disabled = true;
+            
+            try {
+                await carregarDados();
+                console.log("✅ Dados atualizados com sucesso!");
+                alert("✅ Dados atualizados com sucesso!");
+            } catch (erro) {
+                console.error("❌ Erro ao atualizar dados:", erro);
+                alert("❌ Erro ao atualizar dados. Verifique o console.");
+            } finally {
+                setTimeout(() => {
+                    botao.innerText = textoOriginal;
+                    botao.disabled = false;
+                }, 2000);
             }
         }
 
@@ -318,7 +405,7 @@
             }
             
             if (alunosParaMostrar.length === 0) {
-                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado</p>';
+                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado. Clique em "Atualizar Lista" para recarregar.</p>';
                 return;
             }
             
@@ -333,17 +420,18 @@
             
             listaContainer.innerHTML = alunosParaMostrar.map(aluno => {
                 const jaSorteado = alunosJaSorteados.has(aluno.nome);
+                const idSeguro = aluno.nome.replace(/[^a-zA-Z0-9]/g, '-');
                 return `
                     <div class="flex items-center justify-between p-3 rounded-xl border ${jaSorteado ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'} transition-all">
                         <div class="flex items-center gap-3">
                             <input 
                                 type="checkbox" 
-                                id="check-${aluno.nome.replace(/\s+/g, '-')}" 
+                                id="check-${idSeguro}" 
                                 ${jaSorteado ? 'checked' : ''} 
                                 onchange="toggleAlunoSorteado('${aluno.nome.replace(/'/g, "\\'")}', this.checked)"
                                 class="w-5 h-5 accent-amber-500 cursor-pointer"
                             >
-                            <label for="check-${aluno.nome.replace(/\s+/g, '-')}" class="cursor-pointer">
+                            <label for="check-${idSeguro}" class="cursor-pointer">
                                 <span class="font-bold text-slate-700">${aluno.nome}</span>
                                 <span class="text-xs text-slate-400 ml-2">${aluno.turma}</span>
                             </label>
@@ -674,6 +762,7 @@
                 slideSorteio.classList.add("active");
                 document.getElementById("indicador-pagina").innerText = `MODO SORTEIO`;
                 document.getElementById("nome-sorteado-display").innerText = "???";
+                atualizarSeletorTurmasSorteio();
                 atualizarDisplayHistorico();
             }
         }
@@ -696,7 +785,6 @@
             }());
         }
 
-        // Função para embaralhar array (algoritmo Fisher-Yates)
         function embaralharArray(array) {
             const novoArray = [...array];
             for (let i = novoArray.length - 1; i > 0; i--) {
@@ -706,7 +794,6 @@
             return novoArray;
         }
 
-        // Função para atualizar o display do histórico de sorteios
         function atualizarDisplayHistorico() {
             const display = document.getElementById("historico-sorteios-display");
             if (!display) return;
@@ -716,7 +803,7 @@
                 return;
             }
             
-            const ultimos = historicoSorteios.slice(-3).reverse(); // Últimos 3 sorteios
+            const ultimos = historicoSorteios.slice(-3).reverse();
             display.innerHTML = ultimos.map((s, idx) => 
                 `<div class="flex justify-between items-center py-1.5 ${idx > 0 ? 'border-t border-slate-200/60' : ''}">
                     <span class="font-bold text-slate-700 text-sm">🏆 ${s.nome}</span>
@@ -731,7 +818,6 @@
             const turmaAlvo = seletor.value;
             let alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
             
-            // Filtra apenas alunos que ainda NÃO foram sorteados
             let alunosDisponiveis = alunosFiltrados.filter(a => !alunosJaSorteados.has(a.nome));
             
             const displayNome = document.getElementById("nome-sorteado-display");
@@ -743,12 +829,10 @@
                 return; 
             }
 
-            // Se todos os alunos já foram sorteados
             if (alunosDisponiveis.length === 0) {
                 displayNome.innerText = "Todos já sorteados!";
                 ajustarFonteNomeSorteado("Todos já sorteados!");
                 
-                // Pergunta se quer resetar
                 if (confirm('Todos os alunos desta turma já foram sorteados. Deseja resetar a lista de sorteados?')) {
                     alunosJaSorteados.clear();
                     salvarSorteadosNoStorage();
@@ -758,7 +842,6 @@
                 }
             }
 
-            // Se só tem 1 aluno disponível
             if (alunosDisponiveis.length === 1) {
                 displayNome.innerText = alunosDisponiveis[0].nome;
                 ajustarFonteNomeSorteado(alunosDisponiveis[0].nome);
@@ -770,10 +853,8 @@
             btnFechar.style.display = "none"; 
             seletor.disabled = true; 
             
-            // Criar lista embaralhada apenas com alunos disponíveis
             let listaEmbaralhada = embaralharArray([...alunosDisponiveis]);
             
-            // Seleciona o vencedor da lista de disponíveis
             const alunoSorteado = listaEmbaralhada[Math.floor(Math.random() * listaEmbaralhada.length)];
             
             let giros = 0; 
@@ -786,13 +867,10 @@
             function roletar() {
                 giros++;
                 
-                // Mostra nomes aleatórios durante os primeiros 70% dos giros
                 if (giros < totalGiros * 0.7) {
                     const indiceAleatorio = Math.floor(Math.random() * alunosDisponiveis.length);
                     nomeAtual = alunosDisponiveis[indiceAleatorio].nome;
-                } 
-                // Nos últimos 30%, mostra nomes da lista embaralhada em sequência
-                else {
+                } else {
                     const indiceSequencial = (giros - Math.floor(totalGiros * 0.7)) % listaEmbaralhada.length;
                     nomeAtual = listaEmbaralhada[indiceSequencial].nome;
                 }
@@ -807,18 +885,15 @@
                     if (giros > totalGiros * 0.6) velocidade += 12;
                     setTimeout(roletar, velocidade); 
                 } else {
-                    // GARANTE que o aluno sorteado é o escolhido
                     displayNome.innerText = alunoSorteado.nome;
                     ajustarFonteNomeSorteado(alunoSorteado.nome);
                     
                     displayNome.classList.remove('sorteio-animando');
                     displayNome.classList.add('vencedor-animacao');
                     
-                    // Marca como sorteado
                     alunosJaSorteados.add(alunoSorteado.nome);
                     salvarSorteadosNoStorage();
                     
-                    // Atualiza o histórico
                     historicoSorteios.push({
                         nome: alunoSorteado.nome,
                         turma: turmaAlvo,
@@ -1068,7 +1143,7 @@
             const container = document.getElementById("container-slides");
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-sorteio";
-            const turmasDisponiveis = [...new Set(todasTurmas.map(t => t.nome))].sort();
+            const turmasDisponiveis = [...new Set(todosAlunos.map(a => a.turma))].sort();
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
                     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">Sorteio de Brindes • Frequência Ouro</div>
@@ -1133,7 +1208,6 @@
 
         async function carregarDados() {
             try {
-                // Carrega sorteados do localStorage primeiro
                 carregarSorteadosDoStorage();
                 
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
@@ -1167,9 +1241,14 @@
                     todosAlunos = [];
                     for (let j = 1; j < linhasAlunos.length; j++) {
                         const colsA = linhasAlunos[j].split(new RegExp(`\\s*${dAlunos}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                        if (colsA.length >= 2) todosAlunos.push({ nome: colsA[0], turma: colsA[1] });
+                        if (colsA.length >= 2 && colsA[0] && colsA[1]) {
+                            todosAlunos.push({ nome: colsA[0].trim(), turma: colsA[1].trim() });
+                        }
                     }
-                } catch(eA) { console.warn("Planilha de Alunos pulada."); }
+                    console.log(`✅ ${todosAlunos.length} alunos carregados da planilha`);
+                } catch(eA) { 
+                    console.warn("Planilha de Alunos pulada.", eA); 
+                }
 
                 try {
                     const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
