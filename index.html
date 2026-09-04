@@ -118,12 +118,88 @@
         .vencedor-animacao {
             animation: brilho-vencedor 1s ease-in-out infinite;
         }
+
+        /* Estilo para alunos já sorteados */
+        .aluno-sorteado {
+            background-color: #fef3c7 !important;
+            border-color: #f59e0b !important;
+            opacity: 0.7;
+            position: relative;
+        }
+        .aluno-sorteado::after {
+            content: "✓ SORTEADO";
+            position: absolute;
+            top: 2px;
+            right: 8px;
+            font-size: 8px;
+            font-weight: 900;
+            color: #d97706;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Modal para gerenciar sorteados */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
     </style>
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
 
     <!-- Camada de textura de fundo -->
     <div class="fundo-textura"></div>
+
+    <!-- Modal para gerenciar alunos sorteados -->
+    <div id="modal-sorteados" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-black text-slate-800 uppercase">Gerenciar Alunos Sorteados</h3>
+                <button onclick="fecharModalSorteados()" class="w-8 h-8 bg-slate-200 hover:bg-slate-300 rounded-full font-bold text-slate-600 transition-all">✕</button>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">Marque os alunos que já foram sorteados para evitar repetição.</p>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-slate-700 mb-2">Selecione a Turma:</label>
+                <select id="seletor-turma-modal" onchange="atualizarListaAlunosModal()" class="w-full bg-white border-2 border-indigo-200 rounded-xl px-4 py-2 font-bold text-slate-800">
+                    <option value="">Todas as Turmas</option>
+                </select>
+            </div>
+            
+            <div id="lista-alunos-modal" class="space-y-2 mb-4">
+                <!-- Lista de alunos será carregada aqui -->
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="limparTodosSorteados()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-sm px-4 py-2 rounded-xl transition-all">
+                    🗑️ Limpar Todos
+                </button>
+                <button onclick="fecharModalSorteados()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-2 rounded-xl transition-all">
+                    Concluir
+                </button>
+            </div>
+        </div>
+    </div>
 
     <header class="bg-white/80 backdrop-blur-md px-10 py-3 shadow-sm border-b border-slate-200/50 flex justify-between items-center shrink-0 z-10 mx-6 mt-4 rounded-2xl">
         <div class="flex items-center gap-5">
@@ -136,6 +212,9 @@
             <p id="info-semana-detalhada" class="text-indigo-600 font-extrabold text-sm tracking-wider mt-1 uppercase transition-colors duration-300">Iniciando sistema e buscando dados...</p>
         </div>
         <div class="text-right flex items-center gap-4">
+            <button onclick="abrirModalSorteados()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-amber-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
+                📋 Gerenciar Sorteados
+            </button>
             <button onclick="forçarAberturaSorteio()" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 hover:scale-[1.03] active:scale-[0.98] transition-all uppercase tracking-wider border border-white/20">
                 🎁 Realizar Sorteio
             </button>
@@ -177,9 +256,123 @@
         let notaFechada1Trimestre = 91.9; 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
         
-        // Variáveis para controle de sorteio sem repetição
-        let ultimoSorteado = null;
+        // Variáveis para controle de sorteio
+        let alunosJaSorteados = new Set(); // Usando Set para armazenar nomes dos sorteados
         let historicoSorteios = [];
+
+        // Função para carregar sorteados do localStorage
+        function carregarSorteadosDoStorage() {
+            try {
+                const sorteadosSalvos = localStorage.getItem('alunosSorteados');
+                if (sorteadosSalvos) {
+                    const listaSalva = JSON.parse(sorteadosSalvos);
+                    alunosJaSorteados = new Set(listaSalva);
+                }
+            } catch(e) {
+                console.warn("Não foi possível carregar sorteados do storage:", e);
+            }
+        }
+
+        // Função para salvar sorteados no localStorage
+        function salvarSorteadosNoStorage() {
+            try {
+                const listaParaSalvar = Array.from(alunosJaSorteados);
+                localStorage.setItem('alunosSorteados', JSON.stringify(listaParaSalvar));
+            } catch(e) {
+                console.warn("Não foi possível salvar sorteados no storage:", e);
+            }
+        }
+
+        // Função para abrir o modal de gerenciamento
+        function abrirModalSorteados() {
+            const modal = document.getElementById('modal-sorteados');
+            modal.classList.add('active');
+            
+            // Preencher o seletor de turmas no modal
+            const seletorTurma = document.getElementById('seletor-turma-modal');
+            const turmasDisponiveis = [...new Set(todosAlunos.map(a => a.turma))].sort();
+            
+            seletorTurma.innerHTML = '<option value="">Todas as Turmas</option>' + 
+                turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join('');
+            
+            atualizarListaAlunosModal();
+        }
+
+        // Função para fechar o modal
+        function fecharModalSorteados() {
+            const modal = document.getElementById('modal-sorteados');
+            modal.classList.remove('active');
+            salvarSorteadosNoStorage();
+            atualizarDisplayHistorico();
+        }
+
+        // Função para atualizar a lista de alunos no modal
+        function atualizarListaAlunosModal() {
+            const seletorTurma = document.getElementById('seletor-turma-modal');
+            const turmaSelecionada = seletorTurma.value;
+            const listaContainer = document.getElementById('lista-alunos-modal');
+            
+            let alunosParaMostrar = todosAlunos;
+            if (turmaSelecionada) {
+                alunosParaMostrar = todosAlunos.filter(a => a.turma === turmaSelecionada);
+            }
+            
+            if (alunosParaMostrar.length === 0) {
+                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado</p>';
+                return;
+            }
+            
+            // Ordenar alunos: não sorteados primeiro, depois sorteados
+            alunosParaMostrar.sort((a, b) => {
+                const aSorteado = alunosJaSorteados.has(a.nome);
+                const bSorteado = alunosJaSorteados.has(b.nome);
+                if (aSorteado && !bSorteado) return 1;
+                if (!aSorteado && bSorteado) return -1;
+                return a.nome.localeCompare(b.nome);
+            });
+            
+            listaContainer.innerHTML = alunosParaMostrar.map(aluno => {
+                const jaSorteado = alunosJaSorteados.has(aluno.nome);
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-xl border ${jaSorteado ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'} transition-all">
+                        <div class="flex items-center gap-3">
+                            <input 
+                                type="checkbox" 
+                                id="check-${aluno.nome.replace(/\s+/g, '-')}" 
+                                ${jaSorteado ? 'checked' : ''} 
+                                onchange="toggleAlunoSorteado('${aluno.nome.replace(/'/g, "\\'")}', this.checked)"
+                                class="w-5 h-5 accent-amber-500 cursor-pointer"
+                            >
+                            <label for="check-${aluno.nome.replace(/\s+/g, '-')}" class="cursor-pointer">
+                                <span class="font-bold text-slate-700">${aluno.nome}</span>
+                                <span class="text-xs text-slate-400 ml-2">${aluno.turma}</span>
+                            </label>
+                        </div>
+                        ${jaSorteado ? '<span class="text-amber-600 font-black text-xs">✓ SORTEADO</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Função para marcar/desmarcar aluno como sorteado
+        function toggleAlunoSorteado(nomeAluno, marcado) {
+            if (marcado) {
+                alunosJaSorteados.add(nomeAluno);
+            } else {
+                alunosJaSorteados.delete(nomeAluno);
+            }
+            salvarSorteadosNoStorage();
+            atualizarListaAlunosModal();
+        }
+
+        // Função para limpar todos os sorteados
+        function limparTodosSorteados() {
+            if (confirm('Tem certeza que deseja limpar todos os alunos sorteados?')) {
+                alunosJaSorteados.clear();
+                salvarSorteadosNoStorage();
+                atualizarListaAlunosModal();
+            }
+        }
 
         function exibirErroTerminal(mensagem) {
             const painel = document.getElementById("info-semana-detalhada");
@@ -536,7 +729,11 @@
             if (sorteioEmAndamento) return;
             const seletor = document.getElementById("seletor-turma-sorteio"); 
             const turmaAlvo = seletor.value;
-            const alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
+            let alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
+            
+            // Filtra apenas alunos que ainda NÃO foram sorteados
+            let alunosDisponiveis = alunosFiltrados.filter(a => !alunosJaSorteados.has(a.nome));
+            
             const displayNome = document.getElementById("nome-sorteado-display");
             const btn = document.getElementById("btn-trigger-sorteio"); 
             const btnFechar = document.getElementById("btn-fechar-sorteio");
@@ -546,10 +743,25 @@
                 return; 
             }
 
-            // Se só tem 1 aluno, não faz sentido sortear
-            if (alunosFiltrados.length === 1) {
-                displayNome.innerText = alunosFiltrados[0].nome;
-                ajustarFonteNomeSorteado(alunosFiltrados[0].nome);
+            // Se todos os alunos já foram sorteados
+            if (alunosDisponiveis.length === 0) {
+                displayNome.innerText = "Todos já sorteados!";
+                ajustarFonteNomeSorteado("Todos já sorteados!");
+                
+                // Pergunta se quer resetar
+                if (confirm('Todos os alunos desta turma já foram sorteados. Deseja resetar a lista de sorteados?')) {
+                    alunosJaSorteados.clear();
+                    salvarSorteadosNoStorage();
+                    alunosDisponiveis = [...alunosFiltrados];
+                } else {
+                    return;
+                }
+            }
+
+            // Se só tem 1 aluno disponível
+            if (alunosDisponiveis.length === 1) {
+                displayNome.innerText = alunosDisponiveis[0].nome;
+                ajustarFonteNomeSorteado(alunosDisponiveis[0].nome);
                 return;
             }
 
@@ -558,29 +770,17 @@
             btnFechar.style.display = "none"; 
             seletor.disabled = true; 
             
-            // Criar lista embaralhada para o efeito visual
-            let listaEmbaralhada = embaralharArray([...alunosFiltrados]);
+            // Criar lista embaralhada apenas com alunos disponíveis
+            let listaEmbaralhada = embaralharArray([...alunosDisponiveis]);
             
-            // Garantir que o último sorteado não apareça no final (se possível)
-            if (ultimoSorteado && listaEmbaralhada.length > 1) {
-                // Remove o último sorteado da lista final se houver outros alunos
-                listaEmbaralhada = listaEmbaralhada.filter(a => a.nome !== ultimoSorteado);
-                if (listaEmbaralhada.length === 0) {
-                    // Se todos foram sorteados, reinicia o histórico
-                    listaEmbaralhada = embaralharArray([...alunosFiltrados]);
-                    historicoSorteios = [];
-                }
-            }
-            
-            // Seleciona o vencedor da lista sem repetição
+            // Seleciona o vencedor da lista de disponíveis
             const alunoSorteado = listaEmbaralhada[Math.floor(Math.random() * listaEmbaralhada.length)];
             
             let giros = 0; 
-            let velocidade = 70; // Começa um pouco mais lento
-            let totalGiros = 30; // Reduzido para 30 giros (mais rápido)
+            let velocidade = 70;
+            let totalGiros = 30;
             let nomeAtual = "";
             
-            // Adiciona classe de animação ao display
             displayNome.classList.add('sorteio-animando');
 
             function roletar() {
@@ -588,9 +788,8 @@
                 
                 // Mostra nomes aleatórios durante os primeiros 70% dos giros
                 if (giros < totalGiros * 0.7) {
-                    // Pega um nome aleatório da lista original para o efeito visual
-                    const indiceAleatorio = Math.floor(Math.random() * alunosFiltrados.length);
-                    nomeAtual = alunosFiltrados[indiceAleatorio].nome;
+                    const indiceAleatorio = Math.floor(Math.random() * alunosDisponiveis.length);
+                    nomeAtual = alunosDisponiveis[indiceAleatorio].nome;
                 } 
                 // Nos últimos 30%, mostra nomes da lista embaralhada em sequência
                 else {
@@ -601,12 +800,10 @@
                 displayNome.innerText = nomeAtual; 
                 ajustarFonteNomeSorteado(nomeAtual);
                 
-                // Som mais suave no início, mais intenso no final
                 const frequenciaSom = 400 + (giros * 8);
                 ticarSom(Math.min(frequenciaSom, 900), 30);
                 
                 if (giros < totalGiros) { 
-                    // Acelera gradualmente até o final
                     if (giros > totalGiros * 0.6) velocidade += 12;
                     setTimeout(roletar, velocidade); 
                 } else {
@@ -614,19 +811,20 @@
                     displayNome.innerText = alunoSorteado.nome;
                     ajustarFonteNomeSorteado(alunoSorteado.nome);
                     
-                    // Remove classe de animação e adiciona classe de vencedor
                     displayNome.classList.remove('sorteio-animando');
                     displayNome.classList.add('vencedor-animacao');
                     
-                    // Atualiza o histórico de sorteios
-                    ultimoSorteado = alunoSorteado.nome;
+                    // Marca como sorteado
+                    alunosJaSorteados.add(alunoSorteado.nome);
+                    salvarSorteadosNoStorage();
+                    
+                    // Atualiza o histórico
                     historicoSorteios.push({
                         nome: alunoSorteado.nome,
                         turma: turmaAlvo,
                         horario: new Date().toLocaleTimeString('pt-BR')
                     });
                     
-                    // Feedback sonoro de vitória
                     ticarSom(880, 250); 
                     setTimeout(() => ticarSom(1200, 300), 150); 
                     dispararConfetesEspeciais();
@@ -640,14 +838,12 @@
                         btn.innerText = "🎰 REFAZER SORTEIO"; 
                         btnFechar.style.display = "inline-block";
                         
-                        // Remove classe de vencedor após um tempo
                         displayNome.classList.remove('vencedor-animacao');
                         
-                        // Atualiza o histórico na tela
                         atualizarDisplayHistorico();
                         
-                        // Log do histórico (opcional)
                         console.log("Histórico de sorteios:", historicoSorteios);
+                        console.log("Alunos já sorteados:", Array.from(alunosJaSorteados));
                     }, 6000);
                 }
             }
@@ -937,6 +1133,9 @@
 
         async function carregarDados() {
             try {
+                // Carrega sorteados do localStorage primeiro
+                carregarSorteadosDoStorage();
+                
                 const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
                 if(!res.ok) throw new Error("Planilha Principal falhou");
                 const txt = await res.text();
