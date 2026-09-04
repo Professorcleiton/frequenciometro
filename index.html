@@ -102,7 +102,6 @@
         }
         ::-webkit-scrollbar { display: none; }
 
-        /* Animações para o sorteio */
         @keyframes pulse-sorteio {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -119,25 +118,6 @@
             animation: brilho-vencedor 1s ease-in-out infinite;
         }
 
-        /* Estilo para alunos já sorteados */
-        .aluno-sorteado {
-            background-color: #fef3c7 !important;
-            border-color: #f59e0b !important;
-            opacity: 0.7;
-            position: relative;
-        }
-        .aluno-sorteado::after {
-            content: "✓ SORTEADO";
-            position: absolute;
-            top: 2px;
-            right: 8px;
-            font-size: 8px;
-            font-weight: 900;
-            color: #d97706;
-            letter-spacing: 0.5px;
-        }
-        
-        /* Modal para gerenciar sorteados */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -167,7 +147,6 @@
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
 
-    <!-- Camada de textura de fundo -->
     <div class="fundo-textura"></div>
 
     <!-- Modal para gerenciar alunos sorteados -->
@@ -187,7 +166,7 @@
             </div>
             
             <div id="lista-alunos-modal" class="space-y-2 mb-4">
-                <!-- Lista de alunos será carregada aqui -->
+                <p class="text-slate-400 text-center py-4">Carregando alunos...</p>
             </div>
             
             <div class="flex justify-end gap-3">
@@ -255,18 +234,19 @@
     </div>
 
     <script>
-        const LINK_PLANILHA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?output=csv";
-        const LINK_ALUNOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=6658576&single=true&output=csv";
-        const LINK_HISTORICO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbbgsqbbRy_wIwBiuFdcsGH-Bioh3jSerab3k3lm5hYuXZrUR5WtfJXPy-wgGBwLs6zvwEiVDitiDj/pub?gid=994844027&single=true&output=csv";
+        // ===== LINKS DA PLANILHA =====
+        const LINK_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQV2zvnMyHFvZKDraWNcSyCMhfyKiMn0UU8EppGHQkDGs1lh5iyYxvICV522gkVrMKKtxxcd411IjJQ/pub";
+        const LINK_FREQUENCIA = `${LINK_BASE}?gid=1746538498&single=true&output=csv`;
+        const LINK_ALUNOS = `${LINK_BASE}?gid=1866544411&single=true&output=csv`;
+        const LINK_HISTORICO = `${LINK_BASE}?gid=541390615&single=true&output=csv`;
 
+        // ===== VARIÁVEIS GLOBAIS =====
         let notaFechada1Trimestre = 91.9; 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
-        
-        // Variáveis para controle de sorteio
         let alunosJaSorteados = new Set();
         let historicoSorteios = [];
 
-        // Função para carregar sorteados do localStorage
+        // ===== FUNÇÕES DE STORAGE =====
         function carregarSorteadosDoStorage() {
             try {
                 const sorteadosSalvos = localStorage.getItem('alunosSorteados');
@@ -274,23 +254,87 @@
                     const listaSalva = JSON.parse(sorteadosSalvos);
                     alunosJaSorteados = new Set(listaSalva);
                 }
-            } catch(e) {
-                console.warn("Não foi possível carregar sorteados do storage:", e);
-            }
+            } catch(e) {}
         }
 
-        // Função para salvar sorteados no localStorage
         function salvarSorteadosNoStorage() {
             try {
-                const listaParaSalvar = Array.from(alunosJaSorteados);
-                localStorage.setItem('alunosSorteados', JSON.stringify(listaParaSalvar));
-            } catch(e) {
-                console.warn("Não foi possível salvar sorteados no storage:", e);
+                localStorage.setItem('alunosSorteados', JSON.stringify(Array.from(alunosJaSorteados)));
+            } catch(e) {}
+        }
+
+        // ===== FUNÇÕES DE CARREGAMENTO =====
+        async function carregarDados() {
+            try {
+                carregarSorteadosDoStorage();
+                
+                // Carrega frequência
+                const resFreq = await fetch(LINK_FREQUENCIA + "&cache=" + Date.now());
+                if(!resFreq.ok) throw new Error("Planilha de Frequência falhou");
+                const txtFreq = await resFreq.text();
+                const dFreq = txtFreq.includes(';') ? ';' : ',';
+                const linhasFreq = txtFreq.split(/\r?\n/);
+                todasTurmas = [];
+                
+                for (let i = 1; i < linhasFreq.length; i++) {
+                    if (linhasFreq[i].trim().length < 3) continue;
+                    const cols = linhasFreq[i].split(new RegExp(`\\s*${dFreq}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (cols.length >= 5) {
+                        const nome = cols[0];
+                        let strNum = cols[1].replace(/[^0-9,-]/g, '').replace(',', '.');
+                        const freq = parseFloat(strNum);
+                        const bloco = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                        const trof = parseInt(cols[3]) || 0;
+                        const codigoTurma = cols[4] || nome;
+                        if (!isNaN(freq) && nome.length > 0) {
+                            todasTurmas.push({ 
+                                nome, 
+                                valor: freq, 
+                                bloco: bloco.includes("man") ? "manha":"tarde", 
+                                trofeus: trof,
+                                codigo: codigoTurma
+                            });
+                        }
+                    }
+                }
+
+                if (todasTurmas.length === 0) throw new Error("Nenhuma turma encontrada na aba frequencia");
+
+                // Carrega alunos
+                await carregarAlunos();
+
+                // Carrega histórico
+                try {
+                    const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
+                    const txtHist = await resHist.text();
+                    const dHist = txtHist.includes(';') ? ';' : ',';
+                    const linhasHist = txtHist.split(/\r?\n/);
+                    historicoEscola = [];
+                    for(let k = 1; k < linhasHist.length; k++) {
+                        const colsH = linhasHist[k].split(new RegExp(`\\s*${dHist}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
+                        if(colsH.length >= 2) {
+                            let semNome = colsH[0];
+                            let strH = colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.');
+                            const medVal = parseFloat(strH);
+                            if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
+                        }
+                    }
+                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
+                } catch(errH) { console.warn("Histórico pulado."); }
+
+                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+                
+                atualizarTextoSemana(); 
+                gerarSlides();
+                console.log(`✅ ${todasTurmas.length} turmas, ${todosAlunos.length} alunos carregados`);
+
+            } catch (err) { 
+                exibirErroTerminal(err.message);
+                console.error(err); 
             }
         }
 
-        // Função para recarregar apenas a lista de alunos
-        async function recarregarListaAlunos() {
+        async function carregarAlunos() {
             try {
                 const resposta = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
                 if (!resposta.ok) throw new Error("Falha ao carregar lista de alunos");
@@ -299,101 +343,85 @@
                 const delimitador = texto.includes(';') ? ';' : ',';
                 const linhas = texto.split(/\r?\n/);
                 
-                const novaListaAlunos = [];
+                todosAlunos = [];
                 for (let j = 1; j < linhas.length; j++) {
                     const colunas = linhas[j].split(new RegExp(`\\s*${delimitador}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (colunas.length >= 2 && colunas[0] && colunas[1]) {
-                        novaListaAlunos.push({ 
-                            nome: colunas[0].trim(), 
-                            turma: colunas[1].trim() 
+                    
+                    // Estrutura: aluno_id, nome_aluno, turma_ref, turma_codigo
+                    if (colunas.length >= 4 && colunas[1] && colunas[3]) {
+                        todosAlunos.push({ 
+                            id: colunas[0] || '',
+                            nome: colunas[1].trim(),
+                            turmaRef: colunas[2] || '',
+                            turmaCodigo: colunas[3].trim()
                         });
                     }
                 }
-                
-                if (novaListaAlunos.length > 0) {
-                    todosAlunos = novaListaAlunos;
-                    console.log(`✅ Lista de alunos atualizada: ${todosAlunos.length} alunos carregados`);
-                    
-                    // Atualiza o modal se estiver aberto
-                    if (document.getElementById('modal-sorteados').classList.contains('active')) {
-                        atualizarListaAlunosModal();
-                    }
-                    
-                    // Atualiza o seletor de turmas no slide de sorteio
-                    atualizarSeletorTurmasSorteio();
-                    
-                    alert(`✅ Lista atualizada com sucesso!\n${todosAlunos.length} alunos carregados.`);
-                    return true;
-                } else {
-                    throw new Error("Nenhum aluno encontrado na planilha");
-                }
+                console.log(`✅ ${todosAlunos.length} alunos carregados`);
+                return true;
             } catch (erro) {
-                console.error("❌ Erro ao recarregar alunos:", erro);
-                alert("❌ Erro ao atualizar lista de alunos. Verifique o console para mais detalhes.");
+                console.error("❌ Erro ao carregar alunos:", erro);
                 return false;
             }
         }
 
-        // Função para atualizar o seletor de turmas no slide de sorteio
-        function atualizarSeletorTurmasSorteio() {
-            const seletor = document.getElementById("seletor-turma-sorteio");
-            if (!seletor) return;
-            
-            const turmasDisponiveis = [...new Set(todosAlunos.map(a => a.turma))].sort();
-            const turmaAtual = seletor.value;
-            
-            seletor.innerHTML = turmasDisponiveis.map(t => 
-                `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`
-            ).join('');
+        async function recarregarListaAlunos() {
+            const sucesso = await carregarAlunos();
+            if (sucesso) {
+                if (document.getElementById('modal-sorteados').classList.contains('active')) {
+                    atualizarListaAlunosModal();
+                }
+                atualizarSeletorTurmasSorteio();
+                alert(`✅ Lista atualizada com sucesso!\n${todosAlunos.length} alunos carregados.`);
+            } else {
+                alert("❌ Erro ao atualizar lista de alunos.");
+            }
         }
 
-        // Função para forçar atualização de todos os dados
         async function forcarAtualizacaoCompleta() {
             const botao = event.target;
-            const textoOriginal = botao.innerText;
-            
             botao.innerText = "⏳ Atualizando...";
             botao.disabled = true;
-            
             try {
                 await carregarDados();
-                console.log("✅ Dados atualizados com sucesso!");
                 alert("✅ Dados atualizados com sucesso!");
             } catch (erro) {
-                console.error("❌ Erro ao atualizar dados:", erro);
-                alert("❌ Erro ao atualizar dados. Verifique o console.");
+                alert("❌ Erro ao atualizar dados.");
             } finally {
                 setTimeout(() => {
-                    botao.innerText = textoOriginal;
+                    botao.innerText = "🔄 Atualizar";
                     botao.disabled = false;
                 }, 2000);
             }
         }
 
-        // Função para abrir o modal de gerenciamento
+        function atualizarSeletorTurmasSorteio() {
+            const seletor = document.getElementById("seletor-turma-sorteio");
+            if (!seletor) return;
+            const turmasDisponiveis = todasTurmas.map(t => t.codigo).sort();
+            const turmaAtual = seletor.value;
+            seletor.innerHTML = turmasDisponiveis.map(t => 
+                `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`
+            ).join('');
+        }
+
+        // ===== FUNÇÕES DO MODAL =====
         function abrirModalSorteados() {
             const modal = document.getElementById('modal-sorteados');
             modal.classList.add('active');
-            
-            // Preencher o seletor de turmas no modal
             const seletorTurma = document.getElementById('seletor-turma-modal');
-            const turmasDisponiveis = [...new Set(todosAlunos.map(a => a.turma))].sort();
-            
+            const turmasDisponiveis = todasTurmas.map(t => t.codigo).sort();
             seletorTurma.innerHTML = '<option value="">Todas as Turmas</option>' + 
                 turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join('');
-            
             atualizarListaAlunosModal();
         }
 
-        // Função para fechar o modal
         function fecharModalSorteados() {
-            const modal = document.getElementById('modal-sorteados');
-            modal.classList.remove('active');
+            document.getElementById('modal-sorteados').classList.remove('active');
             salvarSorteadosNoStorage();
             atualizarDisplayHistorico();
         }
 
-        // Função para atualizar a lista de alunos no modal
         function atualizarListaAlunosModal() {
             const seletorTurma = document.getElementById('seletor-turma-modal');
             const turmaSelecionada = seletorTurma.value;
@@ -401,15 +429,14 @@
             
             let alunosParaMostrar = todosAlunos;
             if (turmaSelecionada) {
-                alunosParaMostrar = todosAlunos.filter(a => a.turma === turmaSelecionada);
+                alunosParaMostrar = todosAlunos.filter(a => a.turmaCodigo === turmaSelecionada);
             }
             
             if (alunosParaMostrar.length === 0) {
-                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado. Clique em "Atualizar Lista" para recarregar.</p>';
+                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado.</p>';
                 return;
             }
             
-            // Ordenar alunos: não sorteados primeiro, depois sorteados
             alunosParaMostrar.sort((a, b) => {
                 const aSorteado = alunosJaSorteados.has(a.nome);
                 const bSorteado = alunosJaSorteados.has(b.nome);
@@ -424,16 +451,12 @@
                 return `
                     <div class="flex items-center justify-between p-3 rounded-xl border ${jaSorteado ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'} transition-all">
                         <div class="flex items-center gap-3">
-                            <input 
-                                type="checkbox" 
-                                id="check-${idSeguro}" 
-                                ${jaSorteado ? 'checked' : ''} 
+                            <input type="checkbox" id="check-${idSeguro}" ${jaSorteado ? 'checked' : ''} 
                                 onchange="toggleAlunoSorteado('${aluno.nome.replace(/'/g, "\\'")}', this.checked)"
-                                class="w-5 h-5 accent-amber-500 cursor-pointer"
-                            >
+                                class="w-5 h-5 accent-amber-500 cursor-pointer">
                             <label for="check-${idSeguro}" class="cursor-pointer">
                                 <span class="font-bold text-slate-700">${aluno.nome}</span>
-                                <span class="text-xs text-slate-400 ml-2">${aluno.turma}</span>
+                                <span class="text-xs text-slate-400 ml-2">${aluno.turmaCodigo}</span>
                             </label>
                         </div>
                         ${jaSorteado ? '<span class="text-amber-600 font-black text-xs">✓ SORTEADO</span>' : ''}
@@ -442,7 +465,6 @@
             }).join('');
         }
 
-        // Função para marcar/desmarcar aluno como sorteado
         function toggleAlunoSorteado(nomeAluno, marcado) {
             if (marcado) {
                 alunosJaSorteados.add(nomeAluno);
@@ -453,7 +475,6 @@
             atualizarListaAlunosModal();
         }
 
-        // Função para limpar todos os sorteados
         function limparTodosSorteados() {
             if (confirm('Tem certeza que deseja limpar todos os alunos sorteados?')) {
                 alunosJaSorteados.clear();
@@ -462,6 +483,7 @@
             }
         }
 
+        // ===== FUNÇÕES AUXILIARES =====
         function exibirErroTerminal(mensagem) {
             const painel = document.getElementById("info-semana-detalhada");
             painel.innerText = "ERRO: " + mensagem;
@@ -494,6 +516,25 @@
             document.getElementById("info-semana-detalhada").classList.replace("text-rose-600", "text-indigo-600");
         }
 
+        function embaralharArray(array) {
+            const novoArray = [...array];
+            for (let i = novoArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [novoArray[i], novoArray[j]] = [novoArray[j], novoArray[i]];
+            }
+            return novoArray;
+        }
+
+        function dispararConfetesEspeciais() {
+            var duracao = 1.5 * 1000; var fim = Date.now() + duracao;
+            (function moldura() {
+                confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 } });
+                confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.75 } });
+                if (Date.now() < fim) { requestAnimationFrame(moldura); }
+            }());
+        }
+
+        // ===== FUNÇÕES DE ANIMAÇÃO =====
         function atualizarBarraTempoAvançado() {
             const currentSlide = document.querySelector(".pagina-slide.active");
             if (isPaused || sorteioEmAndamento || (currentSlide && currentSlide.classList.contains('slide-tipo-sorteio'))) return;
@@ -540,6 +581,7 @@
             window.requestAnimationFrame(executarSubida);
         }
 
+        // ===== FUNÇÕES DE GRÁFICOS =====
         function renderizarGraficoHistorico(idContainer, isFull = false) {
             const wrapper = document.getElementById(idContainer);
             if (!wrapper) return;
@@ -627,6 +669,7 @@
                 </svg>`;
         }
 
+        // ===== FUNÇÕES DE NAVEGAÇÃO =====
         function mudarSlide(direcao) {
             if (sorteioEmAndamento) return;
             const slides = document.querySelectorAll(".pagina-slide");
@@ -748,6 +791,7 @@
             }
         }
 
+        // ===== FUNÇÕES DO SORTEIO =====
         function forçarAberturaSorteio() {
             if (sorteioEmAndamento) return;
             clearInterval(loopInterval); cancelAnimationFrame(animBarra);
@@ -776,24 +820,6 @@
             iniciarAnimacao();
         }
 
-        function dispararConfetesEspeciais() {
-            var duracao = 1.5 * 1000; var fim = Date.now() + duracao;
-            (function moldura() {
-                confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.75 } });
-                confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.75 } });
-                if (Date.now() < fim) { requestAnimationFrame(moldura); }
-            }());
-        }
-
-        function embaralharArray(array) {
-            const novoArray = [...array];
-            for (let i = novoArray.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [novoArray[i], novoArray[j]] = [novoArray[j], novoArray[i]];
-            }
-            return novoArray;
-        }
-
         function atualizarDisplayHistorico() {
             const display = document.getElementById("historico-sorteios-display");
             if (!display) return;
@@ -815,8 +841,10 @@
         function iniciarSorteioVirtual() {
             if (sorteioEmAndamento) return;
             const seletor = document.getElementById("seletor-turma-sorteio"); 
-            const turmaAlvo = seletor.value;
-            let alunosFiltrados = todosAlunos.filter(a => a.turma.toLowerCase() === turmaAlvo.toLowerCase());
+            const turmaCodigoAlvo = seletor.value;
+            
+            // Filtra alunos pelo código da turma (coluna D)
+            let alunosFiltrados = todosAlunos.filter(a => a.turmaCodigo === turmaCodigoAlvo);
             
             let alunosDisponiveis = alunosFiltrados.filter(a => !alunosJaSorteados.has(a.nome));
             
@@ -896,7 +924,7 @@
                     
                     historicoSorteios.push({
                         nome: alunoSorteado.nome,
-                        turma: turmaAlvo,
+                        turma: turmaCodigoAlvo,
                         horario: new Date().toLocaleTimeString('pt-BR')
                     });
                     
@@ -916,9 +944,6 @@
                         displayNome.classList.remove('vencedor-animacao');
                         
                         atualizarDisplayHistorico();
-                        
-                        console.log("Histórico de sorteios:", historicoSorteios);
-                        console.log("Alunos já sorteados:", Array.from(alunosJaSorteados));
                     }, 6000);
                 }
             }
@@ -934,6 +959,7 @@
 
         function ocluiSorteio() { if(!sorteioEmAndamento) fecharModoSorteio(); }
 
+        // ===== FUNÇÕES DE MONTAGEM DE SLIDES =====
         function montarPaginas(lista, titulo, col, idStart) {
             const container = document.getElementById("container-slides");
             let localId = idStart;
@@ -1143,7 +1169,7 @@
             const container = document.getElementById("container-slides");
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-sorteio";
-            const turmasDisponiveis = [...new Set(todosAlunos.map(a => a.turma))].sort();
+            const turmasDisponiveis = todasTurmas.map(t => t.codigo).sort();
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
                     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">Sorteio de Brindes • Frequência Ouro</div>
@@ -1206,82 +1232,6 @@
             iniciarAnimacao();
         }
 
-        async function carregarDados() {
-            try {
-                carregarSorteadosDoStorage();
-                
-                const res = await fetch(LINK_PLANILHA + "&cache=" + Date.now());
-                if(!res.ok) throw new Error("Planilha Principal falhou");
-                const txt = await res.text();
-                
-                const delimitador = txt.includes(';') ? ';' : ',';
-                const linhas = txt.split(/\r?\n/);
-                todasTurmas = [];
-                
-                for (let i = 1; i < linhas.length; i++) {
-                    if (linhas[i].trim().length < 3) continue;
-                    const cols = linhas[i].split(new RegExp(`\\s*${delimitador}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (cols.length >= 2) {
-                        const nome = cols[0]; 
-                        let strNum = cols[1].replace(/[^0-9,-]/g, '').replace(',', '.');
-                        const freq = parseFloat(strNum);
-                        const turno = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        const trof = parseInt(cols[3]) || 0;
-                        if (!isNaN(freq) && nome.length > 0) todasTurmas.push({ nome, valor: freq, bloco: turno.includes("man") ? "manha":"tarde", trofeus: trof });
-                    }
-                }
-
-                if (todasTurmas.length === 0) throw new Error("Nenhuma turma foi encontrada. Verifique as colunas.");
-
-                try {
-                    const resAlunos = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
-                    const txtAlunos = await resAlunos.text();
-                    const dAlunos = txtAlunos.includes(';') ? ';' : ',';
-                    const linhasAlunos = txtAlunos.split(/\r?\n/);
-                    todosAlunos = [];
-                    for (let j = 1; j < linhasAlunos.length; j++) {
-                        const colsA = linhasAlunos[j].split(new RegExp(`\\s*${dAlunos}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                        if (colsA.length >= 2 && colsA[0] && colsA[1]) {
-                            todosAlunos.push({ nome: colsA[0].trim(), turma: colsA[1].trim() });
-                        }
-                    }
-                    console.log(`✅ ${todosAlunos.length} alunos carregados da planilha`);
-                } catch(eA) { 
-                    console.warn("Planilha de Alunos pulada.", eA); 
-                }
-
-                try {
-                    const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
-                    const txtHist = await resHist.text();
-                    const dHist = txtHist.includes(';') ? ';' : ',';
-                    const linhasHist = txtHist.split(/\r?\n/);
-                    historicoEscola = [];
-                    for(let k = 1; k < linhasHist.length; k++) {
-                        const colsH = linhasHist[k].split(new RegExp(`\\s*${dHist}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                        if(colsH.length >= 2) {
-                            let semNome = colsH[0]; if(semNome.toLowerCase() !== "esta") { semNome = "S" + semNome; }
-                            let strH = colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.');
-                            const medVal = parseFloat(strH);
-                            if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
-                        }
-                    }
-                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
-                } catch(errH) { console.warn("Histórico pulado."); }
-
-                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-                if (historicoEscola.length > 0 && historicoEscola[historicoEscola.length - 1].semana.toLowerCase() === "esta") {
-                    historicoEscola[historicoEscola.length - 1].media = mediaGeralEscolaGlobal;
-                }
-                
-                atualizarTextoSemana(); 
-                gerarSlides();
-
-            } catch (err) { 
-                exibirErroTerminal(err.message);
-                console.error(err); 
-            }
-        }
-
         function iniciarAnimacao() {
             if (loopInterval) clearTimeout(loopInterval);
             cancelAnimationFrame(animBarra);
@@ -1306,6 +1256,7 @@
             }
         }
 
+        // Inicialização
         window.addEventListener('DOMContentLoaded', carregarDados);
     </script>
 </body>
