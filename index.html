@@ -246,13 +246,33 @@
         let alunosJaSorteados = new Set();
         let historicoSorteios = [];
 
+        // ===== FUNÇÃO PARA NORMALIZAR CÓDIGO DE TURMA =====
+        function extrairCodigoTurma(nomeTurma) {
+            if (!nomeTurma) return '';
+            
+            return nomeTurma
+                .toString()
+                .toUpperCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/º|ª|°/g, "")
+                .replace(/-/g, "")
+                .replace(/\bEF\b/g, "")
+                .replace(/\bEM\b/g, "")
+                .replace(/\bANOS\b/g, "")
+                .replace(/\bANO\b/g, "")
+                .replace(/\bSERIE\b/g, "")
+                .replace(/\bSÉRIE\b/g, "")
+                .replace(/\s+/g, "")
+                .trim();
+        }
+
         // ===== FUNÇÕES DE STORAGE =====
         function carregarSorteadosDoStorage() {
             try {
                 const sorteadosSalvos = localStorage.getItem('alunosSorteados');
                 if (sorteadosSalvos) {
-                    const listaSalva = JSON.parse(sorteadosSalvos);
-                    alunosJaSorteados = new Set(listaSalva);
+                    alunosJaSorteados = new Set(JSON.parse(sorteadosSalvos));
                 }
             } catch(e) {}
         }
@@ -263,77 +283,43 @@
             } catch(e) {}
         }
 
-        // ===== FUNÇÕES DE CARREGAMENTO =====
-        async function carregarDados() {
-            try {
-                carregarSorteadosDoStorage();
+        // ===== FUNÇÃO PARA CARREGAR FREQUÊNCIA =====
+        async function carregarFrequencia() {
+            const resFreq = await fetch(LINK_FREQUENCIA + "&cache=" + Date.now());
+            if(!resFreq.ok) throw new Error("Planilha de Frequência falhou");
+            const txtFreq = await resFreq.text();
+            const dFreq = txtFreq.includes(';') ? ';' : ',';
+            const linhasFreq = txtFreq.split(/\r?\n/);
+            todasTurmas = [];
+            
+            for (let i = 1; i < linhasFreq.length; i++) {
+                if (linhasFreq[i].trim().length < 3) continue;
+                const cols = linhasFreq[i].split(new RegExp(`\\s*${dFreq}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
                 
-                // Carrega frequência
-                const resFreq = await fetch(LINK_FREQUENCIA + "&cache=" + Date.now());
-                if(!resFreq.ok) throw new Error("Planilha de Frequência falhou");
-                const txtFreq = await resFreq.text();
-                const dFreq = txtFreq.includes(';') ? ';' : ',';
-                const linhasFreq = txtFreq.split(/\r?\n/);
-                todasTurmas = [];
-                
-                for (let i = 1; i < linhasFreq.length; i++) {
-                    if (linhasFreq[i].trim().length < 3) continue;
-                    const cols = linhasFreq[i].split(new RegExp(`\\s*${dFreq}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (cols.length >= 5) {
-                        const nome = cols[0];
-                        let strNum = cols[1].replace(/[^0-9,-]/g, '').replace(',', '.');
-                        const freq = parseFloat(strNum);
-                        const bloco = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                        const trof = parseInt(cols[3]) || 0;
-                        const codigoTurma = cols[4] || nome;
-                        if (!isNaN(freq) && nome.length > 0) {
-                            todasTurmas.push({ 
-                                nome, 
-                                valor: freq, 
-                                bloco: bloco.includes("man") ? "manha":"tarde", 
-                                trofeus: trof,
-                                codigo: codigoTurma
-                            });
-                        }
+                if (cols.length >= 4) {
+                    const nome = cols[0];
+                    let strNum = cols[1].replace(/[^0-9,-]/g, '').replace(',', '.');
+                    const freq = parseFloat(strNum);
+                    const bloco = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                    const trof = parseInt(cols[3]) || 0;
+                    const codigo = extrairCodigoTurma(nome);
+                    
+                    if (!isNaN(freq) && nome.length > 0) {
+                        todasTurmas.push({ 
+                            nome, 
+                            valor: freq, 
+                            bloco: bloco.includes("man") ? "manha":"tarde", 
+                            trofeus: trof,
+                            codigo: codigo
+                        });
                     }
                 }
-
-                if (todasTurmas.length === 0) throw new Error("Nenhuma turma encontrada na aba frequencia");
-
-                // Carrega alunos
-                await carregarAlunos();
-
-                // Carrega histórico
-                try {
-                    const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
-                    const txtHist = await resHist.text();
-                    const dHist = txtHist.includes(';') ? ';' : ',';
-                    const linhasHist = txtHist.split(/\r?\n/);
-                    historicoEscola = [];
-                    for(let k = 1; k < linhasHist.length; k++) {
-                        const colsH = linhasHist[k].split(new RegExp(`\\s*${dHist}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                        if(colsH.length >= 2) {
-                            let semNome = colsH[0];
-                            let strH = colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.');
-                            const medVal = parseFloat(strH);
-                            if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
-                        }
-                    }
-                    if (historicoEscola.length > 10) { historicoEscola = historicoEscola.slice(-10); }
-                } catch(errH) { console.warn("Histórico pulado."); }
-
-                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-                
-                atualizarTextoSemana(); 
-                gerarSlides();
-                console.log(`✅ ${todasTurmas.length} turmas, ${todosAlunos.length} alunos carregados`);
-
-            } catch (err) { 
-                exibirErroTerminal(err.message);
-                console.error(err); 
             }
+            console.log(`✅ ${todasTurmas.length} turmas carregadas`);
+            console.log("Exemplos:", todasTurmas.slice(0, 3).map(t => `${t.nome} → ${t.codigo}`));
         }
 
+        // ===== FUNÇÃO PARA CARREGAR ALUNOS =====
         async function carregarAlunos() {
             try {
                 const resposta = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
@@ -347,17 +333,21 @@
                 for (let j = 1; j < linhas.length; j++) {
                     const colunas = linhas[j].split(new RegExp(`\\s*${delimitador}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
                     
-                    // Estrutura: aluno_id, nome_aluno, turma_ref, turma_codigo
-                    if (colunas.length >= 4 && colunas[1] && colunas[3]) {
+                    if (colunas.length >= 4 && colunas[1]) {
+                        const turmaRef = colunas[2] || '';
+                        const turmaCodigo = colunas[3] || '';
+                        
                         todosAlunos.push({ 
                             id: colunas[0] || '',
                             nome: colunas[1].trim(),
-                            turmaRef: colunas[2] || '',
-                            turmaCodigo: colunas[3].trim()
+                            turmaRef: turmaRef,
+                            turmaCodigo: turmaCodigo,
+                            codigoNormalizado: extrairCodigoTurma(turmaCodigo || turmaRef)
                         });
                     }
                 }
                 console.log(`✅ ${todosAlunos.length} alunos carregados`);
+                console.log("Exemplos:", todosAlunos.slice(0, 3).map(a => `${a.nome} → ${a.codigoNormalizado}`));
                 return true;
             } catch (erro) {
                 console.error("❌ Erro ao carregar alunos:", erro);
@@ -365,6 +355,51 @@
             }
         }
 
+        // ===== FUNÇÃO PARA CARREGAR HISTÓRICO =====
+        async function carregarHistorico() {
+            try {
+                const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
+                const txtHist = await resHist.text();
+                const dHist = txtHist.includes(';') ? ';' : ',';
+                const linhasHist = txtHist.split(/\r?\n/);
+                historicoEscola = [];
+                for(let k = 1; k < linhasHist.length; k++) {
+                    const colsH = linhasHist[k].split(new RegExp(`\\s*${dHist}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
+                    if(colsH.length >= 2) {
+                        let semNome = colsH[0];
+                        let strH = colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.');
+                        const medVal = parseFloat(strH);
+                        if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
+                    }
+                }
+                if (historicoEscola.length > 10) historicoEscola = historicoEscola.slice(-10);
+                console.log(`✅ ${historicoEscola.length} registros de histórico carregados`);
+            } catch(errH) { 
+                console.warn("Histórico pulado.", errH); 
+            }
+        }
+
+        // ===== FUNÇÃO PRINCIPAL DE CARREGAMENTO =====
+        async function carregarDados() {
+            try {
+                carregarSorteadosDoStorage();
+                await carregarFrequencia();
+                await carregarAlunos();
+                await carregarHistorico();
+                
+                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+                
+                atualizarTextoSemana(); 
+                gerarSlides();
+                console.log(`✅ Sistema carregado: ${todasTurmas.length} turmas, ${todosAlunos.length} alunos`);
+
+            } catch (err) { 
+                exibirErroTerminal(err.message);
+                console.error(err); 
+            }
+        }
+
+        // ===== FUNÇÕES DE ATUALIZAÇÃO =====
         async function recarregarListaAlunos() {
             const sucesso = await carregarAlunos();
             if (sucesso) {
@@ -398,10 +433,21 @@
         function atualizarSeletorTurmasSorteio() {
             const seletor = document.getElementById("seletor-turma-sorteio");
             if (!seletor) return;
-            const turmasDisponiveis = todasTurmas.map(t => t.codigo).sort();
+            
+            const codigosAlunos = new Set(todosAlunos.map(a => a.codigoNormalizado));
+            const turmasComAlunos = todasTurmas.filter(t => codigosAlunos.has(t.codigo));
+            
+            console.log(`📊 ${turmasComAlunos.length} turmas com alunos encontradas`);
+            console.log("Códigos das turmas:", todasTurmas.map(t => `${t.nome} → ${t.codigo}`).join(", "));
+            console.log("Códigos dos alunos:", [...codigosAlunos].sort().join(", "));
+            
+            const turmasParaMostrar = turmasComAlunos.length > 0 ? turmasComAlunos : todasTurmas;
             const turmaAtual = seletor.value;
-            seletor.innerHTML = turmasDisponiveis.map(t => 
-                `<option value="${t}" ${t === turmaAtual ? 'selected' : ''}>${t}</option>`
+            
+            seletor.innerHTML = turmasParaMostrar.map(t => 
+                `<option value="${t.codigo}" data-nome="${t.nome}" ${t.codigo === turmaAtual ? 'selected' : ''}>
+                    ${t.nome}
+                </option>`
             ).join('');
         }
 
@@ -410,9 +456,14 @@
             const modal = document.getElementById('modal-sorteados');
             modal.classList.add('active');
             const seletorTurma = document.getElementById('seletor-turma-modal');
-            const turmasDisponiveis = todasTurmas.map(t => t.codigo).sort();
+            
+            const turmasDisponiveis = todasTurmas.sort((a, b) => a.nome.localeCompare(b.nome));
+            
             seletorTurma.innerHTML = '<option value="">Todas as Turmas</option>' + 
-                turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join('');
+                turmasDisponiveis.map(t => 
+                    `<option value="${t.codigo}" data-nome="${t.nome}">${t.nome}</option>`
+                ).join('');
+            
             atualizarListaAlunosModal();
         }
 
@@ -424,16 +475,18 @@
 
         function atualizarListaAlunosModal() {
             const seletorTurma = document.getElementById('seletor-turma-modal');
-            const turmaSelecionada = seletorTurma.value;
+            const turmaCodigoSelecionado = seletorTurma.value;
             const listaContainer = document.getElementById('lista-alunos-modal');
             
             let alunosParaMostrar = todosAlunos;
-            if (turmaSelecionada) {
-                alunosParaMostrar = todosAlunos.filter(a => a.turmaCodigo === turmaSelecionada);
+            if (turmaCodigoSelecionado) {
+                alunosParaMostrar = todosAlunos.filter(a => 
+                    a.codigoNormalizado === turmaCodigoSelecionado
+                );
             }
             
             if (alunosParaMostrar.length === 0) {
-                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado.</p>';
+                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado para esta turma.</p>';
                 return;
             }
             
@@ -842,9 +895,15 @@
             if (sorteioEmAndamento) return;
             const seletor = document.getElementById("seletor-turma-sorteio"); 
             const turmaCodigoAlvo = seletor.value;
+            const turmaNomeAlvo = seletor.options[seletor.selectedIndex]?.dataset.nome || '';
             
-            // Filtra alunos pelo código da turma (coluna D)
-            let alunosFiltrados = todosAlunos.filter(a => a.turmaCodigo === turmaCodigoAlvo);
+            console.log(`🔍 Sorteio para: ${turmaNomeAlvo} (Código: ${turmaCodigoAlvo})`);
+            
+            let alunosFiltrados = todosAlunos.filter(a => 
+                a.codigoNormalizado === turmaCodigoAlvo
+            );
+            
+            console.log(`📊 ${alunosFiltrados.length} alunos encontrados`);
             
             let alunosDisponiveis = alunosFiltrados.filter(a => !alunosJaSorteados.has(a.nome));
             
@@ -853,15 +912,17 @@
             const btnFechar = document.getElementById("btn-fechar-sorteio");
             
             if (alunosFiltrados.length === 0) { 
-                displayNome.innerText = "Sem alunos na turma!"; 
+                displayNome.innerText = "Sem alunos!";
+                ajustarFonteNomeSorteado("Sem alunos!");
+                console.error("❌ Nenhum aluno encontrado para:", turmaCodigoAlvo);
+                console.log("Códigos disponíveis:", [...new Set(todosAlunos.map(a => a.codigoNormalizado))].sort());
                 return; 
             }
 
             if (alunosDisponiveis.length === 0) {
                 displayNome.innerText = "Todos já sorteados!";
                 ajustarFonteNomeSorteado("Todos já sorteados!");
-                
-                if (confirm('Todos os alunos desta turma já foram sorteados. Deseja resetar a lista de sorteados?')) {
+                if (confirm('Todos os alunos desta turma já foram sorteados. Deseja resetar?')) {
                     alunosJaSorteados.clear();
                     salvarSorteadosNoStorage();
                     alunosDisponiveis = [...alunosFiltrados];
@@ -882,7 +943,6 @@
             seletor.disabled = true; 
             
             let listaEmbaralhada = embaralharArray([...alunosDisponiveis]);
-            
             const alunoSorteado = listaEmbaralhada[Math.floor(Math.random() * listaEmbaralhada.length)];
             
             let giros = 0; 
@@ -924,7 +984,7 @@
                     
                     historicoSorteios.push({
                         nome: alunoSorteado.nome,
-                        turma: turmaCodigoAlvo,
+                        turma: turmaNomeAlvo,
                         horario: new Date().toLocaleTimeString('pt-BR')
                     });
                     
@@ -940,9 +1000,7 @@
                         btn.style.display = "inline-block"; 
                         btn.innerText = "🎰 REFAZER SORTEIO"; 
                         btnFechar.style.display = "inline-block";
-                        
                         displayNome.classList.remove('vencedor-animacao');
-                        
                         atualizarDisplayHistorico();
                     }, 6000);
                 }
@@ -1169,7 +1227,7 @@
             const container = document.getElementById("container-slides");
             const slide = document.createElement("div");
             slide.className = "pagina-slide w-full h-full pt-2 slide-tipo-sorteio";
-            const turmasDisponiveis = todasTurmas.map(t => t.codigo).sort();
+            const turmasDisponiveis = todasTurmas.sort((a, b) => a.nome.localeCompare(b.nome));
             slide.innerHTML = `
                 <div class="flex flex-col h-full items-center justify-start max-w-4xl mx-auto">
                     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-14 rounded-2xl font-black text-xl mb-4 shadow-md uppercase tracking-wider border border-white/10">Sorteio de Brindes • Frequência Ouro</div>
@@ -1177,7 +1235,7 @@
                         <div class="w-full flex gap-4 items-center justify-center bg-slate-50 p-3 rounded-2xl border border-slate-200/60 shadow-inner">
                             <label class="font-black text-slate-700 text-sm uppercase tracking-wide shrink-0">Selecione a Turma Premiada:</label>
                             <select id="seletor-turma-sorteio" class="bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 font-extrabold text-slate-800 uppercase text-sm focus:outline-none focus:border-indigo-500 shadow-sm">
-                                ${turmasDisponiveis.map(t => `<option value="${t}">${t}</option>`).join("")}
+                                ${turmasDisponiveis.map(t => `<option value="${t.codigo}" data-nome="${t.nome}">${t.nome}</option>`).join("")}
                             </select>
                         </div>
                         
