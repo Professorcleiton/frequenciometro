@@ -24,7 +24,7 @@ const freq=[['Turma','Freq','Turno','Troféus'],['6º Ano A','96,5%','Manhã','2
  // 1) Chave na URL é guardada e removida do endereço
  let ctx=mkCtx('https://anchietafrequencia.vercel.app/?chave=ABC123def456ghi789jkl012',u=>
    u.includes('aba=frequenciometro_alunos')?{json:{status:'success',alunos:[['id','nome','turma','cod'],['1','JOÃO','6º Ano A','6A'],['2','ANA','6º Ano A','6A']],sorteados:['ANA']}}
-   : u.includes('aba=frequenciometro')?{json:{status:'success',frequencia:freq,historico:[['S','M'],['S1','91,2']],trimestres:[{nome:'1º Trimestre',fechado:91.9},{nome:'2º Trimestre',fechado:null},{nome:'3º Trimestre',fechado:null}]}}
+   : u.includes('aba=frequenciometro')?{json:{status:'success',frequencia:freq,historico:[['S','M'],['S1','91,2']],medias:{escola:86.09,manha:85.5,tarde:87.1,metodo:'ponderada'},trimestres:[{nome:'1º Trimestre',fechado:91.9},{nome:'2º Trimestre',fechado:null},{nome:'3º Trimestre',fechado:null}]}}
    : {json:{status:'success'}});
  assert.strictEqual(store.freq_chave_tv,'ABC123def456ghi789jkl012'); assert.strictEqual(ctx._url,'/');
  await vm.runInContext('carregarDados()',ctx);
@@ -35,6 +35,7 @@ const freq=[['Turma','Freq','Turno','Troféus'],['6º Ano A','96,5%','Manhã','2
  assert(reqs.some(r=>r.u.includes('chave=ABC123')),'manda a chave');
  // trimestres: 1º fechado, 2º parcial
  assert.strictEqual(vm.runInContext('trimestresPlanilha.length',ctx),3);
+ assert.strictEqual(vm.runInContext('mediaGeralEscolaGlobal',ctx),86.09,'usa a média ponderada do SIGA');
  // registrar sorteio manual
  vm.runInContext('toggleAlunoSorteado("JOÃO", true)',ctx); await new Promise(r=>setImmediate(r));
  const post=reqs.find(r=>r.o&&r.o.method==='POST'); const b=JSON.parse(post.o.body);
@@ -53,5 +54,13 @@ const freq=[['Turma','Freq','Turno','Troféus'],['6º Ano A','96,5%','Manhã','2
  assert.strictEqual(vm.runInContext('todosAlunos.length',ctx),0);
  assert(/chave/.test(vm.runInContext('motivoSemAlunos',ctx)));
  assert(!reqs.some(r=>r.u.includes('1866544411')),'NUNCA baixa a lista pública de alunos');
+ // 3) Dados reais da escola: "92.77", linha Esta zerada e Ensino Médio
+ assert.strictEqual(vm.runInContext('lerNumero("92.77")',ctx),92.77);
+ assert.strictEqual(vm.runInContext('lerNumero("91,26")',ctx),91.26);
+ assert.strictEqual(vm.runInContext('extrairCodigoTurma("1º A - NEM")',ctx),vm.runInContext('extrairCodigoTurma("1NEM")',ctx));
+ assert.strictEqual(vm.runInContext('extrairCodigoTurma("3º B - NEM")',ctx),'3BNEM');
+ assert.strictEqual(vm.runInContext('extrairCodigoTurma("6º A - EF")',ctx),vm.runInContext('extrairCodigoTurma("6A")',ctx));
+ vm.runInContext('processarHistorico([["Semana","Media"],["1","92.77"],["22","89,8"],["Esta","0"]])',ctx);
+ assert.deepStrictEqual(JSON.parse(vm.runInContext('JSON.stringify(historicoEscola)',ctx)),[{semana:'1',media:92.77},{semana:'22',media:89.8}]);
  console.log('FREQUENCIÔMETRO (front-end): TODOS OS TESTES PASSARAM');
 })().catch(e=>{console.error('FALHOU:',e.message);process.exit(1)});
