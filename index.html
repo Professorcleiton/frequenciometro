@@ -269,6 +269,7 @@
         let alunosJaSorteados = new Set();
         let historicoSorteios = [];
         let trimestresPlanilha = null;      // [{ nome, fechado }] vindo do SIGA
+        let mediasOficiais = null;          // { escola, manha, tarde } = Σ presenças ÷ Σ aulas (SIGA)
         let motivoSemAlunos = '';           // por que a lista de alunos não carregou
 
         function esc(v) {
@@ -333,6 +334,7 @@
                 const d = await buscarJSON(`${SIGA_API}?aba=frequenciometro&cache=${Date.now()}`);
                 if (d && d.status === 'success' && Array.isArray(d.frequencia) && d.frequencia.length > 1) {
                     trimestresPlanilha = Array.isArray(d.trimestres) ? d.trimestres : null;
+                    mediasOficiais = d.medias && typeof d.medias.escola === 'number' ? d.medias : null;
                     return { frequencia: d.frequencia, historico: d.historico || [] };
                 }
                 throw new Error(d && d.message ? d.message : 'SIGA sem dados do frequenciômetro');
@@ -453,7 +455,9 @@
                 processarHistorico(publicos.historico);
                 if (todasTurmas.length === 0) throw new Error('Nenhuma turma com frequência na planilha.');
 
-                mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
+                // Média oficial (Σ presenças ÷ Σ aulas) quando o SIGA envia; senão, média simples das turmas
+                mediaGeralEscolaGlobal = mediasOficiais ? mediasOficiais.escola
+                    : todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
 
                 atualizarTextoSemana();
                 gerarSlides();
@@ -1379,8 +1383,9 @@
                 currentGlobalId = montarSlideRankingTurno(tarde, "Ranking Semanal • Tarde", "bg-gradient-to-r from-orange-600 to-yellow-600", currentGlobalId);
             }
 
-            const mediaManha = manha.length > 0 ? manha.reduce((acc, t) => acc + t.valor, 0) / manha.length : 0;
-            const mediaTarde = tarde.length > 0 ? tarde.reduce((acc, t) => acc + t.valor, 0) / tarde.length : 0;
+            const simples = l => l.length > 0 ? l.reduce((acc, t) => acc + t.valor, 0) / l.length : 0;
+            const mediaManha = (mediasOficiais && typeof mediasOficiais.manha === 'number') ? mediasOficiais.manha : simples(manha);
+            const mediaTarde = (mediasOficiais && typeof mediasOficiais.tarde === 'number') ? mediasOficiais.tarde : simples(tarde);
             if (manha.length > 0 && tarde.length > 0) {
                 currentGlobalId = montarSlideDisputaTurnos(mediaManha, mediaTarde, currentGlobalId);
             }

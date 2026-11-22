@@ -24,7 +24,7 @@ const freq=[['Turma','Freq','Turno','Troféus'],['6º Ano A','96,5%','Manhã','2
  // 1) Chave na URL é guardada e removida do endereço
  let ctx=mkCtx('https://anchietafrequencia.vercel.app/?chave=ABC123def456ghi789jkl012',u=>
    u.includes('aba=frequenciometro_alunos')?{json:{status:'success',alunos:[['id','nome','turma','cod'],['1','JOÃO','6º Ano A','6A'],['2','ANA','6º Ano A','6A']],sorteados:['ANA']}}
-   : u.includes('aba=frequenciometro')?{json:{status:'success',frequencia:freq,historico:[['S','M'],['S1','91,2']],trimestres:[{nome:'1º Trimestre',fechado:91.9},{nome:'2º Trimestre',fechado:null},{nome:'3º Trimestre',fechado:null}]}}
+   : u.includes('aba=frequenciometro')?{json:{status:'success',frequencia:freq,historico:[['S','M'],['S1','91,2']],medias:{escola:86.09,manha:85.5,tarde:87.1,metodo:'ponderada'},trimestres:[{nome:'1º Trimestre',fechado:91.9},{nome:'2º Trimestre',fechado:null},{nome:'3º Trimestre',fechado:null}]}}
    : {json:{status:'success'}});
  assert.strictEqual(store.freq_chave_tv,'ABC123def456ghi789jkl012'); assert.strictEqual(ctx._url,'/');
  await vm.runInContext('carregarDados()',ctx);
@@ -35,6 +35,7 @@ const freq=[['Turma','Freq','Turno','Troféus'],['6º Ano A','96,5%','Manhã','2
  assert(reqs.some(r=>r.u.includes('chave=ABC123')),'manda a chave');
  // trimestres: 1º fechado, 2º parcial
  assert.strictEqual(vm.runInContext('trimestresPlanilha.length',ctx),3);
+ assert.strictEqual(vm.runInContext('mediaGeralEscolaGlobal',ctx),86.09,'usa a média ponderada do SIGA');
  // registrar sorteio manual
  vm.runInContext('toggleAlunoSorteado("JOÃO", true)',ctx); await new Promise(r=>setImmediate(r));
  const post=reqs.find(r=>r.o&&r.o.method==='POST'); const b=JSON.parse(post.o.body);
