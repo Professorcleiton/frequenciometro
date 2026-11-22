@@ -53,5 +53,13 @@ const freq=[['Turma','Freq','Turno','Troféus'],['6º Ano A','96,5%','Manhã','2
  assert.strictEqual(vm.runInContext('todosAlunos.length',ctx),0);
  assert(/chave/.test(vm.runInContext('motivoSemAlunos',ctx)));
  assert(!reqs.some(r=>r.u.includes('1866544411')),'NUNCA baixa a lista pública de alunos');
+ // 3) Dados reais da escola: "92.77", linha Esta zerada e Ensino Médio
+ assert.strictEqual(vm.runInContext('lerNumero("92.77")',ctx),92.77);
+ assert.strictEqual(vm.runInContext('lerNumero("91,26")',ctx),91.26);
+ assert.strictEqual(vm.runInContext('extrairCodigoTurma("1º A - NEM")',ctx),vm.runInContext('extrairCodigoTurma("1NEM")',ctx));
+ assert.strictEqual(vm.runInContext('extrairCodigoTurma("3º B - NEM")',ctx),'3BNEM');
+ assert.strictEqual(vm.runInContext('extrairCodigoTurma("6º A - EF")',ctx),vm.runInContext('extrairCodigoTurma("6A")',ctx));
+ vm.runInContext('processarHistorico([["Semana","Media"],["1","92.77"],["22","89,8"],["Esta","0"]])',ctx);
+ assert.deepStrictEqual(JSON.parse(vm.runInContext('JSON.stringify(historicoEscola)',ctx)),[{semana:'1',media:92.77},{semana:'22',media:89.8}]);
  console.log('FREQUENCIÔMETRO (front-end): TODOS OS TESTES PASSARAM');
 })().catch(e=>{console.error('FALHOU:',e.message);process.exit(1)});

@@ -303,7 +303,15 @@
                 .replace(/\bSERIE\b/g, "")
                 .replace(/\bSÉRIE\b/g, "")
                 .replace(/\s+/g, "")
-                .trim();
+                .trim()
+                // "1º A - NEM" (aba frequencia) e "1NEM" (aba Alunos) são a mesma turma
+                .replace(/^(\d)A(NEM|FD|AGRO)$/, "$1$2");
+        }
+
+        // Lê "91,26", "92.77", "90%" → número (antes "92.77" virava 9277)
+        function lerNumero(v) {
+            const n = parseFloat(String(v == null ? '' : v).replace('%', '').trim().replace(',', '.').replace(/[^0-9.\-]/g, ''));
+            return isNaN(n) ? NaN : n;
         }
 
         // ===== LEITURA =====
@@ -346,7 +354,7 @@
                 const cols = linhas[i].map(c => String(c).trim());
                 if (cols.join('').length < 3 || cols.length < 4) continue;
                 const nome = cols[0];
-                const freq = parseFloat(cols[1].replace(/[^0-9,-]/g, '').replace(',', '.'));
+                const freq = lerNumero(cols[1]);
                 const bloco = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
                 const trof = parseInt(cols[3]) || 0;
                 if (!isNaN(freq) && nome.length > 0) {
@@ -361,8 +369,9 @@
             for (let k = 1; k < linhas.length; k++) {
                 const colsH = linhas[k].map(c => String(c).trim());
                 if (colsH.length < 2) continue;
-                const medVal = parseFloat(colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.'));
-                if (!isNaN(medVal)) historicoEscola.push({ semana: colsH[0], media: medVal });
+                const medVal = lerNumero(colsH[1]);
+                // ignora linhas zeradas (ex.: a antiga linha "Esta" com 0)
+                if (!isNaN(medVal) && medVal > 0) historicoEscola.push({ semana: colsH[0], media: medVal });
             }
             if (historicoEscola.length > 10) historicoEscola = historicoEscola.slice(-10);
         }
