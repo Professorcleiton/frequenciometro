@@ -7,7 +7,17 @@ body {
     position: relative;
     margin: 0;
     padding: 0;
+    /* Página do tamanho exato da tela: a barra preta fica sempre no rodapé,
+       qualquer que seja a altura do slide */
+    height: 100vh;
+    height: 100dvh;
 }
+
+/* Cabeçalho em cima, slides no meio, barra preta embaixo — sempre */
+body { display: flex; flex-direction: column; }
+body > header { flex-shrink: 0; }
+#container-slides { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+#container-slides + div { flex-shrink: 0; margin-top: auto; }   /* rodapé com a barra preta */
 
 /* Outros Estilos Globais */
 .barra-frequencia { transition: width 1.5s ease-in-out; }
