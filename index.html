@@ -147,7 +147,6 @@
 </head>
 <body class="font-sans flex flex-col antialiased text-slate-800">
 
-    <div class="fundo-textura"></div>
 
     <!-- Modal para gerenciar alunos sorteados -->
     <div id="modal-sorteados" class="modal-overlay">
@@ -187,7 +186,7 @@
         <div class="flex items-center gap-5">
             <img src="nucleo.png" alt="NRE" class="h-12 object-contain filter drop-shadow-sm">
             <div class="h-10 w-[2px] bg-slate-300/60"></div>
-            <img src="Design sem nome (1) (1).jpg" alt="CCM Anchieta" class="h-16 object-contain rounded-xl shadow-sm border border-white">
+            <img src="logo-ccm.jpg" alt="CCM Anchieta" class="h-16 object-contain rounded-xl shadow-sm border border-white">
         </div>
         <div class="text-center">
             <h1 class="text-3xl font-black bg-gradient-to-r from-blue-900 to-indigo-950 bg-clip-text text-transparent uppercase leading-none tracking-tight">CCM ANCHIETA</h1>
@@ -234,27 +233,67 @@
     </div>
 
     <script>
-        // ===== LINKS DA PLANILHA =====
+        // ===== FONTES DE DADOS =====
+        // Os dados vêm do SIGA (Apps Script). Os números das turmas são públicos.
+        // A LISTA DE ALUNOS só é entregue com a chave da TV (veja CHAVE_TV abaixo).
+        const SIGA_API = "https://script.google.com/macros/s/AKfycbym9DGWB6hBj7nEmoWFM0vmErbzbq4VVobxY4PYRVEsgPmu7A98OxjLfiFY6D4E_ESUXw/exec";
+
+        // Plano B TEMPORÁRIO, só para os números (frequência e histórico), enquanto o
+        // backend novo não estiver instalado. Depois de instalado, mude para false e
+        // interrompa a publicação da planilha (Arquivo → Compartilhar → Publicar na Web).
+        const USAR_PLANILHA_PUBLICADA = true;
         const LINK_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQV2zvnMyHFvZKDraWNcSyCMhfyKiMn0UU8EppGHQkDGs1lh5iyYxvICV522gkVrMKKtxxcd411IjJQ/pub";
         const LINK_FREQUENCIA = `${LINK_BASE}?gid=1746538498&single=true&output=csv`;
-        const LINK_ALUNOS = `${LINK_BASE}?gid=1866544411&single=true&output=csv`;
         const LINK_HISTORICO = `${LINK_BASE}?gid=541390615&single=true&output=csv`;
 
+        // Chave da TV: abra uma vez https://anchietafrequencia.vercel.app/?chave=XXXX
+        // A TV guarda a chave e a tira do endereço. A chave é gerada no Apps Script (FREQ_gerarChaveTV).
+        const CHAVE_TV = (function () {
+            try {
+                const url = new URL(location.href);
+                const nova = url.searchParams.get('chave');
+                if (nova) {
+                    localStorage.setItem('freq_chave_tv', nova.trim());
+                    url.searchParams.delete('chave');
+                    history.replaceState(null, '', url.pathname + url.search + url.hash);
+                }
+                return localStorage.getItem('freq_chave_tv') || '';
+            } catch (e) { return ''; }
+        })();
+
+        const ATUALIZAR_A_CADA_MS = 10 * 60 * 1000;    // relê os dados a cada 10 min
+        const RECARREGAR_PAGINA_A_CADA_MS = 6 * 60 * 60 * 1000; // recarrega a página a cada 6 h (TV ligada o dia todo)
+
         // ===== VARIÁVEIS GLOBAIS =====
-        let notaFechada1Trimestre = 91.9; 
         let todasTurmas = [], todosAlunos = [], historicoEscola = [], indexSlide = 0, loopInterval = null, isPaused = false, tempoSlideMs = 9000, tInicioSlide = 0, tRestante = 9000, animBarra = null, timersPagina = [], sorteioEmAndamento = false, mediaGeralEscolaGlobal = 0;
         let alunosJaSorteados = new Set();
         let historicoSorteios = [];
+        let trimestresPlanilha = null;      // [{ nome, fechado }] vindo do SIGA
+        let motivoSemAlunos = '';           // por que a lista de alunos não carregou
+
+        function esc(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // Número aleatório com o gerador criptográfico do navegador (sorteio justo)
+        function aleatorioAte(n) {
+            if (window.crypto && crypto.getRandomValues) {
+                const limite = Math.floor(0x100000000 / n) * n;
+                const buf = new Uint32Array(1);
+                do { crypto.getRandomValues(buf); } while (buf[0] >= limite);
+                return buf[0] % n;
+            }
+            return Math.floor(Math.random() * n);
+        }
 
         // ===== FUNÇÃO PARA NORMALIZAR CÓDIGO DE TURMA =====
         function extrairCodigoTurma(nomeTurma) {
             if (!nomeTurma) return '';
-            
             return nomeTurma
                 .toString()
                 .toUpperCase()
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[̀-ͯ]/g, "")
                 .replace(/º|ª|°/g, "")
                 .replace(/-/g, "")
                 .replace(/\bEF\b/g, "")
@@ -267,137 +306,164 @@
                 .trim();
         }
 
-        // ===== FUNÇÕES DE STORAGE =====
-        function carregarSorteadosDoStorage() {
+        // ===== LEITURA =====
+        function csvParaLinhas(texto) {
+            const d = texto.includes(';') ? ';' : ',';
+            return texto.split(/\r?\n/).map(l =>
+                l.split(new RegExp(`\\s*${d}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim()));
+        }
+
+        async function buscarJSON(url, opcoes) {
+            const r = await fetch(url, opcoes);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }
+
+        // Números das turmas + histórico + trimestres (públicos)
+        async function buscarDadosPublicos() {
             try {
-                const sorteadosSalvos = localStorage.getItem('alunosSorteados');
-                if (sorteadosSalvos) {
-                    alunosJaSorteados = new Set(JSON.parse(sorteadosSalvos));
+                const d = await buscarJSON(`${SIGA_API}?aba=frequenciometro&cache=${Date.now()}`);
+                if (d && d.status === 'success' && Array.isArray(d.frequencia) && d.frequencia.length > 1) {
+                    trimestresPlanilha = Array.isArray(d.trimestres) ? d.trimestres : null;
+                    return { frequencia: d.frequencia, historico: d.historico || [] };
                 }
-            } catch(e) {}
+                throw new Error(d && d.message ? d.message : 'SIGA sem dados do frequenciômetro');
+            } catch (e) {
+                if (!USAR_PLANILHA_PUBLICADA) throw e;
+                console.warn('⚠️ SIGA indisponível, usando a planilha publicada (temporário):', e.message);
+                const [rf, rh] = await Promise.all([
+                    fetch(LINK_FREQUENCIA + "&cache=" + Date.now()),
+                    fetch(LINK_HISTORICO + "&cache=" + Date.now()).catch(() => null)
+                ]);
+                if (!rf.ok) throw new Error("Planilha de Frequência falhou");
+                return { frequencia: csvParaLinhas(await rf.text()), historico: rh && rh.ok ? csvParaLinhas(await rh.text()) : [] };
+            }
         }
 
-        function salvarSorteadosNoStorage() {
-            try {
-                localStorage.setItem('alunosSorteados', JSON.stringify(Array.from(alunosJaSorteados)));
-            } catch(e) {}
-        }
-
-        // ===== FUNÇÃO PARA CARREGAR FREQUÊNCIA =====
-        async function carregarFrequencia() {
-            const resFreq = await fetch(LINK_FREQUENCIA + "&cache=" + Date.now());
-            if(!resFreq.ok) throw new Error("Planilha de Frequência falhou");
-            const txtFreq = await resFreq.text();
-            const dFreq = txtFreq.includes(';') ? ';' : ',';
-            const linhasFreq = txtFreq.split(/\r?\n/);
+        function processarFrequencia(linhas) {
             todasTurmas = [];
-            
-            for (let i = 1; i < linhasFreq.length; i++) {
-                if (linhasFreq[i].trim().length < 3) continue;
-                const cols = linhasFreq[i].split(new RegExp(`\\s*${dFreq}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                
-                if (cols.length >= 4) {
-                    const nome = cols[0];
-                    let strNum = cols[1].replace(/[^0-9,-]/g, '').replace(',', '.');
-                    const freq = parseFloat(strNum);
-                    const bloco = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                    const trof = parseInt(cols[3]) || 0;
-                    const codigo = extrairCodigoTurma(nome);
-                    
-                    if (!isNaN(freq) && nome.length > 0) {
-                        todasTurmas.push({ 
-                            nome, 
-                            valor: freq, 
-                            bloco: bloco.includes("man") ? "manha":"tarde", 
-                            trofeus: trof,
-                            codigo: codigo
-                        });
-                    }
+            for (let i = 1; i < linhas.length; i++) {
+                const cols = linhas[i].map(c => String(c).trim());
+                if (cols.join('').length < 3 || cols.length < 4) continue;
+                const nome = cols[0];
+                const freq = parseFloat(cols[1].replace(/[^0-9,-]/g, '').replace(',', '.'));
+                const bloco = (cols[2] || "tarde").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+                const trof = parseInt(cols[3]) || 0;
+                if (!isNaN(freq) && nome.length > 0) {
+                    todasTurmas.push({ nome, valor: freq, bloco: bloco.includes("man") ? "manha" : "tarde", trofeus: trof, codigo: extrairCodigoTurma(nome) });
                 }
             }
             console.log(`✅ ${todasTurmas.length} turmas carregadas`);
-            console.log("Exemplos:", todasTurmas.slice(0, 3).map(t => `${t.nome} → ${t.codigo}`));
         }
 
-        // ===== FUNÇÃO PARA CARREGAR ALUNOS =====
+        function processarHistorico(linhas) {
+            historicoEscola = [];
+            for (let k = 1; k < linhas.length; k++) {
+                const colsH = linhas[k].map(c => String(c).trim());
+                if (colsH.length < 2) continue;
+                const medVal = parseFloat(colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.'));
+                if (!isNaN(medVal)) historicoEscola.push({ semana: colsH[0], media: medVal });
+            }
+            if (historicoEscola.length > 10) historicoEscola = historicoEscola.slice(-10);
+        }
+
+        // ===== ALUNOS E SORTEADOS (só com a chave da TV) =====
         async function carregarAlunos() {
-            try {
-                const resposta = await fetch(LINK_ALUNOS + "&cache=" + Date.now());
-                if (!resposta.ok) throw new Error("Falha ao carregar lista de alunos");
-                
-                const texto = await resposta.text();
-                const delimitador = texto.includes(';') ? ';' : ',';
-                const linhas = texto.split(/\r?\n/);
-                
+            if (!CHAVE_TV) {
+                motivoSemAlunos = 'Esta TV ainda não tem a chave do sorteio. Abra o endereço com ?chave=... gerado no Apps Script.';
                 todosAlunos = [];
-                for (let j = 1; j < linhas.length; j++) {
-                    const colunas = linhas[j].split(new RegExp(`\\s*${delimitador}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                    
-                    if (colunas.length >= 4 && colunas[1]) {
-                        const turmaRef = colunas[2] || '';
-                        const turmaCodigo = colunas[3] || '';
-                        
-                        todosAlunos.push({ 
-                            id: colunas[0] || '',
-                            nome: colunas[1].trim(),
-                            turmaRef: turmaRef,
-                            turmaCodigo: turmaCodigo,
-                            codigoNormalizado: extrairCodigoTurma(turmaCodigo || turmaRef)
-                        });
-                    }
+                return false;
+            }
+            try {
+                const d = await buscarJSON(`${SIGA_API}?aba=frequenciometro_alunos&chave=${encodeURIComponent(CHAVE_TV)}&cache=${Date.now()}`);
+                if (!d || d.status !== 'success') {
+                    motivoSemAlunos = d && d.status === 'unauthorized'
+                        ? 'A chave desta TV não vale mais. Abra o endereço novo gerado no Apps Script.'
+                        : 'O SIGA não entregou a lista de alunos (backend atualizado?).';
+                    todosAlunos = [];
+                    return false;
                 }
-                console.log(`✅ ${todosAlunos.length} alunos carregados`);
-                console.log("Exemplos:", todosAlunos.slice(0, 3).map(a => `${a.nome} → ${a.codigoNormalizado}`));
+                todosAlunos = [];
+                (d.alunos || []).forEach((colunas, j) => {
+                    if (j === 0 || colunas.length < 4 || !colunas[1]) return;
+                    const turmaRef = String(colunas[2] || ''), turmaCodigo = String(colunas[3] || '');
+                    todosAlunos.push({
+                        id: String(colunas[0] || ''),
+                        nome: String(colunas[1]).trim(),
+                        turmaRef, turmaCodigo,
+                        codigoNormalizado: extrairCodigoTurma(turmaCodigo || turmaRef)
+                    });
+                });
+                // Sorteados vêm da planilha: valem para todas as TVs
+                alunosJaSorteados = new Set(d.sorteados || []);
+                salvarSorteadosNoStorage();
+                motivoSemAlunos = '';
+                console.log(`✅ ${todosAlunos.length} alunos, ${alunosJaSorteados.size} já sorteados`);
                 return true;
             } catch (erro) {
                 console.error("❌ Erro ao carregar alunos:", erro);
+                motivoSemAlunos = 'Sem conexão com o SIGA.';
                 return false;
             }
         }
 
-        // ===== FUNÇÃO PARA CARREGAR HISTÓRICO =====
-        async function carregarHistorico() {
+        // Grava no SIGA (aba "Sorteios"). Se falhar, o registro local continua valendo nesta TV.
+        async function registrarNoSiga(operacao, dados) {
+            if (!CHAVE_TV) return;
             try {
-                const resHist = await fetch(LINK_HISTORICO + "&cache=" + Date.now());
-                const txtHist = await resHist.text();
-                const dHist = txtHist.includes(';') ? ';' : ',';
-                const linhasHist = txtHist.split(/\r?\n/);
-                historicoEscola = [];
-                for(let k = 1; k < linhasHist.length; k++) {
-                    const colsH = linhasHist[k].split(new RegExp(`\\s*${dHist}\\s*(?=(?:[^"]*"[^"]*")*[^"]*$)`)).map(c => c.replace(/^"|"$/g, '').trim());
-                    if(colsH.length >= 2) {
-                        let semNome = colsH[0];
-                        let strH = colsH[1].replace(/[^0-9,-]/g, '').replace(',', '.');
-                        const medVal = parseFloat(strH);
-                        if(!isNaN(medVal)) historicoEscola.push({ semana: semNome, media: medVal });
-                    }
-                }
-                if (historicoEscola.length > 10) historicoEscola = historicoEscola.slice(-10);
-                console.log(`✅ ${historicoEscola.length} registros de histórico carregados`);
-            } catch(errH) { 
-                console.warn("Histórico pulado.", errH); 
-            }
+                await fetch(SIGA_API, {
+                    method: 'POST', headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(Object.assign({ operacao, chave: CHAVE_TV }, dados))
+                });
+            } catch (e) { console.warn('Sorteio não gravado no SIGA:', e); }
+        }
+
+        function turmaDoAluno(nome) {
+            const a = todosAlunos.find(x => x.nome === nome);
+            return a ? (a.turmaCodigo || a.turmaRef) : '';
+        }
+
+        // ===== FUNÇÕES DE STORAGE (cópia local de segurança) =====
+        function carregarSorteadosDoStorage() {
+            try {
+                const sorteadosSalvos = localStorage.getItem('alunosSorteados');
+                if (sorteadosSalvos) alunosJaSorteados = new Set(JSON.parse(sorteadosSalvos));
+            } catch (e) {}
+        }
+
+        function salvarSorteadosNoStorage() {
+            try { localStorage.setItem('alunosSorteados', JSON.stringify(Array.from(alunosJaSorteados))); } catch (e) {}
         }
 
         // ===== FUNÇÃO PRINCIPAL DE CARREGAMENTO =====
         async function carregarDados() {
             try {
                 carregarSorteadosDoStorage();
-                await carregarFrequencia();
-                await carregarAlunos();
-                await carregarHistorico();
-                
+                const [publicos] = await Promise.all([buscarDadosPublicos(), carregarAlunos()]);
+                processarFrequencia(publicos.frequencia);
+                processarHistorico(publicos.historico);
+                if (todasTurmas.length === 0) throw new Error('Nenhuma turma com frequência na planilha.');
+
                 mediaGeralEscolaGlobal = todasTurmas.reduce((acc, t) => acc + t.valor, 0) / todasTurmas.length;
-                
-                atualizarTextoSemana(); 
+
+                atualizarTextoSemana();
                 gerarSlides();
                 console.log(`✅ Sistema carregado: ${todasTurmas.length} turmas, ${todosAlunos.length} alunos`);
-
-            } catch (err) { 
+            } catch (err) {
                 exibirErroTerminal(err.message);
-                console.error(err); 
+                console.error(err);
             }
         }
+
+        // ===== ATUALIZAÇÃO AUTOMÁTICA (TV ligada o dia todo) =====
+        function podeAtualizarAgora() {
+            const modalAberto = document.getElementById('modal-sorteados')?.classList.contains('active');
+            const sorteioAberto = !!document.querySelector('.slide-tipo-sorteio.active');
+            return !sorteioEmAndamento && !modalAberto && !sorteioAberto;
+        }
+
+        setInterval(() => { if (podeAtualizarAgora()) carregarDados(); }, ATUALIZAR_A_CADA_MS);
+        setInterval(() => { if (podeAtualizarAgora()) location.reload(); }, RECARREGAR_PAGINA_A_CADA_MS);
 
         // ===== FUNÇÕES DE ATUALIZAÇÃO =====
         async function recarregarListaAlunos() {
@@ -445,8 +511,8 @@
             const turmaAtual = seletor.value;
             
             seletor.innerHTML = turmasParaMostrar.map(t => 
-                `<option value="${t.codigo}" data-nome="${t.nome}" ${t.codigo === turmaAtual ? 'selected' : ''}>
-                    ${t.nome}
+                `<option value="${esc(t.codigo)}" data-nome="${esc(t.nome)}" ${t.codigo === turmaAtual ? 'selected' : ''}>
+                    ${esc(t.nome)}
                 </option>`
             ).join('');
         }
@@ -461,7 +527,7 @@
             
             seletorTurma.innerHTML = '<option value="">Todas as Turmas</option>' + 
                 turmasDisponiveis.map(t => 
-                    `<option value="${t.codigo}" data-nome="${t.nome}">${t.nome}</option>`
+                    `<option value="${esc(t.codigo)}" data-nome="${esc(t.nome)}">${esc(t.nome)}</option>`
                 ).join('');
             
             atualizarListaAlunosModal();
@@ -486,7 +552,8 @@
             }
             
             if (alunosParaMostrar.length === 0) {
-                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">Nenhum aluno encontrado para esta turma.</p>';
+                listaContainer.innerHTML = '<p class="text-slate-400 text-center py-4">' +
+                    esc(motivoSemAlunos || 'Nenhum aluno encontrado para esta turma.') + '</p>';
                 return;
             }
             
@@ -505,11 +572,11 @@
                     <div class="flex items-center justify-between p-3 rounded-xl border ${jaSorteado ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'} transition-all">
                         <div class="flex items-center gap-3">
                             <input type="checkbox" id="check-${idSeguro}" ${jaSorteado ? 'checked' : ''} 
-                                onchange="toggleAlunoSorteado('${aluno.nome.replace(/'/g, "\\'")}', this.checked)"
+                                data-nome="${esc(aluno.nome)}" onchange="toggleAlunoSorteado(this.dataset.nome, this.checked)"
                                 class="w-5 h-5 accent-amber-500 cursor-pointer">
                             <label for="check-${idSeguro}" class="cursor-pointer">
-                                <span class="font-bold text-slate-700">${aluno.nome}</span>
-                                <span class="text-xs text-slate-400 ml-2">${aluno.turmaCodigo}</span>
+                                <span class="font-bold text-slate-700">${esc(aluno.nome)}</span>
+                                <span class="text-xs text-slate-400 ml-2">${esc(aluno.turmaCodigo)}</span>
                             </label>
                         </div>
                         ${jaSorteado ? '<span class="text-amber-600 font-black text-xs">✓ SORTEADO</span>' : ''}
@@ -521,19 +588,39 @@
         function toggleAlunoSorteado(nomeAluno, marcado) {
             if (marcado) {
                 alunosJaSorteados.add(nomeAluno);
+                registrarNoSiga('SORTEIO_REGISTRAR', { nome: nomeAluno, turma: turmaDoAluno(nomeAluno), origem: 'manual' });
             } else {
                 alunosJaSorteados.delete(nomeAluno);
+                registrarNoSiga('SORTEIO_DESMARCAR', { nome: nomeAluno });
             }
             salvarSorteadosNoStorage();
             atualizarListaAlunosModal();
         }
 
         function limparTodosSorteados() {
-            if (confirm('Tem certeza que deseja limpar todos os alunos sorteados?')) {
+            const seletor = document.getElementById('seletor-turma-modal');
+            const codigo = seletor.value;
+            const nomeTurma = seletor.options[seletor.selectedIndex]?.dataset.nome || '';
+            const pergunta = codigo
+                ? `Liberar de novo todos os alunos da turma ${nomeTurma} para o sorteio?`
+                : 'Liberar de novo TODOS os alunos da escola para o sorteio?';
+            if (!confirm(pergunta)) return;
+            liberarSorteados(codigo);
+            atualizarListaAlunosModal();
+        }
+
+        // Volta os alunos (de uma turma, ou todos) para o sorteio, aqui e no SIGA
+        function liberarSorteados(codigoTurma) {
+            const alvo = codigoTurma ? todosAlunos.filter(a => a.codigoNormalizado === codigoTurma) : null;
+            if (alvo) {
+                alvo.forEach(a => alunosJaSorteados.delete(a.nome));
+                const turmas = [...new Set(alvo.map(a => a.turmaCodigo || a.turmaRef))];
+                turmas.forEach(t => registrarNoSiga('SORTEIO_LIMPAR', { turma: t }));
+            } else {
                 alunosJaSorteados.clear();
-                salvarSorteadosNoStorage();
-                atualizarListaAlunosModal();
+                registrarNoSiga('SORTEIO_LIMPAR', {});
             }
+            salvarSorteadosNoStorage();
         }
 
         // ===== FUNÇÕES AUXILIARES =====
@@ -683,11 +770,17 @@
             if (!wrapper) return;
             wrapper.innerHTML = "";
 
-            const dadosTrimestres = [
-                { nome: "1º Trimestre", valor: notaFechada1Trimestre, status: "Fechado" },
-                { nome: "2º Trimestre", valor: mediaGeralEscolaGlobal, status: "Parcial" },
-                { nome: "3º Trimestre", valor: 0.0, status: "Aguardando" }
-            ];
+            // Vêm da aba "Frequenciometro_Trimestres" do SIGA: trimestre com média preenchida = Fechado;
+            // o primeiro sem média = Parcial (média atual da escola); os seguintes = Aguardando.
+            const base = (trimestresPlanilha && trimestresPlanilha.length)
+                ? trimestresPlanilha
+                : [{ nome: "1º Trimestre", fechado: 91.9 }, { nome: "2º Trimestre", fechado: null }, { nome: "3º Trimestre", fechado: null }];
+            let parcialUsado = false;
+            const dadosTrimestres = base.slice(0, 3).map(t => {
+                if (t.fechado != null) return { nome: t.nome, valor: t.fechado, status: "Fechado" };
+                if (!parcialUsado) { parcialUsado = true; return { nome: t.nome, valor: mediaGeralEscolaGlobal, status: "Parcial" }; }
+                return { nome: t.nome, valor: 0.0, status: "Aguardando" };
+            });
 
             const largura = 900; const altura = 380; const margemX = 60; const margemYBase = 50;
             const alturaUtil = altura - margemYBase - 40; const larguraUtil = largura - 2 * margemX;
@@ -912,6 +1005,7 @@
             const btnFechar = document.getElementById("btn-fechar-sorteio");
             
             if (alunosFiltrados.length === 0) { 
+                if (motivoSemAlunos) { alert(motivoSemAlunos); }
                 displayNome.innerText = "Sem alunos!";
                 ajustarFonteNomeSorteado("Sem alunos!");
                 console.error("❌ Nenhum aluno encontrado para:", turmaCodigoAlvo);
@@ -922,9 +1016,8 @@
             if (alunosDisponiveis.length === 0) {
                 displayNome.innerText = "Todos já sorteados!";
                 ajustarFonteNomeSorteado("Todos já sorteados!");
-                if (confirm('Todos os alunos desta turma já foram sorteados. Deseja resetar?')) {
-                    alunosJaSorteados.clear();
-                    salvarSorteadosNoStorage();
+                if (confirm('Todos os alunos desta turma já foram sorteados. Deseja liberar a turma de novo?')) {
+                    liberarSorteados(turmaCodigoAlvo);
                     alunosDisponiveis = [...alunosFiltrados];
                 } else {
                     return;
@@ -943,7 +1036,7 @@
             seletor.disabled = true; 
             
             let listaEmbaralhada = embaralharArray([...alunosDisponiveis]);
-            const alunoSorteado = listaEmbaralhada[Math.floor(Math.random() * listaEmbaralhada.length)];
+            const alunoSorteado = listaEmbaralhada[aleatorioAte(listaEmbaralhada.length)];  // gerador criptográfico
             
             let giros = 0; 
             let velocidade = 70;
@@ -981,6 +1074,7 @@
                     
                     alunosJaSorteados.add(alunoSorteado.nome);
                     salvarSorteadosNoStorage();
+                    registrarNoSiga('SORTEIO_REGISTRAR', { nome: alunoSorteado.nome, turma: alunoSorteado.turmaCodigo || alunoSorteado.turmaRef || turmaNomeAlvo, origem: 'sorteio' });
                     
                     historicoSorteios.push({
                         nome: alunoSorteado.nome,
@@ -1235,7 +1329,7 @@
                         <div class="w-full flex gap-4 items-center justify-center bg-slate-50 p-3 rounded-2xl border border-slate-200/60 shadow-inner">
                             <label class="font-black text-slate-700 text-sm uppercase tracking-wide shrink-0">Selecione a Turma Premiada:</label>
                             <select id="seletor-turma-sorteio" class="bg-white border-2 border-indigo-200 rounded-xl px-4 py-1.5 font-extrabold text-slate-800 uppercase text-sm focus:outline-none focus:border-indigo-500 shadow-sm">
-                                ${turmasDisponiveis.map(t => `<option value="${t.codigo}" data-nome="${t.nome}">${t.nome}</option>`).join("")}
+                                ${turmasDisponiveis.map(t => `<option value="${esc(t.codigo)}" data-nome="${esc(t.nome)}">${esc(t.nome)}</option>`).join("")}
                             </select>
                         </div>
                         
